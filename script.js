@@ -27,14 +27,19 @@ document.querySelectorAll(".slider").forEach(slider=>{
 const lightbox=document.getElementById("mediaLightbox"),image=document.getElementById("lightboxImage");
 const lightboxIframe=document.getElementById("lightboxIframe");
 
-// روابط التضمين الرسمية لريلز الفيسبوك الخمسة بالترتيب من 1 لـ 5
-const fbReelsArray = [
-    "https://facebook.com", // الريل الأولى
-    "https://facebook.com", // الثانية
-    "https://facebook.com", // الثالثة
-    "https://facebook.com", // الرابعة
-    "https://facebook.com"  // الخامسة
-];
+// خريطة ذكية وشاملة بتربط كل كفرات قسم الموشن المحتملة بروابط ريلز الفيسبوك الرسمية
+const fbReelsMap = {
+    "vfx1": "https://facebook.com",
+    "vfx2": "https://facebook.com",
+    "vfx3": "https://facebook.com",
+    "vfx4": "https://facebook.com",
+    "vfx5": "https://facebook.com",
+    "rm1": "https://facebook.com",
+    "rm2": "https://facebook.com",
+    "rm3": "https://facebook.com",
+    "rm4": "https://facebook.com",
+    "rm5": "https://facebook.com"
+};
 
 const close=()=>{
     lightbox?.classList.remove("open");
@@ -44,28 +49,30 @@ const close=()=>{
     if(lightboxIframe) { lightboxIframe.src = ""; lightboxIframe.style.display = "none"; }
 };
 
-document.querySelectorAll(".media-open").forEach(btn=>btn.addEventListener("click",()=>{
+document.querySelectorAll(".media-open").forEach(btn=>btn.addEventListener("click",(e)=>{
+    // منع انتشار الحدث عشان الضغط على الأسهم ميشغلش الفيديو بالخطأ
+    e.stopPropagation();
+    
     const src=btn.dataset.full||btn.querySelector("img")?.src;
     if(!src||!lightbox)return;
 
-    // فحص ذكي: هل الزر المضغوط موجود داخل حاوية القسم الرابع (VFX & Creative Motion)؟
-    const isVfxSection = btn.closest(".work-section")?.querySelector("h3")?.textContent.includes("VFX") || 
-                        btn.closest(".gallery-card")?.querySelector("h3")?.textContent.includes("VIDEO");
+    // فحص دقيق لاسم الصورة لتحديد الريل الصحيحة
+    let matchedReel = null;
+    const lowerSrc = src.toLowerCase();
+    for (let key in fbReelsMap) {
+        if (lowerSrc.includes(key.toLowerCase())) {
+            matchedReel = fbReelsMap[key];
+            break;
+        }
+    }
 
-    if (isVfxSection && lightboxIframe) {
-        // تحديد ترتيب الصورة المفتوحة حالياً جوة السلايدر لمعرفة أي ريل نشغلها
-        const parentSlider = btn.closest(".slides") || btn.closest(".work-slider");
-        const allItems = parentSlider ? [...parentSlider.querySelectorAll(".media-open")] : [];
-        const itemIndex = allItems.indexOf(btn);
-        
-        // جلب الرابط من المصفوفة بناءً على الترتيب (إذا لم يجد الترتيب يفتح الريل الأولى كافتراضي)
-        const matchedReel = (itemIndex >= 0 && itemIndex < fbReelsArray.length) ? fbReelsArray[itemIndex] : fbReelsArray[0];
-
+    if (matchedReel && lightboxIframe) {
+        // تشغيل ريل فيسبوك المحددة فقط وإخفاء الكفر الثابت
         if(image) image.style.display = "none";
         lightboxIframe.style.display = "block";
         lightboxIframe.src = matchedReel;
     } else if (image) {
-        // تشغيل بقية صور السكاشن العادية (01 و 02 و 03) كصور طبيعية ثابتة
+        // تشغيل بقية صور السكاشن العادية كصور ثابتة طبيعية
         if(lightboxIframe) lightboxIframe.style.display = "none";
         image.style.display = "block";
         image.src = src;
