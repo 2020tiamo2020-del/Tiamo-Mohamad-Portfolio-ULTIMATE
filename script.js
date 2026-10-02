@@ -23,21 +23,9 @@ document.querySelectorAll(".slider").forEach(slider=>{
  go(0);start();
 });
 
-// === إدارة الـ Lightbox المطور والمشغلات الذكية ===
+// === إدارة الـ Lightbox الذكي المطلق ===
 const lightbox=document.getElementById("mediaLightbox"),image=document.getElementById("lightboxImage");
 const lightboxIframe=document.getElementById("lightboxIframe");
-
-// خريطة الربط الذكية: بتبص على اسم الصورة أو الـ alt عشان تفتح لينك الريل المظبوط
-const fbReelsMap = {
-    "rm1": "https://facebook.com",
-    "rm2": "https://facebook.com",
-    "rm3": "https://facebook.com",
-    "rm4": "https://facebook.com",
-    "rm5": "https://facebook.com",
-    "vfx1": "https://facebook.com",
-    "vfx2": "https://facebook.com",
-    "vfx3": "https://facebook.com"
-};
 
 const close=()=>{
     lightbox?.classList.remove("open");
@@ -50,33 +38,19 @@ const close=()=>{
 document.querySelectorAll(".media-open").forEach(btn=>btn.addEventListener("click",(e)=>{
     e.stopPropagation();
     
-    const src=btn.dataset.full||btn.querySelector("img")?.src;
-    if(!src||!lightbox) return;
+    // جلب الرابط المباشر للفيديو المخزن في الزر نفسه
+    const videoUrl = btn.getAttribute("data-video");
+    const src = btn.dataset.full || btn.querySelector("img")?.src;
+    
+    if(!lightbox) return;
 
-    // فحص ذكي جداً لاسم ملف الصورة عشان نمنع أي تداخل بين السكاشن
-    let matchedReel = null;
-    const lowerSrc = src.toLowerCase();
-    for (let key in fbReelsMap) {
-        if (lowerSrc.includes(key.toLowerCase())) {
-            matchedReel = fbReelsMap[key];
-            break;
-        }
-    }
-
-    // فحص إضافي: لو الضغطة جاية من الكارت الرئيسي رقم 02 برة يشغل فيديو المحارب مباشرة
-    const isSection02 = btn.querySelector("small")?.textContent.trim() === "02" || btn.closest(".gallery-card")?.querySelector("small")?.textContent.trim() === "02";
-
-    if (isSection02 && lightboxIframe) {
+    if (videoUrl && lightboxIframe) {
+        // إذا وجد رابط فيديو صريح، يشغل الريل المظبوطة فوراً ويخفي الصورة
         if(image) image.style.display = "none";
         lightboxIframe.style.display = "block";
-        lightboxIframe.src = "https://facebook.com";
-    } else if (matchedReel && lightboxIframe) {
-        // تشغيل فيديو الريل المظبوطة المشن المخصصة للصورة الحالية
-        if(image) image.style.display = "none";
-        lightboxIframe.style.display = "block";
-        lightboxIframe.src = matchedReel;
-    } else if (image) {
-        // بقية الأقسام (01 و 03) تفتح كصور ثابتة طبيعية ومستقرة تماماً
+        lightboxIframe.src = "https://facebook.com" + encodeURIComponent(videoUrl) + "&show_text=false&t=0";
+    } else if (image && src) {
+        // لبقية السكاشن العادية تفتح كصورة ثابتة مستقرة
         if(lightboxIframe) lightboxIframe.style.display = "none";
         image.style.display = "block";
         image.src = src;
