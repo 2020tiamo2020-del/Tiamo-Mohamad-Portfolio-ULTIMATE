@@ -23,73 +23,61 @@ document.querySelectorAll(".slider").forEach(slider=>{
  go(0);start();
 });
 
-const lightbox = document.getElementById("mediaLightbox");
-const lightboxImage = document.getElementById("lightboxImage");
-const lightboxVideo = document.getElementById("lightboxVideo");
-const lightboxIframe = document.getElementById("lightboxIframe");
+// الحاوية والمشغلات الذكية
+const lightbox=document.getElementById("mediaLightbox"),image=document.getElementById("lightboxImage");
+const lightboxIframe=document.getElementById("lightboxIframe");
 
-// دالة الإغلاق المضمونة لتنظيف كل الميديا والصوت
-const close = () => {
-    lightbox?.classList.remove("open");
-    lightbox?.setAttribute("aria-hidden", "true");
-    document.body.classList.remove("lightbox-open");
-    if (lightboxImage) { lightboxImage.src = ""; lightboxImage.style.display = "none"; }
-    if (lightboxVideo) { lightboxVideo.pause(); lightboxVideo.src = ""; lightboxVideo.style.display = "none"; }
-    if (lightboxIframe) { lightboxIframe.src = ""; lightboxIframe.style.display = "none"; }
+// خريطة ذكية لربط صور كفر المربع رقم 4 بروابط ريلز الفيسبوك المباشرة
+const fbReelsMap = {
+    "rm1.jpg": "https://facebook.com",
+    "rm2.jpg": "https://facebook.com",
+    "rm3.jpg": "https://facebook.com",
+    "rm4.jpg": "https://facebook.com",
+    "rm5.jpg": "https://facebook.com"
 };
 
-// تشغيل الصندوق بذكاء تام
-document.querySelectorAll(".gallery-card").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-        const isVideo = btn.querySelector("h3")?.textContent.includes("VIDEO");
-        let src = btn.dataset.src || btn.querySelector("img")?.src;
-        
-        if (src) {
-            // إخفاء مبدئي لكل العناصر
-            if (lightboxImage) lightboxImage.style.display = "none";
-            if (lightboxVideo) lightboxVideo.style.display = "none";
-            if (lightboxIframe) lightboxIframe.style.display = "none";
+const close=()=>{
+    lightbox?.classList.remove("open");
+    lightbox?.setAttribute("aria-hidden","true");
+    document.body.classList.remove("lightbox-open");
+    if(image) { image.removeAttribute("src"); image.style.display = "block"; }
+    if(lightboxIframe) { lightboxIframe.src = ""; lightboxIframe.style.display = "none"; }
+};
 
-            if (isVideo) {
-                // لو الرابط من فيسبوك ريلز، بنحوله فوراً لرابط المشغل الرسمي بدون معالجات معقدة
-                if (src.includes("facebook.com")) {
-                    const embedSrc = "https://facebook.com" + encodeURIComponent(src) + "&show_text=false&t=0";
-                    if (lightboxIframe) {
-                        lightboxIframe.style.display = "block";
-                        lightboxIframe.src = embedSrc;
-                    }
-                } else if (lightboxVideo) {
-                    // لو فيديو عادي MP4
-                    lightboxVideo.style.display = "block";
-                    lightboxVideo.src = src;
-                    lightboxVideo.play().catch(err => console.log("Auto-play prevented"));
-                }
-            } else if (lightboxImage) {
-                // لو كروت الصور العادية
-                lightboxImage.style.display = "block";
-                lightboxImage.src = src;
-                lightboxImage.alt = btn.querySelector("img")?.alt || "Gallery Image";
-            }
+document.querySelectorAll(".media-open").forEach(btn=>btn.addEventListener("click",()=>{
+    const src=btn.dataset.full||btn.querySelector("img")?.src;
+    if(!src||!lightbox)return;
 
-            lightbox?.classList.add("open");
-            lightbox?.setAttribute("aria-hidden", "false");
-            document.body.classList.add("lightbox-open");
+    // فحص ما إذا كانت الصورة المضغوطة تنتمي للريلز المحددة
+    let matchedReel = null;
+    for (let key in fbReelsMap) {
+        if (src.includes(key)) {
+            matchedReel = fbReelsMap[key];
+            break;
         }
-    });
-});
+    }
 
-// مستمعي الأحداث لإغلاق الصندوق
-lightbox?.addEventListener("click", (e) => { if (e.target === lightbox) close(); });
-document.querySelector(".lightbox-close")?.addEventListener("click", close);
-document.addEventListener("keydown", (e) => { if (e.key === "Escape") close(); });
+    if (matchedReel && lightboxIframe) {
+        // تشغيل فيديو ريل فيسبوك حقيقي
+        if(image) image.style.display = "none";
+        lightboxIframe.style.display = "block";
+        lightboxIframe.src = matchedReel;
+    } else if (image) {
+        // تشغيل صورة عادية بقية سكاشن الموقع
+        if(lightboxIframe) lightboxIframe.style.display = "none";
+        image.style.display = "block";
+        image.src = src;
+        image.alt = btn.querySelector("img")?.alt||"Tiamo Mohamad artwork";
+    }
 
-});
+    lightbox.classList.add("open");
+    lightbox.setAttribute("aria-hidden","false");
+    document.body.classList.add("lightbox-open");
+}));
 
-
-document.querySelector(".lightbox-close")?.addEventListener("click", close);
-document.addEventListener("keydown", (e) => { if (e.key === "Escape") close(); });
-
-lightbox?.addEventListener("click",e=>{if(e.target===lightbox)close()});document.querySelector(".lightbox-close")?.addEventListener("click",close);document.addEventListener("keydown",e=>{if(e.key==="Escape")close()});
+lightbox?.addEventListener("click",e=>{if(e.target===lightbox)close()});
+document.querySelector(".lightbox-close")?.addEventListener("click",close);
+document.addEventListener("keydown",e=>{if(e.key==="Escape")close()});
 
 const glow=document.querySelector(".cursor-glow");if(glow&&matchMedia("(pointer:fine)").matches)window.addEventListener("pointermove",e=>{glow.style.left=e.clientX+"px";glow.style.top=e.clientY+"px"},{passive:true});
 
