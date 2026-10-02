@@ -23,9 +23,64 @@ document.querySelectorAll(".slider").forEach(slider=>{
  go(0);start();
 });
 
-const lightbox=document.getElementById("mediaLightbox"),image=document.getElementById("lightboxImage");
-const close=()=>{lightbox?.classList.remove("open");lightbox?.setAttribute("aria-hidden","true");document.body.classList.remove("lightbox-open");if(image)image.removeAttribute("src")};
-document.querySelectorAll(".media-open").forEach(btn=>btn.addEventListener("click",()=>{const src=btn.dataset.full||btn.querySelector("img")?.src;if(!src||!lightbox||!image)return;image.src=src;image.alt=btn.querySelector("img")?.alt||"Tiamo Mohamad artwork";lightbox.classList.add("open");lightbox.setAttribute("aria-hidden","false");document.body.classList.add("lightbox-open")}));
+const lightbox = document.getElementById("mediaLightbox");
+const lightboxImage = document.getElementById("lightboxImage");
+
+// إنشاء مشغل فيديو مخفي جوة الصندوق عشان نستخدمه للفيديوهات فقط
+let lightboxVideo = document.getElementById("lightboxVideo");
+if (!lightboxVideo && lightbox) {
+    lightboxVideo = document.createElement("video");
+    lightboxVideo.id = "lightboxVideo";
+    lightboxVideo.controls = true;
+    lightboxVideo.style.maxWidth = "100%";
+    lightboxVideo.style.maxHeight = "80vh";
+    lightboxVideo.style.display = "none"; // مخفي في العادي
+    lightbox.appendChild(lightboxVideo);
+}
+
+// دالة الإغلاق (بتطفي الفيديو والصورة لما تقفل الصندوق)
+const close = () => {
+    lightbox?.classList.remove("open");
+    lightbox?.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("lightbox-open");
+    if (lightboxImage) lightboxImage.removeAttribute("src");
+    if (lightboxVideo) {
+        lightboxVideo.pause();
+        lightboxVideo.removeAttribute("src");
+        lightboxVideo.load();
+    }
+};
+
+// تشغيل الصندوق بذكاء بناءً على نوع الكارت
+document.querySelectorAll(".media-open").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+        const src = btn.dataset.src;
+        // التأكد إذا كان الكارت المضغوط عليه هو المربع رقم 4 الخاص بالفيديوهات
+        const isVideo = btn.closest(".gallery-card")?.querySelector("h3")?.textContent.includes("VIDEO") || btn.dataset.type === "video";
+
+        if (src) {
+            if (isVideo && lightboxVideo) {
+                if (lightboxImage) lightboxImage.style.display = "none"; // إخفاء تاج الصورة
+                lightboxVideo.style.display = "block"; // إظهار مشغل الفيديو
+                lightboxVideo.src = src;
+                lightboxVideo.play().catch(err => console.log("Auto-play prevented"));
+            } else if (lightboxImage) {
+                if (lightboxVideo) lightboxVideo.style.display = "none"; // إخفاء مشغل الفيديو
+                lightboxImage.style.display = "block"; // إظهار تاج الصورة
+                lightboxImage.src = src;
+                lightboxImage.alt = btn.querySelector("img")?.alt || "Gallery Image";
+            }
+            lightbox?.classList.add("open");
+            lightbox?.setAttribute("aria-hidden", "false");
+            document.body.classList.add("lightbox-open");
+        }
+    });
+});
+
+lightbox?.addEventListener("click", (e) => { if (e.target === lightbox) close(); });
+document.querySelector(".lightbox-close")?.addEventListener("click", close);
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") close(); });
+
 lightbox?.addEventListener("click",e=>{if(e.target===lightbox)close()});document.querySelector(".lightbox-close")?.addEventListener("click",close);document.addEventListener("keydown",e=>{if(e.key==="Escape")close()});
 
 const glow=document.querySelector(".cursor-glow");if(glow&&matchMedia("(pointer:fine)").matches)window.addEventListener("pointermove",e=>{glow.style.left=e.clientX+"px";glow.style.top=e.clientY+"px"},{passive:true});
