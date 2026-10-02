@@ -27,7 +27,7 @@ document.querySelectorAll(".slider").forEach(slider=>{
 const lightbox=document.getElementById("mediaLightbox"),image=document.getElementById("lightboxImage");
 const lightboxIframe=document.getElementById("lightboxIframe");
 
-// خريطة الربط الذكية والمطلقة: بتربط روابط ريلز الفيسبوك بصورك الخمسة أوتوماتيكياً
+// خريطة الربط المطلقة: بتربط روابط ريلز الفيسبوك بصورك الخمسة بناءً على اسمها الحقيقي
 const fbReelsMap = {
     "rm1": "https://facebook.com",
     "rm2": "https://facebook.com",
@@ -47,17 +47,27 @@ const close=()=>{
     if(lightboxIframe) { lightboxIframe.src = ""; lightboxIframe.style.display = "none"; }
 };
 
+// تشغيل الصندوق بذكاء عند الضغط على الكروت
 document.querySelectorAll(".media-open").forEach(btn=>btn.addEventListener("click",(e)=>{
+    // لو الضغطة جاية على أسهم التقليب أو النقط ميتفتحش الفيديو
+    if (e.target.closest(".prev") || e.target.closest(".next") || e.target.closest(".dots")) return;
+    
     e.stopPropagation();
     
-    // قراءة مسار الصورة المفتوحة حالياً جوة الكواليس
-    const src = btn.dataset.full || btn.dataset.src || btn.querySelector("img")?.src;
-    if(!src||!lightbox) return;
+    // جلب مسار الصورة الفعلي المفتوح حالياً جوة الكارت
+    let src = btn.dataset.full || btn.dataset.src;
+    if(!src) {
+        // محاولة جلب أول صورة ظاهرة جوة السلايدر الحالي
+        const activeImg = btn.querySelector(".slides figure img") || btn.querySelector("img");
+        src = activeImg ? activeImg.src : "";
+    }
+    
+    if(!src || !lightbox) return;
 
     let matchedReel = null;
     const lowerSrc = src.toLowerCase();
     
-    // مطابقة المسار مع خريطة الفيديوهات الخمسة
+    // فحص الصورة لمطابقتها مع خريطة الفيديوهات
     for (let key in fbReelsMap) {
         if (lowerSrc.includes(key.toLowerCase())) {
             matchedReel = fbReelsMap[key];
@@ -65,7 +75,7 @@ document.querySelectorAll(".media-open").forEach(btn=>btn.addEventListener("clic
         }
     }
 
-    // فحص إضافي لو الضغطة جاية من الكارت رقم 02 (Cinematic Reel) برة
+    // فحص إضافي لو الضغطة جاية من الكارت رقم 02 (Portrait Reels) برة الشاشة
     const isSection02 = btn.querySelector("small")?.textContent.trim() === "02" || btn.closest(".gallery-card")?.querySelector("small")?.textContent.trim() === "02";
 
     if (isSection02 && lightboxIframe) {
@@ -78,7 +88,7 @@ document.querySelectorAll(".media-open").forEach(btn=>btn.addEventListener("clic
         lightboxIframe.style.display = "block";
         lightboxIframe.src = matchedReel;
     } else if (image) {
-        // بقية أقسام الصور العادية تفتح كصورة ثابتة طبيعية ومستقرة تماماً زي الأول
+        // بقية أقسام الصور العادية (01 و 03) تفتح كصور ثابتة طبيعية ومستقرة تماماً زي الأول
         if(lightboxIframe) lightboxIframe.style.display = "none";
         image.style.display = "block";
         image.src = src;
