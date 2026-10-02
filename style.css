@@ -72,3 +72,30 @@
   .gallery-card .slides > figure { padding: 10px; }
   .gallery-card .arrow { width: 38px; height: 52px; }
 }
+/* === تفعيل المدار التوأم الثاني ليطابق المدار المائل الأساسي ويلف عكسه === */
+.hero-visual .o4 {
+  position: absolute !important;
+  width: 450px !important;
+  height: 180px !important;
+  border: 1px solid rgba(22, 216, 255, 0.22) !important;
+  border-radius: 50% !important;
+  transform-origin: center center !important;
+  animation: spinOvalCounter 23s linear infinite !important;
+}
+
+/* ربط المدارين بأنيميشن الدوران العكسي مع الحفاظ على زاوية الميل الأصلية للموقع */
+@keyframes spinOvalClock {
+  0% { transform: rotate(-20deg); }
+  100% { transform: rotate(340deg); }
+}
+
+@keyframes spinOvalCounter {
+  0% { transform: rotate(-20deg); }
+  100% { transform: rotate(-380deg); }
+}
+
+/* إجبار المدار الأصلي o2 على استخدام الدوران المتناسق المقابل */
+.hero-visual .o2 {
+  transform-origin: center center !important;
+  animation: spinOvalClock 23s linear infinite !important;
+}
