@@ -23,9 +23,21 @@ document.querySelectorAll(".slider").forEach(slider=>{
  go(0);start();
 });
 
-// === إدارة الـ Lightbox والمشغلات الذكية المطلقة ===
+// === إدارة الـ Lightbox المطور والمشغلات الذكية ===
 const lightbox=document.getElementById("mediaLightbox"),image=document.getElementById("lightboxImage");
 const lightboxIframe=document.getElementById("lightboxIframe");
+
+// خريطة الربط الذكية: بتبص على اسم الصورة أو الـ alt عشان تفتح لينك الريل المظبوط
+const fbReelsMap = {
+    "rm1": "https://facebook.com",
+    "rm2": "https://facebook.com",
+    "rm3": "https://facebook.com",
+    "rm4": "https://facebook.com",
+    "rm5": "https://facebook.com",
+    "vfx1": "https://facebook.com",
+    "vfx2": "https://facebook.com",
+    "vfx3": "https://facebook.com"
+};
 
 const close=()=>{
     lightbox?.classList.remove("open");
@@ -36,28 +48,38 @@ const close=()=>{
 };
 
 document.querySelectorAll(".media-open").forEach(btn=>btn.addEventListener("click",(e)=>{
-    // منع تداخل الضغطات مع أسهم التقليب
     e.stopPropagation();
     
-    // جلب الرابط المباشر أو كود التضمين المخزن في زرار الضغط نفسه من خاصية data-full أو data-src
-    const fullSrc = btn.dataset.full || btn.dataset.src;
-    const thumbSrc = btn.querySelector("img")?.src;
-    
-    if(!lightbox) return;
+    const src=btn.dataset.full||btn.querySelector("img")?.src;
+    if(!src||!lightbox) return;
 
-    // فحص ذكي: لو الرابط الممرر عبارة عن رابط فيسبوك ريلز
-    if (fullSrc && fullSrc.includes("facebook.com")) {
-        if(image) image.style.display = "none";
-        if(lightboxIframe) {
-            lightboxIframe.style.display = "block";
-            // تحويل الرابط تلقائيًا وبشكل فوري لصيغة التضمين الرسمية الخاصة بفيسبوك
-            lightboxIframe.src = "https://facebook.com" + encodeURIComponent(fullSrc) + "&show_text=false&t=0";
+    // فحص ذكي جداً لاسم ملف الصورة عشان نمنع أي تداخل بين السكاشن
+    let matchedReel = null;
+    const lowerSrc = src.toLowerCase();
+    for (let key in fbReelsMap) {
+        if (lowerSrc.includes(key.toLowerCase())) {
+            matchedReel = fbReelsMap[key];
+            break;
         }
-    } else if (image && (fullSrc || thumbSrc)) {
-        // تشغيل الصور العادية لبقية سكاشن الموقع
+    }
+
+    // فحص إضافي: لو الضغطة جاية من الكارت الرئيسي رقم 02 برة يشغل فيديو المحارب مباشرة
+    const isSection02 = btn.querySelector("small")?.textContent.trim() === "02" || btn.closest(".gallery-card")?.querySelector("small")?.textContent.trim() === "02";
+
+    if (isSection02 && lightboxIframe) {
+        if(image) image.style.display = "none";
+        lightboxIframe.style.display = "block";
+        lightboxIframe.src = "https://facebook.com";
+    } else if (matchedReel && lightboxIframe) {
+        // تشغيل فيديو الريل المظبوطة المشن المخصصة للصورة الحالية
+        if(image) image.style.display = "none";
+        lightboxIframe.style.display = "block";
+        lightboxIframe.src = matchedReel;
+    } else if (image) {
+        // بقية الأقسام (01 و 03) تفتح كصور ثابتة طبيعية ومستقرة تماماً
         if(lightboxIframe) lightboxIframe.style.display = "none";
         image.style.display = "block";
-        image.src = fullSrc || thumbSrc;
+        image.src = src;
         image.alt = btn.querySelector("img")?.alt || "Tiamo Mohamad artwork";
     }
 
