@@ -25,94 +25,64 @@ document.querySelectorAll(".slider").forEach(slider=>{
 
 const lightbox = document.getElementById("mediaLightbox");
 const lightboxImage = document.getElementById("lightboxImage");
+const lightboxVideo = document.getElementById("lightboxVideo");
+const lightboxIframe = document.getElementById("lightboxIframe");
 
-// إنشاء مشغل فيديو مخفي جوة الصندوق عشان نستخدمه للفيديوهات فقط
-let lightboxVideo = document.getElementById("lightboxVideo");
-if (!lightboxVideo && lightbox) {
-    lightboxVideo = document.createElement("video");
-    lightboxVideo.id = "lightboxVideo";
-    lightboxVideo.controls = true;
-    lightboxVideo.style.maxWidth = "100%";
-    lightboxVideo.style.maxHeight = "80vh";
-    lightboxVideo.style.display = "none"; // مخفي في العادي
-    lightbox.appendChild(lightboxVideo);
-}
-
-// دالة الإغلاق (بتطفي الفيديو والصورة لما تقفل الصندوق)
-const close = (    const iframe = document.getElementById("lightboxIframe");
-    if (iframe) { iframe.src = ""; iframe.style.display = "none"; }
-) => {
+// دالة الإغلاق المضمونة لتنظيف كل الميديا والصوت
+const close = () => {
     lightbox?.classList.remove("open");
     lightbox?.setAttribute("aria-hidden", "true");
     document.body.classList.remove("lightbox-open");
-    if (lightboxImage) lightboxImage.removeAttribute("src");
-    if (lightboxVideo) {
-        lightboxVideo.pause();
-        lightboxVideo.removeAttribute("src");
-        lightboxVideo.load();
-    }
+    if (lightboxImage) { lightboxImage.src = ""; lightboxImage.style.display = "none"; }
+    if (lightboxVideo) { lightboxVideo.pause(); lightboxVideo.src = ""; lightboxVideo.style.display = "none"; }
+    if (lightboxIframe) { lightboxIframe.src = ""; lightboxIframe.style.display = "none"; }
 };
 
-// تشغيل الصندوق بذكاء بناءً على نوع الكارت
-document.querySelectorAll(".media-open").forEach((btn) => {
+// تشغيل الصندوق بذكاء تام
+document.querySelectorAll(".gallery-card").forEach((btn) => {
     btn.addEventListener("click", (e) => {
-                const src = btn.dataset.src;
-        let videoSrc = src;
+        const isVideo = btn.querySelector("h3")?.textContent.includes("VIDEO");
+        let src = btn.dataset.src || btn.querySelector("img")?.src;
         
-        // تحويل رابط ريلز الفيسبوك إلى صيغة المشغل الرسمي المتوافق مع موقعك
-                if (src && src.includes("facebook.com") && src.includes("/reel/")) {
-            const reelId = src.split("/reel/")[1].split("/")[0].split("?")[0];
-            videoSrc = `https://facebook.com{reelId}%2F&show_text=false&t=0`;
-        }
-
-        }
-
-        // التأكد إذا كان الكارت المضغوط عليه هو المربع رقم 4 الخاص بالفيديوهات
-        const isVideo = btn.closest(".gallery-card")?.querySelector("h3")?.textContent.includes("VIDEO") || btn.dataset.type === "video";
-
         if (src) {
+            // إخفاء مبدئي لكل العناصر
+            if (lightboxImage) lightboxImage.style.display = "none";
+            if (lightboxVideo) lightboxVideo.style.display = "none";
+            if (lightboxIframe) lightboxIframe.style.display = "none";
+
             if (isVideo) {
-                if (lightboxImage) lightboxImage.style.display = "none"; // إخفاء الصورة تماماً
-                
-                // لو الرابط جاي من فيسبوك، هنشغله جوة iframe عشان الحماية
+                // لو الرابط من فيسبوك ريلز، بنحوله فوراً لرابط المشغل الرسمي بدون معالجات معقدة
                 if (src.includes("facebook.com")) {
-                    if (lightboxVideo) lightboxVideo.style.display = "none";
-                    let iframe = document.getElementById("lightboxIframe");
-                    if (!iframe) {
-                        iframe = document.createElement("iframe");
-                        iframe.id = "lightboxIframe";
-                        iframe.style.width = "100%";
-                        iframe.style.height = "80vh";
-                        iframe.style.maxWidth = "420px"; // أنسب عرض طولي لشاشة الريلز
-                        iframe.style.border = "none";
-                        lightbox.appendChild(iframe);
+                    const embedSrc = "https://facebook.com" + encodeURIComponent(src) + "&show_text=false&t=0";
+                    if (lightboxIframe) {
+                        lightboxIframe.style.display = "block";
+                        lightboxIframe.src = embedSrc;
                     }
-                    iframe.style.display = "block";
-                    iframe.src = videoSrc;
                 } else if (lightboxVideo) {
-                    // تشغيل الفيديوهات العادية MP4 لو مش فيسبوك
-                    const iframe = document.getElementById("lightboxIframe");
-                    if (iframe) iframe.style.display = "none";
+                    // لو فيديو عادي MP4
                     lightboxVideo.style.display = "block";
-                    lightboxVideo.src = videoSrc;
+                    lightboxVideo.src = src;
                     lightboxVideo.play().catch(err => console.log("Auto-play prevented"));
                 }
             } else if (lightboxImage) {
-                // عرض الصور العادية في السكاشن التانية
-                const iframe = document.getElementById("lightboxIframe");
-                if (iframe) iframe.style.display = "none";
-                if (lightboxVideo) lightboxVideo.style.display = "none";
+                // لو كروت الصور العادية
                 lightboxImage.style.display = "block";
                 lightboxImage.src = src;
                 lightboxImage.alt = btn.querySelector("img")?.alt || "Gallery Image";
             }
 
-            }
             lightbox?.classList.add("open");
             lightbox?.setAttribute("aria-hidden", "false");
             document.body.classList.add("lightbox-open");
         }
     });
+});
+
+// مستمعي الأحداث لإغلاق الصندوق
+lightbox?.addEventListener("click", (e) => { if (e.target === lightbox) close(); });
+document.querySelector(".lightbox-close")?.addEventListener("click", close);
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") close(); });
+
 });
 
 
