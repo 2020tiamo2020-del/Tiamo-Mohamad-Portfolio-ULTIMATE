@@ -99,3 +99,67 @@
   transform-origin: center center !important;
   animation: spinOvalClock 23s linear infinite !important;
 }
+/* === تصميم النجوم النيون وتأثير الوميض والبلور === */
+.neon-star {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* توزيع النجوم بأماكن استراتيجية وتحديد الوميض */
+.neon-star.s1 {
+  top: 25%;
+  left: 20%;
+  background: #16d8ff;
+  box-shadow: 0 0 15px #16d8ff, 0 0 30px #16d8ff;
+  animation: neonBlink 3s ease-in-out infinite;
+}
+
+.neon-star.s2 {
+  top: 35%;
+  right: 22%;
+  background: #8b35ff;
+  box-shadow: 0 0 15px #8b35ff, 0 0 30px #8b35ff;
+  animation: neonBlink 4s ease-in-out infinite 1s;
+}
+
+.neon-star.s3 {
+  bottom: 28%;
+  left: 30%;
+  background: #8b35ff;
+  box-shadow: 0 0 15px #8b35ff, 0 0 30px #8b35ff;
+  animation: neonBlink 2.5s ease-in-out infinite 0.5s;
+}
+
+.neon-star.s4 {
+  bottom: 22%;
+  right: 28%;
+  background: #16d8ff;
+  box-shadow: 0 0 15px #16d8ff, 0 0 30px #16d8ff;
+  animation: neonBlink 3.5s ease-in-out infinite 1.5s;
+}
+
+.neon-star.s5 {
+  top: 65%;
+  left: 15%;
+  background: #ffffff;
+  box-shadow: 0 0 12px #ffffff, 0 0 25px #16d8ff;
+  animation: neonBlink 4.5s ease-in-out infinite 2s;
+}
+
+/* أنيميشن الوميض السحري */
+@keyframes neonBlink {
+  0%, 100% {
+    opacity: 0.2;
+    filter: blur(1px);
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    filter: blur(0px);
+    transform: scale(1.2);
+  }
+}
