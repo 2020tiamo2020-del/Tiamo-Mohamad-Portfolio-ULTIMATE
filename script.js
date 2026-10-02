@@ -23,11 +23,12 @@ document.querySelectorAll(".slider").forEach(slider=>{
  go(0);start();
 });
 
-// الحاوية والمشغلات الذكية
+// === إدارة الـ Lightbox والمشغلات الذكية ===
 const lightbox=document.getElementById("mediaLightbox"),image=document.getElementById("lightboxImage");
+// تعريف الـ iframe المسؤول عن ريلز الفيسبوك
 const lightboxIframe=document.getElementById("lightboxIframe");
 
-// خريطة ذكية لربط صور كفر المربع رقم 4 بروابط ريلز الفيسبوك المباشرة
+// الخريطة الموزونة لربط صور الكفرات الـ 5 بروابط التضمين الرسمية لريلز فيسبوك
 const fbReelsMap = {
     "rm1.jpg": "https://facebook.com",
     "rm2.jpg": "https://facebook.com",
@@ -48,7 +49,7 @@ document.querySelectorAll(".media-open").forEach(btn=>btn.addEventListener("clic
     const src=btn.dataset.full||btn.querySelector("img")?.src;
     if(!src||!lightbox)return;
 
-    // فحص ما إذا كانت الصورة المضغوطة تنتمي للريلز المحددة
+    // فحص ذكي: هل الصورة الحالية هي إحدى كفرات المربع رقم 4؟
     let matchedReel = null;
     for (let key in fbReelsMap) {
         if (src.includes(key)) {
@@ -58,12 +59,12 @@ document.querySelectorAll(".media-open").forEach(btn=>btn.addEventListener("clic
     }
 
     if (matchedReel && lightboxIframe) {
-        // تشغيل فيديو ريل فيسبوك حقيقي
+        // تشغيل فيديو الريل لايف من فيسبوك بالصوت والصورة
         if(image) image.style.display = "none";
         lightboxIframe.style.display = "block";
         lightboxIframe.src = matchedReel;
     } else if (image) {
-        // تشغيل صورة عادية بقية سكاشن الموقع
+        // تشغيل صور السكاشن التانية العادية (بورتريه ولاندسكيب) زي الأول بالظبط
         if(lightboxIframe) lightboxIframe.style.display = "none";
         image.style.display = "block";
         image.src = src;
