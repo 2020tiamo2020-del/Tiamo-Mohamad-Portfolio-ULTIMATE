@@ -39,7 +39,9 @@ if (!lightboxVideo && lightbox) {
 }
 
 // دالة الإغلاق (بتطفي الفيديو والصورة لما تقفل الصندوق)
-const close = () => {
+const close = (    const iframe = document.getElementById("lightboxIframe");
+    if (iframe) { iframe.src = ""; iframe.style.display = "none"; }
+) => {
     lightbox?.classList.remove("open");
     lightbox?.setAttribute("aria-hidden", "true");
     document.body.classList.remove("lightbox-open");
@@ -58,9 +60,11 @@ document.querySelectorAll(".media-open").forEach((btn) => {
         let videoSrc = src;
         
         // تحويل رابط ريلز الفيسبوك إلى صيغة المشغل الرسمي المتوافق مع موقعك
-        if (src && src.includes("facebook.com") && src.includes("/reel/")) {
+                if (src && src.includes("facebook.com") && src.includes("/reel/")) {
             const reelId = src.split("/reel/")[1].split("/")[0].split("?")[0];
             videoSrc = `https://facebook.com{reelId}%2F&show_text=false&t=0`;
+        }
+
         }
 
         // التأكد إذا كان الكارت المضغوط عليه هو المربع رقم 4 الخاص بالفيديوهات
@@ -111,7 +115,7 @@ document.querySelectorAll(".media-open").forEach((btn) => {
     });
 });
 
-lightbox?.addEventListener("click", (e) => { if (e.target === lightbox) close(); });
+
 document.querySelector(".lightbox-close")?.addEventListener("click", close);
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") close(); });
 
