@@ -23,23 +23,9 @@ document.querySelectorAll(".slider").forEach(slider=>{
  go(0);start();
 });
 
-// === إدارة الـ Lightbox والمشغلات الذكية ===
+// === إدارة الـ Lightbox والمشغلات الذكية المطلقة ===
 const lightbox=document.getElementById("mediaLightbox"),image=document.getElementById("lightboxImage");
 const lightboxIframe=document.getElementById("lightboxIframe");
-
-// خريطة ذكية وشاملة بتربط كل كفرات قسم الموشن المحتملة بروابط ريلز الفيسبوك الرسمية
-const fbReelsMap = {
-    "vfx1": "https://facebook.com",
-    "vfx2": "https://facebook.com",
-    "vfx3": "https://facebook.com",
-    "vfx4": "https://facebook.com",
-    "vfx5": "https://facebook.com",
-    "rm1": "https://facebook.com",
-    "rm2": "https://facebook.com",
-    "rm3": "https://facebook.com",
-    "rm4": "https://facebook.com",
-    "rm5": "https://facebook.com"
-};
 
 const close=()=>{
     lightbox?.classList.remove("open");
@@ -50,33 +36,45 @@ const close=()=>{
 };
 
 document.querySelectorAll(".media-open").forEach(btn=>btn.addEventListener("click",(e)=>{
-    // منع انتشار الحدث عشان الضغط على الأسهم ميشغلش الفيديو بالخطأ
     e.stopPropagation();
     
-    const src=btn.dataset.full||btn.querySelector("img")?.src;
-    if(!src||!lightbox)return;
+    // جلب الرابط المباشر المخزن في زرار الضغط نفسه
+    const fullSrc = btn.dataset.full;
+    const thumbSrc = btn.querySelector("img")?.src;
+    
+    if(!lightbox) return;
 
-    // فحص دقيق لاسم الصورة لتحديد الريل الصحيحة
-    let matchedReel = null;
-    const lowerSrc = src.toLowerCase();
-    for (let key in fbReelsMap) {
-        if (lowerSrc.includes(key.toLowerCase())) {
-            matchedReel = fbReelsMap[key];
-            break;
-        }
-    }
-
-    if (matchedReel && lightboxIframe) {
-        // تشغيل ريل فيسبوك المحددة فقط وإخفاء الكفر الثابت
+    // فحص ذكي: لو الرابط المخزن أو الـ full عبارة عن رابط فيسبوك ريلز
+    if (fullSrc && fullSrc.includes("facebook.com")) {
         if(image) image.style.display = "none";
-        lightboxIframe.style.display = "block";
-        lightboxIframe.src = matchedReel;
-    } else if (image) {
-        // تشغيل بقية صور السكاشن العادية كصور ثابتة طبيعية
+        if(lightboxIframe) {
+            lightboxIframe.style.display = "block";
+            // تحويل الرابط تلقائيًا وبشكل فوري لصيغة المشغل بدون خريطة ثابتة
+            lightboxIframe.src = "https://facebook.com" + encodeURIComponent(fullSrc) + "&show_text=false&t=0";
+        }
+    } else if (thumbSrc && (thumbSrc.includes("vfx") || thumbSrc.includes("rm"))) {
+        // حل بديل إضافي: لو مفيش fullSrc بس الصورة تبع قسم الموشن، بنوزع الروابط بناءً على ترتيب الزرار داخل السلايدر الخاص به
+        const parentSlider = btn.closest(".slides") || btn.closest(".work-slider");
+        const allItems = parentSlider ? [...parentSlider.querySelectorAll(".media-open")] : [];
+        const itemIndex = allItems.indexOf(btn);
+        
+        const fbReelsArray = [
+            "https://facebook.comhttps%3A%2F%2Fwww.facebook.com%2Freel%2F4017785205147909&show_text=false&t=0",
+            "https://facebook.comhttps%3A%2F%2Fwww.facebook.com%2Freel%2F3463296903818986&show_text=false&t=0",
+            "https://facebook.comhttps%3A%2F%2Fwww.facebook.com%2Freel%2F1666649731363694&show_text=false&t=0",
+            "https://facebook.comhttps%3A%2F%2Fwww.facebook.com%2Freel%2F1848437869396200&show_text=false&t=0",
+            "https://facebook.comhttps%3A%2F%2Fwww.facebook.com%2Freel%2F25238938432408638&show_text=false&t=0"
+        ];
+        
+        const matchedReel = (itemIndex >= 0 && itemIndex < fbReelsArray.length) ? fbReelsArray[itemIndex] : fbReelsArray[0];
+        if(image) image.style.display = "none";
+        if(lightboxIframe) { lightboxIframe.style.display = "block"; lightboxIframe.src = matchedReel; }
+    } else if (image && (fullSrc || thumbSrc)) {
+        // تشغيل الصور العادية لبقية السكاشن
         if(lightboxIframe) lightboxIframe.style.display = "none";
         image.style.display = "block";
-        image.src = src;
-        image.alt = btn.querySelector("img")?.alt||"Tiamo Mohamad artwork";
+        image.src = fullSrc || thumbSrc;
+        image.alt = btn.querySelector("img")?.alt || "Tiamo Mohamad artwork";
     }
 
     lightbox.classList.add("open");
