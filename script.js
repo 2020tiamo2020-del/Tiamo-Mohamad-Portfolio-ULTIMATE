@@ -23,9 +23,21 @@ document.querySelectorAll(".slider").forEach(slider=>{
  go(0);start();
 });
 
-// === إدارة الـ Lightbox الذكي المطلق ===
+// === إدارة الـ Lightbox المطور والمشغلات الذكية ===
 const lightbox=document.getElementById("mediaLightbox"),image=document.getElementById("lightboxImage");
 const lightboxIframe=document.getElementById("lightboxIframe");
+
+// خريطة الربط الذكية والمطلقة: بتربط روابط ريلز الفيسبوك بصورك الخمسة أوتوماتيكياً
+const fbReelsMap = {
+    "rm1": "https://facebook.com",
+    "rm2": "https://facebook.com",
+    "rm3": "https://facebook.com",
+    "rm4": "https://facebook.com",
+    "rm5": "https://facebook.com",
+    "vfx1": "https://facebook.com",
+    "vfx2": "https://facebook.com",
+    "vfx3": "https://facebook.com"
+};
 
 const close=()=>{
     lightbox?.classList.remove("open");
@@ -38,19 +50,35 @@ const close=()=>{
 document.querySelectorAll(".media-open").forEach(btn=>btn.addEventListener("click",(e)=>{
     e.stopPropagation();
     
-    // جلب الرابط المباشر للفيديو المخزن في الزر نفسه
-    const videoUrl = btn.getAttribute("data-video");
-    const src = btn.dataset.full || btn.querySelector("img")?.src;
-    
-    if(!lightbox) return;
+    // قراءة مسار الصورة المفتوحة حالياً جوة الكواليس
+    const src = btn.dataset.full || btn.dataset.src || btn.querySelector("img")?.src;
+    if(!src||!lightbox) return;
 
-    if (videoUrl && lightboxIframe) {
-        // إذا وجد رابط فيديو صريح، يشغل الريل المظبوطة فوراً ويخفي الصورة
+    let matchedReel = null;
+    const lowerSrc = src.toLowerCase();
+    
+    // مطابقة المسار مع خريطة الفيديوهات الخمسة
+    for (let key in fbReelsMap) {
+        if (lowerSrc.includes(key.toLowerCase())) {
+            matchedReel = fbReelsMap[key];
+            break;
+        }
+    }
+
+    // فحص إضافي لو الضغطة جاية من الكارت رقم 02 (Cinematic Reel) برة
+    const isSection02 = btn.querySelector("small")?.textContent.trim() === "02" || btn.closest(".gallery-card")?.querySelector("small")?.textContent.trim() === "02";
+
+    if (isSection02 && lightboxIframe) {
         if(image) image.style.display = "none";
         lightboxIframe.style.display = "block";
-        lightboxIframe.src = "https://facebook.com" + encodeURIComponent(videoUrl) + "&show_text=false&t=0";
-    } else if (image && src) {
-        // لبقية السكاشن العادية تفتح كصورة ثابتة مستقرة
+        lightboxIframe.src = "https://facebook.com";
+    } else if (matchedReel && lightboxIframe) {
+        // تشغيل فيديو ريل فيسبوك المظبوط فوراً وإخفاء الكفر الثابت
+        if(image) image.style.display = "none";
+        lightboxIframe.style.display = "block";
+        lightboxIframe.src = matchedReel;
+    } else if (image) {
+        // بقية أقسام الصور العادية تفتح كصورة ثابتة طبيعية ومستقرة تماماً زي الأول
         if(lightboxIframe) lightboxIframe.style.display = "none";
         image.style.display = "block";
         image.src = src;
