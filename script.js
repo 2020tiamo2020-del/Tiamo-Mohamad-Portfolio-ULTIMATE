@@ -18,24 +18,23 @@ document.querySelectorAll(".slider").forEach(slider=>{
  prev?.addEventListener("click",e=>{e.stopPropagation();go(index-1,true)});next?.addEventListener("click",e=>{e.stopPropagation();go(index+1,true)});
  slider.addEventListener("mouseenter",()=>paused=true);slider.addEventListener("mouseleave",()=>paused=false);
  slider.addEventListener("focusin",()=>paused=true);slider.addEventListener("focusout",()=>paused=false);
- let touchX=null;slider.addEventListener("touchstart",e=>{touchX=e.changedTouches[0].clientX;paused=true},{passive:true});
- slider.addEventListener("touchend",e=>{if(touchX===null)return;const dx=e.changedTouches[0].clientX-touchX;if(Math.abs(dx)>45)go(index+(dx<0?1:-1),true);touchX=null;paused=false},{passive:true});
+ let touchX=null;slider.addEventListener("touchstart",e=>{touchX=e.changedTouches.clientX;paused=true},{passive:true});
+ slider.addEventListener("touchend",e=>{if(touchX===null)return;const dx=e.changedTouches.clientX-touchX;if(Math.abs(dx)>45)go(index+(dx<0?1:-1),true);touchX=null;paused=false},{passive:true});
  go(0);start();
 });
 
 // === إدارة الـ Lightbox والمشغلات الذكية ===
 const lightbox=document.getElementById("mediaLightbox"),image=document.getElementById("lightboxImage");
-// تعريف الـ iframe المسؤول عن ريلز الفيسبوك
 const lightboxIframe=document.getElementById("lightboxIframe");
 
-// الخريطة الموزونة لربط صور الكفرات الـ 5 بروابط التضمين الرسمية لريلز فيسبوك
-const fbReelsMap = {
-    "rm1.jpg": "https://facebook.com",
-    "rm2.jpg": "https://facebook.com",
-    "rm3.jpg": "https://facebook.com",
-    "rm4.jpg": "https://facebook.com",
-    "rm5.jpg": "https://facebook.com"
-};
+// روابط التضمين الرسمية لريلز الفيسبوك الخمسة بالترتيب من 1 لـ 5
+const fbReelsArray = [
+    "https://facebook.com", // الريل الأولى
+    "https://facebook.com", // الثانية
+    "https://facebook.com", // الثالثة
+    "https://facebook.com", // الرابعة
+    "https://facebook.com"  // الخامسة
+];
 
 const close=()=>{
     lightbox?.classList.remove("open");
@@ -49,22 +48,24 @@ document.querySelectorAll(".media-open").forEach(btn=>btn.addEventListener("clic
     const src=btn.dataset.full||btn.querySelector("img")?.src;
     if(!src||!lightbox)return;
 
-    // فحص ذكي: هل الصورة الحالية هي إحدى كفرات المربع رقم 4؟
-    let matchedReel = null;
-    for (let key in fbReelsMap) {
-        if (src.includes(key)) {
-            matchedReel = fbReelsMap[key];
-            break;
-        }
-    }
+    // فحص ذكي: هل الزر المضغوط موجود داخل حاوية القسم الرابع (VFX & Creative Motion)؟
+    const isVfxSection = btn.closest(".work-section")?.querySelector("h3")?.textContent.includes("VFX") || 
+                        btn.closest(".gallery-card")?.querySelector("h3")?.textContent.includes("VIDEO");
 
-    if (matchedReel && lightboxIframe) {
-        // تشغيل فيديو الريل لايف من فيسبوك بالصوت والصورة
+    if (isVfxSection && lightboxIframe) {
+        // تحديد ترتيب الصورة المفتوحة حالياً جوة السلايدر لمعرفة أي ريل نشغلها
+        const parentSlider = btn.closest(".slides") || btn.closest(".work-slider");
+        const allItems = parentSlider ? [...parentSlider.querySelectorAll(".media-open")] : [];
+        const itemIndex = allItems.indexOf(btn);
+        
+        // جلب الرابط من المصفوفة بناءً على الترتيب (إذا لم يجد الترتيب يفتح الريل الأولى كافتراضي)
+        const matchedReel = (itemIndex >= 0 && itemIndex < fbReelsArray.length) ? fbReelsArray[itemIndex] : fbReelsArray[0];
+
         if(image) image.style.display = "none";
         lightboxIframe.style.display = "block";
         lightboxIframe.src = matchedReel;
     } else if (image) {
-        // تشغيل صور السكاشن التانية العادية (بورتريه ولاندسكيب) زي الأول بالظبط
+        // تشغيل بقية صور السكاشن العادية (01 و 02 و 03) كصور طبيعية ثابتة
         if(lightboxIframe) lightboxIframe.style.display = "none";
         image.style.display = "block";
         image.src = src;
