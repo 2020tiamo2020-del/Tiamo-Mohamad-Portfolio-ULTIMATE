@@ -54,21 +54,55 @@ const close = () => {
 // تشغيل الصندوق بذكاء بناءً على نوع الكارت
 document.querySelectorAll(".media-open").forEach((btn) => {
     btn.addEventListener("click", (e) => {
-        const src = btn.dataset.src;
+                const src = btn.dataset.src;
+        let videoSrc = src;
+        
+        // تحويل رابط ريلز الفيسبوك إلى صيغة المشغل الرسمي المتوافق مع موقعك
+        if (src && src.includes("facebook.com") && src.includes("/reel/")) {
+            const reelId = src.split("/reel/")[1].split("/")[0].split("?")[0];
+            videoSrc = `https://facebook.com{reelId}%2F&show_text=false&t=0`;
+        }
+
         // التأكد إذا كان الكارت المضغوط عليه هو المربع رقم 4 الخاص بالفيديوهات
         const isVideo = btn.closest(".gallery-card")?.querySelector("h3")?.textContent.includes("VIDEO") || btn.dataset.type === "video";
 
         if (src) {
-            if (isVideo && lightboxVideo) {
-                if (lightboxImage) lightboxImage.style.display = "none"; // إخفاء تاج الصورة
-                lightboxVideo.style.display = "block"; // إظهار مشغل الفيديو
-                lightboxVideo.src = src;
-                lightboxVideo.play().catch(err => console.log("Auto-play prevented"));
+            if (isVideo) {
+                if (lightboxImage) lightboxImage.style.display = "none"; // إخفاء الصورة تماماً
+                
+                // لو الرابط جاي من فيسبوك، هنشغله جوة iframe عشان الحماية
+                if (src.includes("facebook.com")) {
+                    if (lightboxVideo) lightboxVideo.style.display = "none";
+                    let iframe = document.getElementById("lightboxIframe");
+                    if (!iframe) {
+                        iframe = document.createElement("iframe");
+                        iframe.id = "lightboxIframe";
+                        iframe.style.width = "100%";
+                        iframe.style.height = "80vh";
+                        iframe.style.maxWidth = "420px"; // أنسب عرض طولي لشاشة الريلز
+                        iframe.style.border = "none";
+                        lightbox.appendChild(iframe);
+                    }
+                    iframe.style.display = "block";
+                    iframe.src = videoSrc;
+                } else if (lightboxVideo) {
+                    // تشغيل الفيديوهات العادية MP4 لو مش فيسبوك
+                    const iframe = document.getElementById("lightboxIframe");
+                    if (iframe) iframe.style.display = "none";
+                    lightboxVideo.style.display = "block";
+                    lightboxVideo.src = videoSrc;
+                    lightboxVideo.play().catch(err => console.log("Auto-play prevented"));
+                }
             } else if (lightboxImage) {
-                if (lightboxVideo) lightboxVideo.style.display = "none"; // إخفاء مشغل الفيديو
-                lightboxImage.style.display = "block"; // إظهار تاج الصورة
+                // عرض الصور العادية في السكاشن التانية
+                const iframe = document.getElementById("lightboxIframe");
+                if (iframe) iframe.style.display = "none";
+                if (lightboxVideo) lightboxVideo.style.display = "none";
+                lightboxImage.style.display = "block";
                 lightboxImage.src = src;
                 lightboxImage.alt = btn.querySelector("img")?.alt || "Gallery Image";
+            }
+
             }
             lightbox?.classList.add("open");
             lightbox?.setAttribute("aria-hidden", "false");
