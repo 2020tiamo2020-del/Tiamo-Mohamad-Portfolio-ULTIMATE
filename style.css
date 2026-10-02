@@ -75,11 +75,41 @@
   .gallery-card .arrow { width: 38px; height: 52px; }
 }
 /* إجبار المدار الثاني والبيضاوي على الدوران العكسي في السنتر */
+/* ضبط المدار البيضاوي المائل بالزاوية الأصلية وإجباره على الدوران العكسي الموزون */
 .hero-visual .o2 {
   width: 450px !important;
   height: 180px !important;
   border-color: rgba(22, 216, 255, 0.35) !important;
-  box-shadow: 0 0 25px rgba(22, 216, 255, 0.2) !important;
+  box-shadow: 0 0 25px rgba(22, 216, 255, 0.15) !important;
+  position: absolute !important;
   transform-origin: center center !important;
-  animation: spinCounterClockwise 18s linear infinite !important;
+  animation: spinOvalCounter 20s linear infinite !important;
+}
+
+/* ضبط المدار الدائري الأول عشان يلف في الاتجاه المعاكس المنتظم */
+.hero-visual .o1 {
+  width: 310px !important;
+  height: 310px !important;
+  border-color: rgba(139, 53, 255, 0.45) !important;
+  transform-origin: center center !important;
+  animation: spinOvalClock 14s linear infinite !important;
+}
+
+/* أنيميشن الدوران مع الحفاظ على زاوية ميل المدار البيضاوي الأصلية (-20deg) */
+@keyframes spinOvalCounter {
+  0% {
+    transform: rotate(-20deg);
+  }
+  100% {
+    transform: rotate(-380deg); /* يلف لورا عكس عقارب الساعة بالملي */
+  }
+}
+
+@keyframes spinOvalClock {
+  0% {
+    transform: rotate(-20deg);
+  }
+  100% {
+    transform: rotate(340deg); /* يلف لقدام مع عقارب الساعة بالملي */
+  }
 }
