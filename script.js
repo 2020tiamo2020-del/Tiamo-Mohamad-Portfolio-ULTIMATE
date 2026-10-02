@@ -23,18 +23,9 @@ document.querySelectorAll(".slider").forEach(slider=>{
  go(0);start();
 });
 
-// === إدارة الـ Lightbox الذكي والمشغلات المطلقة للميديا ===
+// === إدارة الـ Lightbox والمشغلات الذكية المطلقة ===
 const lightbox=document.getElementById("mediaLightbox"),image=document.getElementById("lightboxImage");
 const lightboxIframe=document.getElementById("lightboxIframe");
-
-// روابط ريلز الفيسبوك الخمسة الخاصة بالقسم رقم 04 بالترتيب المظبوط
-const vfxReelsArray = [
-    "https://facebook.com", // الريل الأولى
-    "https://facebook.com", // الريل الثانية
-    "https://facebook.com", // الريل الثالثة
-    "https://facebook.com", // الريل الرابعة
-    "https://facebook.com"  // الريل الخامسة
-];
 
 const close=()=>{
     lightbox?.classList.remove("open");
@@ -45,39 +36,28 @@ const close=()=>{
 };
 
 document.querySelectorAll(".media-open").forEach(btn=>btn.addEventListener("click",(e)=>{
-    // منع تداخل الضغطات مع أسهم التقليب جوة السلايدر
+    // منع تداخل الضغطات مع أسهم التقليب
     e.stopPropagation();
     
-    const src=btn.dataset.full||btn.querySelector("img")?.src;
-    if(!src||!lightbox) return;
+    // جلب الرابط المباشر أو كود التضمين المخزن في زرار الضغط نفسه من خاصية data-full أو data-src
+    const fullSrc = btn.dataset.full || btn.dataset.src;
+    const thumbSrc = btn.querySelector("img")?.src;
+    
+    if(!lightbox) return;
 
-    // فحص رقم القسم لمعرفة الضغطة جاية منين بالظبط
-    const parentCard = btn.closest(".gallery-card");
-    const sectionNumber = parentCard?.querySelector("small")?.textContent.trim();
-
-    if (sectionNumber === "04" && lightboxIframe) {
-        // إذا كنا جوة القسم الرابع، نحدد ترتيب الزرار جوة السلايدر لتشغيل الريل المقابلة له فوراً
-        const parentSlider = btn.closest(".slides") || btn.closest(".work-slider") || parentCard;
-        const allItems = parentSlider ? [...parentSlider.querySelectorAll(".media-open")] : [];
-        const itemIndex = allItems.indexOf(btn);
-        
-        const matchedReel = (itemIndex >= 0 && itemIndex < vfxReelsArray.length) ? vfxReelsArray[itemIndex] : vfxReelsArray[0];
-        
+    // فحص ذكي: لو الرابط الممرر عبارة عن رابط فيسبوك ريلز
+    if (fullSrc && fullSrc.includes("facebook.com")) {
         if(image) image.style.display = "none";
-        lightboxIframe.style.display = "block";
-        lightboxIframe.src = matchedReel;
-
-    } else if (sectionNumber === "02" && lightboxIframe) {
-        // إذا كنا جوة القسم الثاني (Cinematic Reel)، يشغل ريل المحارب الخاصة به بشكل مستقل
-        if(image) image.style.display = "none";
-        lightboxIframe.style.display = "block";
-        lightboxIframe.src = "https://facebook.com";
-
-    } else if (image) {
-        // بقية أقسام الصور العادية (01 و 03) تفتح كصور ثابتة طبيعية زي الأول تماماً
+        if(lightboxIframe) {
+            lightboxIframe.style.display = "block";
+            // تحويل الرابط تلقائيًا وبشكل فوري لصيغة التضمين الرسمية الخاصة بفيسبوك
+            lightboxIframe.src = "https://facebook.com" + encodeURIComponent(fullSrc) + "&show_text=false&t=0";
+        }
+    } else if (image && (fullSrc || thumbSrc)) {
+        // تشغيل الصور العادية لبقية سكاشن الموقع
         if(lightboxIframe) lightboxIframe.style.display = "none";
         image.style.display = "block";
-        image.src = src;
+        image.src = fullSrc || thumbSrc;
         image.alt = btn.querySelector("img")?.alt || "Tiamo Mohamad artwork";
     }
 
