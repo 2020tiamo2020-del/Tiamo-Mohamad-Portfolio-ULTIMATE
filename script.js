@@ -28,6 +28,12 @@ updateScrollOrbit();
 const menuBtn=document.getElementById("menuBtn"),nav=document.getElementById("nav");
 menuBtn?.addEventListener("click",()=>nav?.classList.toggle("open"));
 nav?.querySelectorAll("a").forEach(a=>a.addEventListener("click",()=>nav.classList.remove("open")));
+const menuBtn=document.getElementById("menuBtn"),nav=document.getElementById("nav");   ← سطر 28 (كما هو)
+menuBtn?.addEventListener("click",()=>nav?.classList.toggle("open"));                   ← سطر 29 (كما هو)
+nav?.querySelectorAll("a").forEach(a=>a.addEventListener("click",()=>nav.classList.remove("open")));   ← سطر 30 (كما هو)
+addEventListener("scroll",()=>nav?.classList.remove("open"),{passive:true});            ← جديد
+document.addEventListener("click",e=>{if(!nav?.contains(e.target)&&!menuBtn?.contains(e.target))nav?.classList.remove("open")});   ← جديد
+const ro=new IntersectionObserver(...                                                   ← (كان سطر 31) 
   const ro=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add("visible");ro.unobserve(e.target)}}),{threshold:.12});
 document.querySelectorAll(".reveal").forEach(e=>ro.observe(e));
 
