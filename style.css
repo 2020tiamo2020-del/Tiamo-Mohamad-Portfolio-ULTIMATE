@@ -509,4 +509,3 @@
 .about-photo.show{opacity:.9;transform:translateX(0)}
 .about-photo img{height:100%;width:auto;max-width:100%;margin-left:auto;display:block;-webkit-mask-image:radial-gradient(ellipse 85% 75% at 50% 38%,#000 45%,transparent 100%);mask-image:radial-gradient(ellipse 85% 75% at 50% 38%,#000 45%,transparent 100%)}
 @media(max-width:900px){.about-photo{width:75%;height:80%}.about-photo.show{opacity:.35}}
-@media(prefers-reduced-motion:reduce){.about-photo{transition:opacity .4s ease;transform:none}}
