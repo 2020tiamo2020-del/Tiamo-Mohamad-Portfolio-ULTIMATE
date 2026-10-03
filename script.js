@@ -27,7 +27,8 @@ addEventListener("resize",updateScrollOrbit);
 updateScrollOrbit();
 const menuBtn=document.getElementById("menuBtn"),nav=document.getElementById("nav");
 menuBtn?.addEventListener("click",()=>nav?.classList.toggle("open"));
-const ro=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add("visible");ro.unobserve(e.target)}}),{threshold:.12});
+nav?.querySelectorAll("a").forEach(a=>a.addEventListener("click",()=>nav.classList.remove("open")));
+  const ro=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add("visible");ro.unobserve(e.target)}}),{threshold:.12});
 document.querySelectorAll(".reveal").forEach(e=>ro.observe(e));
 
 document.querySelectorAll(".slider").forEach(slider=>{
