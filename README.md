@@ -1,26 +1,20 @@
-[README.txt](https://github.com/user-attachments/files/33005439/README.txt)
-TIAMO MOHAMAD — ULTIMATE PORTFOLIO
+### 📄 الملف الرابع: `README.txt`
+*(هذا ملف إرشادي منظم، احتفظ به كمرجع لك لمعرفة أسماء ومسارات الصور المطلوبة)*
 
-1) Upload index.html, style.css and script.js to the root of your GitHub Pages repository.
-2) Keep your existing image folders/files and put them under /images/ using the filenames referenced in index.html.
-3) Optional logo: if you want your own logo image, replace the TM mark in the header later; the site works without an uploaded logo.
+```text
+TIAMO MOHAMAD — DEPLOYMENT INSTRUCTIONS
 
-Configured links:
-- WhatsApp: +20 12 7853 6645
-- Photoshop Mode: https://www.facebook.com/groups/3740640722906464
-- Personal Facebook: https://www.facebook.com/tiamo.mohamad/
-- Instagram: https://www.instagram.com/120tiamo120/
-- TikTok: https://www.tiktok.com/@tiamo.mohamad
-- Example Facebook Reel: https://www.facebook.com/reel/1876850873302115
+1) Upload index.html, style.css and script.js to the root of your GitHub repository.
+2) In your repository, create a folder named exactly: /images/
+3) Put all your image files inside the /images/ folder using these exact names:
 
-Gallery behavior:
-- Separate gallery for each work category.
-- Portrait and landscape media preserve natural proportions.
-- Smooth auto-slide.
-- Arrow controls appear and glow on mouse hover.
-- Hover pauses autoplay.
-- Touch swipe works on mobile.
-- Video cards open the original Facebook Reel in a new tab.
-- Missing images are intentionally allowed; add the real assets later without changing the layout.
+   - main-logo.png        (Your main header brand logo)
+   - portrait-before.jpg  (Photoshop slider: raw camera face work)
+   - portrait-after.jpg   (Photoshop slider: finished clean retouch face work)
+   - advertising-before.jpg (Photoshop slider: raw background product)
+   - advertising-after.jpg  (Photoshop slider: spectacular advertising composite)
+   - ai-1.jpg            (First image for Category A Slider)
+   - ai-2.jpg            (Second image for Category A Slider)
+   - reel-thumb.jpg      (Video preview thumbnail cover)
 
-No prices are displayed on the portfolio.
+4) The template has fallback placeholders so the site will load perfectly even if some images are missing. Replace them anytime!
