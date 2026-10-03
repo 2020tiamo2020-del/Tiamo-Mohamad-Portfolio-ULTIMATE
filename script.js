@@ -32,7 +32,8 @@ nav?.querySelectorAll("a").forEach(a=>a.addEventListener("click",()=>nav.classLi
 document.addEventListener("click",e=>{if(!nav?.contains(e.target)&&!menuBtn?.contains(e.target))nav?.classList.remove("open")});                                               
   const ro=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add("visible");ro.unobserve(e.target)}}),{threshold:.12});
 document.querySelectorAll(".reveal").forEach(e=>ro.observe(e));
-
+const aboutPhoto=document.querySelector(".about-photo"),aboutSec=document.getElementById("about");
+if(aboutPhoto&&aboutSec)new IntersectionObserver(es=>es.forEach(e=>aboutPhoto.classList.toggle("show",e.isIntersecting)),{threshold:.35}).observe(aboutSec);
 document.querySelectorAll(".slider").forEach(slider=>{
   const track=slider.querySelector(".slides"),slides=[...slider.querySelectorAll(".slides>figure")],prev=slider.querySelector(".prev"),next=slider.querySelector(".next"),dots=slider.querySelector(".dots");
   if(!track||!slides.length)return;
