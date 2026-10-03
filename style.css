@@ -509,3 +509,5 @@
 .about-photo.show{opacity:.9;transform:translateX(0)}
 .about-photo img{height:100%;width:auto;max-width:100%;margin-left:auto;display:block;-webkit-mask-image:linear-gradient(to right,transparent,#000 28%,#000 72%,transparent),linear-gradient(to bottom,transparent,#000 10%,#000 72%,transparent);-webkit-mask-composite:source-in;mask-image:linear-gradient(to right,transparent,#000 28%,#000 72%,transparent),linear-gradient(to bottom,transparent,#000 10%,#000 72%,transparent);mask-composite:intersect}@media(max-width:900px){.about-photo{width:75%;height:80%}.about-photo.show{opacity:.35}}
 @media(prefers-reduced-motion:reduce){.about-photo{transition:opacity .4s ease;transform:none}}
+#about .section-title,#about .section-kicker{padding-right:min(32%,370px)}
+@media(max-width:900px){#about .section-title,#about .section-kicker{padding-right:0}}
