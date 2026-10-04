@@ -1,4 +1,12 @@
-(() => {
+if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+
+const goTop = () => {
+  if (location.hash) history.replaceState(null, "", location.pathname + location.search);
+  window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+};
+const navType = performance.getEntriesByType("navigation")[0]?.type;
+if (navType === "reload" || navType === "back_forward") goTop();
+addEventListener("pageshow", e => { if (e.persisted) goTop(); });(() => {
 "use strict";
 
 /* ---------- Helpers ---------- */
