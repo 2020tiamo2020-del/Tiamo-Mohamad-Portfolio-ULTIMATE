@@ -1,3 +1,0 @@
-User-agent: *
-Allow: /
-Sitemap: https://2020tiamo2020-del.github.io/Tiamo-Mohamad-Portfolio-ULTIMATE/sitemap.xml
