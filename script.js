@@ -762,7 +762,7 @@ updateScrollOrbit(true);
    It then records: visits, pages, countries, devices, browsers and WHERE visitors came from (referrer),
    plus clicks on WhatsApp / Facebook / Instagram / TikTok / Photoshop Mode links. ---------- */
 (() => {
-  const GOATCOUNTER_CODE = "";
+  const GOATCOUNTER_CODE = "tiamo";
   if (!GOATCOUNTER_CODE) return;
 
   const gc = document.createElement("script");
