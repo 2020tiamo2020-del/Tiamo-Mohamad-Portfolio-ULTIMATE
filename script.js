@@ -315,11 +315,36 @@ document.querySelectorAll(".slider").forEach(slider => {
   play();
 });
 
-/* ---------- Lightbox ---------- */
+/* ---------- Lightbox (gallery nav like AI Creation) ---------- */
 const lightbox = document.getElementById("mediaLightbox");
 const image = document.getElementById("lightboxImage");
 const closeBtn = document.querySelector(".lightbox-close");
+const lbPrev = document.querySelector(".lightbox-prev");
+const lbNext = document.querySelector(".lightbox-next");
+const lbCount = document.getElementById("lightboxCount");
 let lastTrigger = null;
+let lbItems = [];
+let lbIndex = 0;
+
+let _openSoundAt = 0;
+const playOpenSound = () => {
+  try {
+    const now = performance.now();
+    if (now - _openSoundAt < 280) return; // prevent rapid double-fire
+    _openSoundAt = now;
+    if (!window.__openAudio) {
+      window.__openAudio = new Audio("audio/open.mp3");
+      window.__openAudio.preload = "auto";
+      window.__openAudio.volume = 0.55;
+    }
+    const a = window.__openAudio;
+    a.pause();
+    a.currentTime = 0;
+    const p = a.play();
+    if (p && p.catch) p.catch(() => {});
+  } catch (_) {}
+};
+window.playOpenSound = playOpenSound;
 
 const closeLightbox = () => {
   if (!lightbox?.classList.contains("open")) return;
@@ -327,43 +352,103 @@ const closeLightbox = () => {
   lightbox.setAttribute("aria-hidden", "true");
   document.body.classList.remove("lightbox-open");
   image?.removeAttribute("src");
+  if (lbCount) lbCount.textContent = "";
   lastTrigger?.focus?.();
   lastTrigger = null;
+  lbItems = [];
+  lbIndex = 0;
 };
-const playOpenSound = () => {
-  try {
-    if (!window.__openAudio) {
-      window.__openAudio = new Audio("audio/open.mp3");
-      window.__openAudio.preload = "metadata";
-      window.__openAudio.volume = 0.5;
-    }
-    window.__openAudio.currentTime = 0;
-    const p = window.__openAudio.play();
-    if (p && p.catch) p.catch(() => {});
-  } catch (_) {}
+
+const showLb = (i, withSound = false) => {
+  if (!lbItems.length || !image) return;
+  lbIndex = (i + lbItems.length) % lbItems.length;
+  const it = lbItems[lbIndex];
+  image.classList.add("lb-swap");
+  setTimeout(() => {
+    image.src = it.src;
+    image.alt = it.alt;
+    image.classList.remove("lb-swap");
+  }, 140);
+  if (lbCount) {
+    lbCount.textContent = String(lbIndex + 1).padStart(2, "0") + " / " + String(lbItems.length).padStart(2, "0");
+  }
+  if (withSound) playOpenSound();
 };
+
+const collectGallery = btn => {
+  const card = btn.closest(".gallery-card");
+  const scope = card || document.getElementById("work") || document;
+  const nodes = [...scope.querySelectorAll(".media-open")].filter(b => {
+    const s = b.dataset.full || b.querySelector("img")?.src;
+    return !!s;
+  });
+  return nodes.map(b => ({
+    src: b.dataset.full || b.querySelector("img")?.src,
+    alt: b.querySelector("img")?.alt || "Tiamo Mohamad artwork",
+    el: b
+  }));
+};
+
 const openImage = btn => {
   const src = btn.dataset.full || btn.querySelector("img")?.src;
   if (!src || !lightbox || !image) return;
+  // already open on this image → ignore (stops double handler)
+  if (lightbox.classList.contains("open") && lastTrigger === btn) return;
   lastTrigger = btn;
-  image.src = src;
-  image.alt = btn.querySelector("img")?.alt || "Tiamo Mohamad artwork";
+  lbItems = collectGallery(btn);
+  lbIndex = Math.max(0, lbItems.findIndex(it => it.el === btn || it.src === src));
+  if (lbIndex < 0) lbIndex = 0;
+  if (!lbItems.length) {
+    lbItems = [{ src, alt: btn.querySelector("img")?.alt || "Tiamo Mohamad artwork", el: btn }];
+    lbIndex = 0;
+  }
+  image.src = lbItems[lbIndex].src;
+  image.alt = lbItems[lbIndex].alt;
+  image.classList.remove("lb-swap");
+  if (lbCount) {
+    lbCount.textContent = String(lbIndex + 1).padStart(2, "0") + " / " + String(lbItems.length).padStart(2, "0");
+  }
+  const multi = lbItems.length > 1;
+  if (lbPrev) lbPrev.style.display = multi ? "" : "none";
+  if (lbNext) lbNext.style.display = multi ? "" : "none";
   lightbox.classList.add("open");
   lightbox.setAttribute("aria-hidden", "false");
   document.body.classList.add("lightbox-open");
   playOpenSound();
-  setTimeout(() => closeBtn?.focus(), 60);   // wait for the overlay to become visible, otherwise focus() is ignored
+  setTimeout(() => closeBtn?.focus(), 60);
 };
-document.querySelectorAll(".media-open").forEach(btn => btn.addEventListener("click", e => {
-  e.preventDefault(); e.stopPropagation(); openImage(btn);
-}));
-// Reel links intentionally keep their native Facebook href (open in a new tab).
+
+// Event delegation so auto-slot images also open
+document.addEventListener("click", e => {
+  const btn = e.target.closest?.(".media-open");
+  if (!btn) return;
+  e.preventDefault();
+  e.stopPropagation();
+  openImage(btn);
+});
+
+lbPrev?.addEventListener("click", e => { e.stopPropagation(); showLb(lbIndex - 1, true); });
+lbNext?.addEventListener("click", e => { e.stopPropagation(); showLb(lbIndex + 1, true); });
+
 lightbox?.addEventListener("click", e => { if (e.target === lightbox) closeLightbox(); });
 closeBtn?.addEventListener("click", closeLightbox);
+
 document.addEventListener("keydown", e => {
   if (e.key === "Escape") { closeLightbox(); closeMenu(); }
-  if (e.key === "Tab" && lightbox?.classList.contains("open")) { e.preventDefault(); closeBtn?.focus(); } // minimal focus trap
+  if (!lightbox?.classList.contains("open")) return;
+  if (e.key === "ArrowRight") { e.preventDefault(); showLb(lbIndex + 1, true); }
+  if (e.key === "ArrowLeft") { e.preventDefault(); showLb(lbIndex - 1, true); }
+  if (e.key === "Tab") { e.preventDefault(); closeBtn?.focus(); }
 });
+
+// Swipe on lightbox (mobile)
+let lbTouchX = 0;
+lightbox?.addEventListener("touchstart", e => { lbTouchX = e.touches[0].clientX; }, { passive: true });
+lightbox?.addEventListener("touchend", e => {
+  if (!lightbox.classList.contains("open")) return;
+  const d = e.changedTouches[0].clientX - lbTouchX;
+  if (Math.abs(d) > 50) showLb(lbIndex + (d < 0 ? 1 : -1), true);
+}, { passive: true });
 
 /* ---------- Gallery auto-slots: up to 30 files per gallery, invisible until the file exists ----------
    Just upload the picture into /images/ using the gallery's NAME + NUMBER and it appears by itself
@@ -408,7 +493,7 @@ const REEL_LINKS = {
       const btn = document.createElement("button");
       btn.className = "media-open"; btn.type = "button"; btn.dataset.full = hit.url; btn.setAttribute("aria-label", "Open photo");
       btn.appendChild(img);
-      btn.addEventListener("click", e => { e.preventDefault(); e.stopPropagation(); openImage(btn); });
+      /* click handled by document delegation on .media-open */
       fig.appendChild(btn);
     }
     return fig;
@@ -992,7 +1077,7 @@ updateScrollOrbit(true);
         io.disconnect(); thumbsNear = true;
         thumbsWrap.querySelectorAll(".ba-thumb").forEach(paint);
         thumbsWrap.classList.add("is-in"); settle();
-      }, { rootMargin: "300px 0px", threshold: 0 });
+      }, { rootMargin: "120px 0px", threshold: 0 });
       io.observe(thumbsWrap);
     } else { thumbsNear = true; thumbsWrap.classList.add("is-in"); settle(); }
     if ("ResizeObserver" in window) {
@@ -1380,7 +1465,7 @@ updateScrollOrbit(true);
       });
     };
     vids.forEach(v => v.addEventListener("canplay", update));
-    new IntersectionObserver(es => { near = es[0].isIntersecting; update(); }, { rootMargin: "400px 0px" }).observe(slider);
+    new IntersectionObserver(es => { near = es[0].isIntersecting; update(); }, { rootMargin: "180px 0px" }).observe(slider);
     new IntersectionObserver(es => { shown = es[0].isIntersecting; update(); }, { threshold: 0.2 }).observe(slider);
     new MutationObserver(update).observe(slider.querySelector(".slides"), { attributes: true, subtree: true, attributeFilter: ["class"] });
     document.addEventListener("visibilitychange", update);
@@ -1705,7 +1790,7 @@ updateScrollOrbit(true);
       );
     };
 
-    // Toast ~1s before enter sound ends + short UI click with it
+    // Toast soon after enter scene settles (not waiting for full welcome.mp3)
     let toastScheduled = false;
     const scheduleWelcomeToast = () => {
       if (toastScheduled) return;
@@ -1714,38 +1799,22 @@ updateScrollOrbit(true);
       const show = () => {
         if (shown) return;
         shown = true;
-        // dedicated toast notification sound (not language toggle)
         try {
           if (!window.__toastAudio) {
             window.__toastAudio = new Audio("audio/toast.mp3");
-            window.__toastAudio.preload = "metadata";
+            window.__toastAudio.preload = "auto";
             window.__toastAudio.volume = 0.55;
           }
-          window.__toastAudio.currentTime = 0;
-          const p = window.__toastAudio.play();
+          const a = window.__toastAudio;
+          a.pause();
+          a.currentTime = 0;
+          const p = a.play();
           if (p && p.catch) p.catch(() => {});
         } catch (_) {}
         showWelcomeToast();
       };
-      if (welcomeAudio) {
-        const tryEarly = () => {
-          const d = welcomeAudio.duration;
-          if (Number.isFinite(d) && d > 1.2) {
-            const earlyAt = Math.max(0, (d - 1) * 1000); // 1s before end
-            const elapsed = (welcomeAudio.currentTime || 0) * 1000;
-            setTimeout(show, Math.max(0, earlyAt - elapsed));
-            return true;
-          }
-          return false;
-        };
-        if (!tryEarly()) {
-          welcomeAudio.addEventListener("loadedmetadata", () => { tryEarly(); }, { once: true });
-        }
-        // safety: never later than full track + buffer
-        setTimeout(show, 5500);
-      } else {
-        setTimeout(show, 1200);
-      }
+      // ~ after logo land (visual done) — synced with toast.mp3, not enter track length
+      setTimeout(show, 1100);
     };
 
     // Particles swirl to logo center
