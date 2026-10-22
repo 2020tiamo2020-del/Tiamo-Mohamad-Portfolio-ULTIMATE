@@ -1,0 +1,233 @@
+/* TIAMO — Enhance layer (Lenis + Hero WebGL + gallery tilt)
+   Loads after style.css / motion.css. Does not override section spacing. */
+
+/* ---- Lenis recommended ---- */
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
+.lenis.lenis-stopped { overflow: hidden; }
+.lenis.lenis-smooth iframe { pointer-events: none; }
+.lenis.lenis-scrolling iframe { pointer-events: none; }
+
+/* ---- Hero WebGL canvas under the TM orb ---- */
+.hero-visual {
+  position: relative;
+  isolation: isolate;
+}
+.hero-visual .tm-hero-gl {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+  display: block;
+}
+.hero-visual.has-webgl .orbit {
+  opacity: 0 !important;
+  visibility: hidden;
+  pointer-events: none;
+}
+.hero-visual #tmOrb,
+.hero-visual .core {
+  position: relative;
+  z-index: 2;
+}
+.hero-visual .floating-tag {
+  z-index: 3;
+}
+
+/* ---- Gallery 3D tilt ---- */
+.gallery-grid {
+  perspective: 1200px;
+}
+.gallery-card.tm-tilt {
+  transform-style: preserve-3d;
+  will-change: transform;
+  transition: transform .45s var(--ease, cubic-bezier(.22, 1, .36, 1)),
+              border-color .35s var(--ease, cubic-bezier(.22, 1, .36, 1)),
+              box-shadow .35s var(--ease, cubic-bezier(.22, 1, .36, 1));
+}
+.gallery-card.tm-tilt:hover {
+  /* base hover lift is blended with tilt via JS */
+}
+@media (hover: none), (pointer: coarse) {
+  .gallery-card.tm-tilt {
+    transform: none !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gallery-card.tm-tilt {
+    transform: none !important;
+    transition: border-color .2s ease, box-shadow .2s ease;
+  }
+  .hero-visual.has-webgl .orbit {
+    opacity: 1 !important;
+    visibility: visible;
+  }
+  .hero-visual .tm-hero-gl {
+    display: none !important;
+  }
+}
+
+/* ---- Soft energy field behind AI Creation (CSS fallback + canvas host) ---- */
+#creation {
+  position: relative;
+  isolation: isolate;
+}
+#creation .tm-fx-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+  opacity: .55;
+  mix-blend-mode: screen;
+}
+#creation > *:not(.tm-fx-canvas) {
+  position: relative;
+  z-index: 1;
+}
+
+/* ---- About photo: gentle depth on pointer (desktop) ---- */
+@media (hover: hover) and (pointer: fine) {
+  #about .about-photo {
+    transition: transform .6s var(--ease, cubic-bezier(.22, 1, .36, 1));
+    transform-style: preserve-3d;
+  }
+}
+
+
+/* =========================================================
+   SCROLL VITALITY — Lando-inspired living scroll
+   ========================================================= */
+html.tm-scroll-live {
+  --tm-vel: 0;
+  --tm-vel-dir: 1;
+}
+html.tm-scroll-live body {
+  /* hairline energy while the wheel is alive */
+  transition: filter .4s ease;
+}
+html.tm-scroll-live.tm-scrolling body {
+  /* almost imperceptible — keeps the page “alive” without blurry text */
+}
+
+.tm-scroll-section {
+  --tm-sp: 0;
+  --tm-sm: 0;
+  will-change: auto;
+}
+
+.tm-scroll-title {
+  will-change: transform, opacity;
+  transition: none; /* driven by JS each frame */
+}
+
+.tm-scroll-card {
+  will-change: translate, scale;
+  transition: translate .15s linear, scale .15s linear;
+}
+
+/* soft section wash linked to progress (very light) */
+@media (hover: hover) and (pointer: fine) {
+  .tm-scroll-section.tm-in-view {
+    /* reserved for future shader hooks */
+  }
+  #work.tm-scroll-section {
+    background:
+      radial-gradient(
+        70% 50% at 50% calc(50% + (var(--tm-sm, 0) * 8%)),
+        rgba(139, 53, 255, calc(0.04 + var(--tm-sp, 0) * 0.04)),
+        transparent 70%
+      );
+  }
+  #beforeafter.tm-scroll-section {
+    background:
+      radial-gradient(
+        60% 45% at 80% calc(40% + (var(--tm-sm, 0) * 6%)),
+        rgba(22, 216, 255, calc(0.03 + var(--tm-sp, 0) * 0.03)),
+        transparent 65%
+      );
+  }
+  #creation.tm-scroll-section {
+    background:
+      radial-gradient(
+        55% 40% at 20% calc(50% + (var(--tm-sm, 0) * 5%)),
+        rgba(139, 53, 255, calc(0.05 + var(--tm-sp, 0) * 0.04)),
+        transparent 60%
+      );
+  }
+}
+
+/* Lenis + sticky header safety */
+html.lenis {
+  scroll-behavior: auto !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tm-scroll-title,
+  .tm-scroll-card {
+    transform: none !important;
+    translate: none !important;
+    scale: none !important;
+    opacity: 1 !important;
+    will-change: auto;
+  }
+  html.tm-scroll-live.tm-scrolling body {
+    filter: none;
+  }
+}
+
+
+/* =========================================================
+   AI CREATION portal — fly-in + scale world
+   ========================================================= */
+#creation{
+  --tm-mx: 0px;
+  --tm-my: 0px;
+}
+#creation .cr-wall{
+  perspective: 1200px;
+}
+#creation .tm-portal-item{
+  --tm-ps: 0.92;
+  --tm-py: 0px;
+  opacity: 0;
+  will-change: transform, opacity, filter;
+  transition:
+    opacity .9s cubic-bezier(.22,1,.36,1),
+    transform 1s cubic-bezier(.16,1,.3,1),
+    filter .9s ease;
+  transform:
+    translate3d(var(--tm-ox, 0), calc(var(--tm-oy, 40px) + var(--tm-py)), 0)
+    scale(var(--tm-ps))
+    rotateX(var(--tm-rx, 0deg))
+    rotateY(var(--tm-ry, 0deg));
+  filter: blur(8px) brightness(.7);
+}
+#creation .tm-portal-item.from-left{ --tm-ox: -64px; --tm-oy: 20px; --tm-ry: 8deg; }
+#creation .tm-portal-item.from-right{ --tm-ox: 64px; --tm-oy: 20px; --tm-ry: -8deg; }
+#creation .tm-portal-item.from-top{ --tm-ox: 0px; --tm-oy: -56px; --tm-rx: 6deg; }
+#creation .tm-portal-item.from-bot{ --tm-ox: 0px; --tm-oy: 56px; --tm-rx: -6deg; }
+#creation .tm-portal-item.from-scale{ --tm-ox: 0px; --tm-oy: 24px; }
+
+#creation .tm-portal-item.tm-portal-in{
+  opacity: 1;
+  filter: none;
+  transform:
+    translate3d(var(--tm-mx, 0px), calc(var(--tm-my, 0px) * 0.35 + var(--tm-py)), 0)
+    scale(var(--tm-ps))
+    rotateX(0deg)
+    rotateY(0deg);
+  transition-delay: calc(var(--tm-pi, 0) * 45ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #creation .tm-portal-item{
+    opacity: 1 !important;
+    filter: none !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
