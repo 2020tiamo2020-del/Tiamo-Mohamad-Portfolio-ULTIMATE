@@ -112,7 +112,7 @@ const onScroll = () => {
 addEventListener("scroll", onScroll, { passive: true }); onScroll();
 
 /* 4 · Staggered rise (blur + lift) as each block enters the viewport */
-const SEL = ".section-kicker,.cr-count,.cr-more,.gallery-card,.contact p,.contact-btn,.ba-copy .btn"; /* social-links excluded — must stay visible */
+const SEL = ".section-kicker,.cr-count,.cr-more,.gallery-card,.social-links a,.contact p,.contact-btn,.ba-copy .btn";
 if ("IntersectionObserver" in window) {
   const st = $$(SEL).filter(e => !e.closest(".section-heading-scroll") && !e.closest(".hero"));
   st.forEach(e => e.classList.add("tm-st"));
