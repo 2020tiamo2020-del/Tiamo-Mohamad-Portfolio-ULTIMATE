@@ -436,18 +436,17 @@ nav?.querySelectorAll("a").forEach(a => a.addEventListener("click", closeMenu));
     try { window.__fillAboutBA && window.__fillAboutBA(); } catch (_) {}
     const kicker = sec.querySelector(".section-kicker");
     const cert = sec.querySelector(".cert");
-    const headY = absTop(kicker || sec) - headerPad() - 24;
-    /* If certificate would be cut, bias scroll so more of About fits in the viewport */
+    const headY = absTop(kicker || sec) - headerPad() - 12;
     if (cert) {
-      const certBottom = absTop(cert) + cert.offsetHeight + 24;
-      const viewH = innerHeight;
-      const maxY = Math.max(0, certBottom - viewH);
-      scrollYTo(Math.min(headY, maxY));
+      const certBottom = absTop(cert) + cert.offsetHeight + 32;
+      const maxY = Math.max(0, certBottom - innerHeight);
+      /* prefer showing full certificate; title may sit closer under nav */
+      scrollYTo(Math.max(maxY, Math.min(headY, maxY + 40)));
     } else {
       scrollYTo(headY);
     }
-    setTimeout(() => { try { window.__sectionEnter && window.__sectionEnter.about && window.__sectionEnter.about(); } catch (_) {} }, 200);
-    setTimeout(() => { try { window.__updateActiveNav && window.__updateActiveNav(); } catch (_) {} }, 500);
+    setTimeout(() => { try { window.__sectionEnter && window.__sectionEnter.about && window.__sectionEnter.about(); } catch (_) {} }, 280);
+    setTimeout(() => { try { window.__updateActiveNav && window.__updateActiveNav(); } catch (_) {} }, 550);
   };
 
   const frameContact = () => {

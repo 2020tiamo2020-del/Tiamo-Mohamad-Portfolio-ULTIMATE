@@ -590,188 +590,132 @@ section.hero.hero-enter h1 .word{
 }
 
 
+
 /* =========================================================
-   About glass title reveal (B glass + C sequential lines)
+   About title — glass rectangles cover text, then wipe away
    ========================================================= */
-#about .section-title h2{
+#about .section-title h2[data-tm-glass]{
   display:flex;
   flex-direction:column;
   align-items:flex-start;
-  gap:0.02em;
+  gap:0.15em;
+  opacity:1 !important;
+  transform:none !important;
 }
-[dir=rtl] #about .section-title h2{ align-items:flex-end; }
+[dir=rtl] #about .section-title h2[data-tm-glass]{
+  align-items:flex-end;
+}
 
-#about .section-title h2 .tm-line{
+#about .section-title h2[data-tm-glass] .tm-line{
   position:relative;
   display:block;
   overflow:hidden;
   width:max-content;
   max-width:100%;
-  line-height:1.15;
-  padding:0.08em 0.12em;
-  margin:0 0 0.08em;
-  min-height:1.15em;
+  line-height:1.18;
+  padding:0.04em 0.06em;
 }
 
-#about .section-title h2 .tm-line-text{
+#about .section-title h2[data-tm-glass] .tm-line-text{
   display:block;
   position:relative;
   z-index:1;
-  transform:translate3d(0, 112%, 0);
+  transform:translateY(110%);
   opacity:0;
-  transition:
-    transform 1.15s cubic-bezier(.19,1,.22,1) calc(var(--li, 0) * 0.22s + 0.2s),
-    opacity .6s ease calc(var(--li, 0) * 0.22s + 0.25s);
 }
 
-#about .section-title h2 .tm-gbar{
+#about .section-title h2[data-tm-glass] .tm-gbar{
   position:absolute;
-  inset:0;
+  left:0; right:0; top:0; bottom:0;
   z-index:2;
-  border-radius:10px;
-  /* frosted glass — clearly visible while covering the line */
-  background:linear-gradient(
-    105deg,
-    rgba(255,255,255,.42) 0%,
-    rgba(230,220,255,.32) 45%,
-    rgba(180,160,255,.22) 100%
-  );
-  border:1px solid rgba(255,255,255,.35);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.45),
-    0 10px 32px rgba(0,0,0,.25);
-  -webkit-backdrop-filter:blur(14px) saturate(150%);
-  backdrop-filter:blur(14px) saturate(150%);
-  transform:translate3d(0, 0, 0);
-  transform-origin:left center;
-  transition:
-    transform 1.2s cubic-bezier(.19,1,.22,1) calc(var(--li, 0) * 0.22s + 0.15s),
-    opacity .5s ease calc(var(--li, 0) * 0.22s + 0.9s);
+  border-radius:8px;
+  pointer-events:none;
+  /* solid-enough glass so the rectangle is unmistakable */
+  background:linear-gradient(105deg,
+    rgba(255,255,255,.55) 0%,
+    rgba(210,200,255,.4) 50%,
+    rgba(160,140,255,.32) 100%);
+  border:1px solid rgba(255,255,255,.4);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.5), 0 8px 28px rgba(0,0,0,.2);
+  -webkit-backdrop-filter:blur(12px);
+  backdrop-filter:blur(12px);
+  transform:translateX(0);
+  opacity:0; /* hidden until is-revealing */
+}
+
+#about .section-title h2[data-tm-glass] .tm-line.is-accent .tm-gbar{
+  background:linear-gradient(105deg,
+    rgba(139,53,255,.65) 0%,
+    rgba(176,124,255,.5) 45%,
+    rgba(22,216,255,.35) 100%);
+  border-color:rgba(196,181,253,.55);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.3), 0 8px 32px rgba(139,53,255,.35);
+}
+
+/* REVEALING: show bars, then animate wipe + text rise */
+#about .section-title h2[data-tm-glass].is-revealing .tm-gbar{
+  opacity:1;
+  animation:tmGbarWipe 1.05s cubic-bezier(.19,1,.22,1) forwards;
+  animation-delay:calc(var(--li, 0) * 0.2s + 0.15s);
+}
+#about .section-title h2[data-tm-glass].is-revealing .tm-line-text{
+  animation:tmTextRise 1.05s cubic-bezier(.19,1,.22,1) forwards;
+  animation-delay:calc(var(--li, 0) * 0.2s + 0.2s);
+}
+
+@keyframes tmGbarWipe{
+  0%{ transform:translateX(0); opacity:1; }
+  35%{ transform:translateX(0); opacity:1; }
+  100%{ transform:translateX(105%); opacity:0.15; }
+}
+@keyframes tmTextRise{
+  0%{ transform:translateY(110%); opacity:0; }
+  35%{ transform:translateY(110%); opacity:0; }
+  100%{ transform:translateY(0); opacity:1; }
+}
+[dir=rtl] @keyframes tmGbarWipe{
+  0%{ transform:translateX(0); opacity:1; }
+  35%{ transform:translateX(0); opacity:1; }
+  100%{ transform:translateX(-105%); opacity:0.15; }
+}
+
+/* DONE: settled final state */
+#about .section-title h2[data-tm-glass].is-done .tm-line-text{
+  transform:none;
+  opacity:1;
+  animation:none;
+}
+#about .section-title h2[data-tm-glass].is-done .tm-gbar{
+  opacity:0;
+  animation:none;
   pointer-events:none;
 }
-/* accent line (purple "image & motion") — glass takes that hue */
-#about .section-title h2 .tm-line-accent .tm-gbar{
-  background:linear-gradient(
-    105deg,
-    rgba(139,53,255,.55) 0%,
-    rgba(176,124,255,.42) 40%,
-    rgba(22,216,255,.28) 100%
-  );
-  border-color:rgba(196,181,253,.5);
-  box-shadow:
-    inset 0 1px 0 rgba(220,200,255,.35),
-    0 10px 36px rgba(139,53,255,.4);
-}
-[dir=rtl] #about .section-title h2 .tm-gbar{
-  transform-origin:right center;
-}
 
-/* play rules unified above */
-
-/* DEFAULT: nothing printed until About has settled and play starts */
-#about .section-title h2 .tm-line-text{
-  opacity:0;
-  visibility:hidden;
-  transform:translate3d(0, 115%, 0);
-}
-#about .section-title h2 .tm-gbar{
-  opacity:0;
-  visibility:hidden;
-  transform:translate3d(0, 0, 0);
-}
-
-/* READY: bars cover the lines (text still hidden under bar) */
-#about .section-title h2.tm-lines-ready .tm-gbar{
-  opacity:1;
-  visibility:visible;
-  transform:translate3d(0, 0, 0);
-}
-#about .section-title h2.tm-lines-ready .tm-line-text{
-  opacity:0;
-  visibility:visible;
-  transform:translate3d(0, 115%, 0);
-}
-
-/* ON: wipe bars away + text settles */
-#about .section-title h2.tm-lines-on .tm-line-text{
-  opacity:1;
-  visibility:visible;
-  transform:translate3d(0, 0, 0);
-}
-#about .section-title h2.tm-lines-on .tm-gbar{
-  opacity:.25;
-  visibility:visible;
-  transform:translate3d(105%, 0, 0);
-}
-[dir=rtl] #about .section-title h2.tm-lines-on .tm-gbar{
-  transform:translate3d(-105%, 0, 0);
-}
-
-/* keep h2 from old slide animation */
-.js #about .section-title h2{
-  opacity:1 !important;
-  transform:none !important;
-}
-
-@media (max-width:900px){
-  #about .section-title h2 .tm-line{ width:100%; }
-  #about .section-title h2 .tm-line-text,
-  #about .section-title h2 .tm-gbar{
-    transition-duration:.9s;
-  }
-}
-
-@media (prefers-reduced-motion: reduce){
-  #about .section-title h2 .tm-line-text,
-  #about .section-title h2 .tm-gbar{
-    transition:none !important;
-    transform:none !important;
-    opacity:1 !important;
-  }
-  #about .section-title h2 .tm-gbar{ display:none !important; }
-}
-
-
-/* About paragraph: fully readable while section is on screen */
-#about.about-in .section-title > p.tm-words .tm-lw{
-  opacity:1 !important;
-}
-#about.about-in .section-title > p{
-  opacity:1 !important;
-}
-
-/* keep em purple visible through glass */
-#about .section-title h2 .tm-line-text em{
-  color:inherit;
+#about .section-title h2[data-tm-glass] .tm-line-text em{
   font-style:normal;
-  background:linear-gradient(120deg,#c4b5fd,#8b35ff 40%,#16d8ff);
+  background:linear-gradient(120deg,#c4b5fd,#8b35ff 45%,#16d8ff);
   -webkit-background-clip:text;
   background-clip:text;
   color:transparent;
-  /* fallback if clip unsupported */
 }
-@supports not (background-clip:text){
-  #about .section-title h2 .tm-line-text em{ color:#b07cff; background:none; }
+
+/* About body fully lit when section active */
+#about.about-in .section-title > p.tm-words .tm-lw{ opacity:1 !important; }
+#about.about-in .section-title > p{ opacity:1 !important; }
+
+#about, #about .cert, #about .about-grid{ overflow:visible !important; }
+
+@media (prefers-reduced-motion: reduce){
+  #about .section-title h2[data-tm-glass] .tm-line-text,
+  #about .section-title h2[data-tm-glass] .tm-gbar{
+    animation:none !important;
+    transform:none !important;
+    opacity:1 !important;
+  }
+  #about .section-title h2[data-tm-glass] .tm-gbar{ display:none !important; }
 }
 
 
-/* about title compact — avoid pushing certificate off / clipping */
-#about .section-title h2.tm-lines-ready,
-#about .section-title h2.tm-lines-on{
-  margin-bottom:0.15em;
-}
-#about{
-  overflow:visible;
-}
-#about .cert{
-  overflow:visible;
-}
-
-
-/* cert clip fix — keep certificate fully inside About frame */
-#about{
-  overflow:visible !important;
-}
 #about .about-grid,
 #about .section-title,
 #about .cert{

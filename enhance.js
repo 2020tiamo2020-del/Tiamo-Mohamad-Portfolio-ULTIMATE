@@ -777,106 +777,102 @@ function initAboutGlassTitle() {
 
   let playT = 0;
   let gen = 0;
-  let busyBuild = false;
+  let building = false;
 
-  const build = (force) => {
-    if (busyBuild) return;
+  const build = () => {
+    if (building) return;
+    building = true;
     const lang = document.documentElement.lang === "ar" ? "ar" : "en";
-    if (!force && h2.querySelector(".tm-line") && h2.dataset.tmLang === lang) return;
-    busyBuild = true;
     h2.dataset.tmLang = lang;
-    h2.setAttribute("data-tm-glass", "1");
-    h2.classList.remove("tm-lines-on", "tm-lines-ready");
-    const lines = LINES[lang];
-    h2.innerHTML = lines.map((html, i) => {
-      const accent = /<em[\s>]/i.test(html) ? " tm-line-accent" : "";
-      return `<span class="tm-line${accent}" style="--li:${i}"><span class="tm-line-text">${html}</span><span class="tm-gbar" aria-hidden="true"></span></span>`;
+    h2.classList.remove("is-revealing", "is-done");
+    h2.innerHTML = LINES[lang].map((html, i) => {
+      const accent = /<em[\s>]/i.test(html) ? " is-accent" : "";
+      return (
+        '<span class="tm-line' + accent + '" style="--li:' + i + '">' +
+          '<span class="tm-line-text">' + html + '</span>' +
+          '<span class="tm-gbar" aria-hidden="true"></span>' +
+        '</span>'
+      );
     }).join("");
-    busyBuild = false;
+    building = false;
   };
 
-  const lightAboutPara = () => {
+  const lightPara = () => {
     const p = sec.querySelector(".section-title > p");
-    if (!p) return;
-    p.querySelectorAll(".tm-lw").forEach(w => w.classList.add("on"));
+    if (p) p.querySelectorAll(".tm-lw").forEach(w => w.classList.add("on"));
   };
 
   const reset = () => {
     clearTimeout(playT);
     gen++;
-    h2.classList.remove("tm-lines-on", "tm-lines-ready");
+    h2.classList.remove("is-revealing", "is-done");
   };
 
-  const play = (delayMs) => {
+  const play = (delay) => {
     clearTimeout(playT);
     const my = ++gen;
-    const wait = typeof delayMs === "number" ? delayMs : 500;
     playT = setTimeout(() => {
       if (my !== gen) return;
-      /* force rebuild — language switch / data-en writers may have wiped lines */
-      build(true);
-      if (!h2.querySelector(".tm-line")) return;
+      build();
+      const lines = h2.querySelectorAll(".tm-line");
+      if (!lines.length) return;
 
-      h2.classList.remove("tm-lines-on", "tm-lines-ready");
+      /* start: bars covering, text hidden — forced reflow then reveal class */
+      h2.classList.remove("is-revealing", "is-done");
       void h2.offsetWidth;
+      h2.classList.add("is-revealing");
 
-      /* phase 1: bars visible, covering lines — hold so the rectangles are readable */
-      h2.classList.add("tm-lines-ready");
-      void h2.offsetWidth;
-
-      /* phase 2: after a short beat, wipe bars + reveal text */
+      /* after wipe finishes, mark done */
+      const total = 1200 + (lines.length - 1) * 220;
       setTimeout(() => {
         if (my !== gen) return;
-        h2.classList.add("tm-lines-on");
-        lightAboutPara();
-        setTimeout(lightAboutPara, 400);
-      }, 320);
-    }, wait);
+        h2.classList.add("is-done");
+        lightPara();
+      }, total);
+      lightPara();
+    }, typeof delay === "number" ? delay : 400);
   };
 
-  /* initial structure (hidden until play) */
-  build(true);
+  build();
 
-  /* own IO — more reliable than depending only on about-in races */
+  /* IntersectionObserver on the title itself */
   if ("IntersectionObserver" in window) {
-    let wasIn = false;
-    new IntersectionObserver((entries) => {
-      const on = entries.some(e => e.isIntersecting && e.intersectionRatio > 0.2);
-      if (on && !wasIn) {
-        wasIn = true;
+    let seen = false;
+    new IntersectionObserver((ents) => {
+      const hit = ents.some(e => e.isIntersecting);
+      if (hit && !seen) {
+        seen = true;
         sec.classList.add("about-in");
-        play(550);
-      } else if (!on && wasIn) {
-        wasIn = false;
+        play(350);
+      } else if (!hit && seen) {
+        seen = false;
         reset();
       }
-    }, { threshold: [0, 0.2, 0.35, 0.5] }).observe(sec);
+    }, { threshold: 0.35 }).observe(sec.querySelector(".section-title") || sec);
   }
 
-  /* still watch about-in for nav-driven class toggles */
   new MutationObserver(() => {
-    if (sec.classList.contains("about-in")) play(600);
+    if (sec.classList.contains("about-in")) play(500);
     else reset();
   }).observe(sec, { attributes: true, attributeFilter: ["class"] });
 
   window.__sectionEnter = window.__sectionEnter || {};
   window.__sectionEnter.about = () => {
     sec.classList.add("about-in");
-    play(900);
+    play(700);
   };
 
-  /* if something rewrites h2 (lang apply), restore lines */
   new MutationObserver(() => {
-    if (busyBuild) return;
+    if (building) return;
     if (!h2.querySelector(".tm-line")) {
-      build(true);
-      if (sec.classList.contains("about-in")) play(200);
+      build();
+      if (sec.classList.contains("about-in")) play(150);
     }
-  }).observe(h2, { childList: true, characterData: true, subtree: true });
+  }).observe(h2, { childList: true });
 
   new MutationObserver(() => {
-    build(true);
-    if (sec.classList.contains("about-in")) play(250);
+    build();
+    if (sec.classList.contains("about-in")) play(200);
   }).observe(document.documentElement, { attributes: true, attributeFilter: ["lang"] });
 }
 
