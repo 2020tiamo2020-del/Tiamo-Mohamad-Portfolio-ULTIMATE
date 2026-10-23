@@ -9,95 +9,32 @@ html.lenis, html.lenis body { height: auto; }
 .lenis.lenis-smooth iframe { pointer-events: none; }
 .lenis.lenis-scrolling iframe { pointer-events: none; }
 
-/* ---- Hero WebGL rings around TM orb (CSS orbits stay visible) ---- */
+/* ---- Hero WebGL canvas under the TM orb ---- */
 .hero-visual {
   position: relative;
   isolation: isolate;
-  overflow: visible; /* critical: let full ellipses show */
-}
-section.hero {
-  overflow: visible;
 }
 .hero-visual .tm-hero-gl {
   position: absolute;
-  /* oversized canvas so tilted rings are never cropped into a square */
-  width: 150%;
-  height: 150%;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
+  inset: 0;
+  width: 100%;
+  height: 100%;
   z-index: 0;
   pointer-events: none;
   display: block;
 }
-/* keep original CSS orbits + stars under the GL rings layer */
-.hero-visual .orbit,
-.hero-visual .neon-star {
-  z-index: 1;
-  opacity: 1 !important;
-  visibility: visible !important;
+.hero-visual.has-webgl .orbit {
+  opacity: 0 !important;
+  visibility: hidden;
+  pointer-events: none;
 }
 .hero-visual #tmOrb,
 .hero-visual .core {
   position: relative;
-  z-index: 3;
+  z-index: 2;
 }
 .hero-visual .floating-tag {
-  z-index: 4;
-}
-.hero-visual .core-hint {
-  z-index: 4;
-}
-/* do not hide orbits when GL is ready */
-.hero-visual.has-webgl .orbit,
-.hero-visual.has-webgl-rings .orbit {
-  opacity: 1 !important;
-  visibility: visible !important;
-}
-
-/* ---- Hero CSS orbits: slightly smaller, balanced around TM ---- */
-.hero-visual .o1{
-  width: 268px !important;
-  height: 268px !important;
-}
-.hero-visual .o2{
-  width: 370px !important;
-  height: 148px !important;
-}
-.hero-visual .o3{
-  width: 420px !important;
-  height: 420px !important;
-}
-.hero-visual .o4{
-  width: 370px !important;
-  height: 148px !important;
-}
-@media (max-width: 900px){
-  .hero-visual .o1{ width: 200px !important; height: 200px !important; }
-  .hero-visual .o2,
-  .hero-visual .o4{ width: 280px !important; height: 112px !important; }
-  .hero-visual .o3{ width: 300px !important; height: 300px !important; }
-}
-@media (max-width: 560px){
-  .hero-visual .o1{ width: 170px !important; height: 170px !important; }
-  .hero-visual .o2,
-  .hero-visual .o4{ width: 240px !important; height: 96px !important; }
-  .hero-visual .o3{ width: 250px !important; height: 250px !important; }
-}
-
-
-/* About portrait: smoother, slower entrance */
-#about .about-photo {
-  transition:
-    opacity 1.85s cubic-bezier(.22, 1, .36, 1),
-    transform 2.15s cubic-bezier(.22, 1, .36, 1) !important;
-}
-#about .about-photo:not(.show) {
-  transform: translateX(72px);
-  opacity: 0;
-}
-#about .about-photo.show {
-  transition-delay: .12s;
+  z-index: 3;
 }
 
 /* ---- Gallery 3D tilt ---- */
@@ -123,6 +60,10 @@ section.hero {
   .gallery-card.tm-tilt {
     transform: none !important;
     transition: border-color .2s ease, box-shadow .2s ease;
+  }
+  .hero-visual.has-webgl .orbit {
+    opacity: 1 !important;
+    visibility: visible;
   }
   .hero-visual .tm-hero-gl {
     display: none !important;
@@ -297,7 +238,14 @@ html.lenis {
   z-index: 5;
 }
 
-/* Open image: handled by creation.css worlds viewer (gate + travel transitions) */
+/* Open image: cinematic (lightweight) */
+.cr-view.open .cr-pic{
+  animation: tmCrPicIn .7s cubic-bezier(.16,1,.3,1) both;
+}
+@keyframes tmCrPicIn{
+  from{ transform: scale(.9); opacity: 0; }
+  to{ transform: scale(1); opacity: 1; }
+}
 body.tm-cr-view-open{ overflow: hidden; }
 
 @media (prefers-reduced-motion: reduce) {
@@ -308,29 +256,4 @@ body.tm-cr-view-open{ overflow: hidden; }
     animation: none !important;
   }
   #creation .cr-wall{ transform: none !important; }
-}
-
-/* =========================================================
-   8 · WORDS — scroll-linked word lighting
-   (words stay fully visible until JS has split the text: .tm-words is added by enhance.js)
-   ========================================================= */
-.tm-words .tm-lw{
-  opacity: .24;
-  transition: opacity .35s ease, color .35s ease, text-shadow .35s ease;
-}
-.tm-words .tm-lw.on{ opacity: 1; }
-
-/* =========================================================
-   9 · AI CREATION — glass frame opens on arrival (desktop only; --ao is set by enhance.js, default 1 = fully open)
-   ========================================================= */
-@media (hover:hover) and (pointer:fine) and (min-width:901px){
-  #creation .cr-glass{
-    --ao: 1;
-    scale: calc(.8 + .2 * var(--ao));
-    translate: 0 calc((1 - var(--ao)) * 46px);
-    border-radius: calc(30px + (1 - var(--ao)) * 40px);
-    transform-origin: 50% 0;
-  }
-  #creation .cr-glass::before{ border-radius: inherit; }
-  #creation .cr-glass .cr-wall{ scale: calc(1.16 - .16 * var(--ao, 1)); }
 }

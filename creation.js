@@ -78,7 +78,7 @@ const tile = (it, copy) => {
   const t = document.createElement("div"); t.className = "cr-tile"; t.dataset.u = it.u; t.dataset.k = it.k;
   if (copy) t.setAttribute("aria-hidden", "true"); else { t.setAttribute("role", "img"); t.setAttribute("aria-label", "AI artwork " + it.n); }
   t.innerHTML = '<div class="cr-img" style="padding-bottom:' + it.r * 100 + '%"></div><span class="cr-num">' + String(it.n).padStart(2, "0") + '</span><div class="cr-guard"></div>';
-  t.addEventListener("click", e => { e.preventDefault(); e.stopPropagation(); open(it.k); });
+  t.addEventListener("click", () => open(it.k));
   lazy ? lazy.observe(t) : (t.firstChild.style.backgroundImage = "url('" + it.u + "')", t.classList.add("ld"));
   return t;
 };
@@ -147,207 +147,22 @@ let rw = 0; addEventListener("resize", () => { clearTimeout(rw); rw = setTimeout
 /* ----- protection: no right-click menu, no drag, no long-press save inside this section ----- */
 ["contextmenu", "dragstart", "selectstart"].forEach(ev => sec.addEventListener(ev, e => e.preventDefault()));
 
-/* click any tile → open world (delegation, no capture on whole page) */
-wall.addEventListener("click", e => {
-  const t = e.target && e.target.closest && e.target.closest(".cr-tile");
-  if (!t || t.getAttribute("aria-hidden") === "true") return;
-  const k = t.dataset.k;
-  if (k === undefined || k === "") return;
-  e.preventDefault();
-  openWorld(+k);
-});
-
-/* ----- Worlds viewer: dual-layer travel — never blocks the page when closed ----- */
-const reduceWorld = matchMedia("(prefers-reduced-motion: reduce)").matches;
-const isTouch = matchMedia("(hover: none), (pointer: coarse)").matches;
-
-const v = document.createElement("div");
-v.className = "cr-view";
-v.setAttribute("role", "dialog");
-v.setAttribute("aria-modal", "true");
-v.setAttribute("aria-label", "AI worlds viewer");
-v.setAttribute("aria-hidden", "true");
-/* critical: closed viewer must not sit on top of the page */
-v.style.cssText = "display:none;position:fixed;inset:0;z-index:200;";
-v.innerHTML =
-  '<div class="cr-world-bg" aria-hidden="true">' +
-    '<div class="cr-stars"></div><div class="cr-nebula"></div><div class="cr-vignette"></div>' +
-  '</div>' +
-  '<div class="cr-stage">' +
-    '<div class="cr-frame">' +
-      '<div class="cr-pic cr-pic-a is-active" role="img" aria-label="AI artwork"></div>' +
-      '<div class="cr-pic cr-pic-b" aria-hidden="true"></div>' +
-    '</div>' +
-  '</div>' +
-  '<button class="cr-x" type="button" aria-label="Close">×</button>' +
-  '<div class="cr-hud" aria-live="polite">' +
-    '<div class="cr-n"><b class="cr-n-cur">01</b><i>/</i><span class="cr-n-tot">00</span></div>' +
-    '<div class="cr-world-tag" data-en="WORLD" data-ar="عالم">WORLD</div>' +
-    '<div class="cr-nav-hint" data-en="SCROLL OR DRAG TO TRAVEL" data-ar="مرّر أو اسحب للتنقل">SCROLL OR DRAG TO TRAVEL</div>' +
-  '</div>';
+/* ----- viewer ----- */
+const v = document.createElement("div"); v.className = "cr-view"; v.setAttribute("role", "dialog"); v.setAttribute("aria-hidden", "true");
+v.innerHTML = '<div class="cr-pic"></div><button class="cr-x" type="button" aria-label="Close">×</button><button class="cr-pv" type="button" aria-label="Previous">‹</button><button class="cr-nx" type="button" aria-label="Next">›</button><div class="cr-n"></div>';
 document.body.appendChild(v);
-
-const layerA = v.querySelector(".cr-pic-a");
-const layerB = v.querySelector(".cr-pic-b");
-const nCur = v.querySelector(".cr-n-cur");
-const nTot = v.querySelector(".cr-n-tot");
-let cur = 0, busy = false, wheelLock = 0, drag = null, activeIsA = true;
-let savedScrollY = 0, scrollFrozen = false;
-
+const pic = v.querySelector(".cr-pic"), cnt = v.querySelector(".cr-n"); let cur = 0;
 ["contextmenu", "dragstart"].forEach(ev => v.addEventListener(ev, e => e.preventDefault()));
-
-const arUI = () => document.documentElement.lang === "ar" || document.documentElement.dir === "rtl";
-const pad2 = n => String(n).padStart(2, "0");
-const activeLayer = () => (activeIsA ? layerA : layerB);
-const idleLayer = () => (activeIsA ? layerB : layerA);
-
-const syncHudLang = () => {
-  v.querySelectorAll("[data-en][data-ar]").forEach(el => {
-    const t = arUI() ? el.getAttribute("data-ar") : el.getAttribute("data-en");
-    if (t != null) el.textContent = t;
-  });
-  const xb = v.querySelector(".cr-x");
-  if (xb) xb.setAttribute("aria-label", arUI() ? "إغلاق" : "Close");
+const show = k => { cur = (k + items.length) % items.length; pic.classList.add("swap");
+  setTimeout(() => { pic.style.backgroundImage = "url('" + items[cur].u + "')"; pic.classList.remove("swap"); }, 160);
+  cnt.textContent = String(cur + 1).padStart(2, "0") + " / " + String(items.length).padStart(2, "0");
 };
-
-const setCounter = () => {
-  if (!items.length) return;
-  nCur.textContent = pad2(cur + 1);
-  nTot.textContent = pad2(items.length);
-  activeLayer().setAttribute("aria-label", (arUI() ? "عمل بالذكاء الاصطناعي " : "AI artwork ") + (cur + 1));
-};
-
-const warm = i => {
-  if (!items.length) return;
-  const im = new Image();
-  im.decoding = "async";
-  im.src = items[((i % items.length) + items.length) % items.length].u;
-};
-
-const clearLayers = () => {
-  [layerA, layerB].forEach(el => {
-    if (!el) return;
-    el.className = el.classList.contains("cr-pic-a") ? "cr-pic cr-pic-a" : "cr-pic cr-pic-b";
-    el.style.backgroundImage = "";
-    el.setAttribute("aria-hidden", "true");
-  });
-};
-
-const freezeScroll = () => {
-  if (scrollFrozen) return;
-  savedScrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || 0;
-  scrollFrozen = true;
-  document.body.dataset.crScrollY = String(savedScrollY);
-  document.body.style.overflow = "hidden";
-};
-const unfreezeScroll = () => {
-  if (!scrollFrozen) {
-    document.body.style.overflow = "";
-    document.body.style.position = "";
-    document.body.style.top = "";
-    document.body.style.left = "";
-    document.body.style.right = "";
-    document.body.style.width = "";
-    return;
-  }
-  scrollFrozen = false;
-  document.body.style.overflow = "";
-  document.body.style.position = "";
-  document.body.style.top = "";
-  document.body.style.left = "";
-  document.body.style.right = "";
-  document.body.style.width = "";
-  const y = savedScrollY || +(document.body.dataset.crScrollY || 0) || 0;
-  window.scrollTo(0, y);
-  requestAnimationFrame(() => window.scrollTo(0, y));
-};
-
-const paintInstant = k => {
-  if (!items.length) return;
-  cur = ((k % items.length) + items.length) % items.length;
-  const a = activeLayer(), b = idleLayer();
-  a.style.backgroundImage = "url('" + items[cur].u + "')";
-  a.className = (activeIsA ? "cr-pic cr-pic-a" : "cr-pic cr-pic-b") + " is-active is-settled";
-  a.removeAttribute("aria-hidden");
-  b.className = activeIsA ? "cr-pic cr-pic-b" : "cr-pic cr-pic-a";
-  b.style.backgroundImage = "";
-  b.setAttribute("aria-hidden", "true");
-  setCounter();
-  warm(cur + 1); warm(cur - 1);
-};
-
-const travel = (k, dir) => {
-  if (!items.length || busy || reduceWorld) {
-    paintInstant(k);
-    return;
-  }
-  const next = ((k % items.length) + items.length) % items.length;
-  if (next === cur) return;
-
-  busy = true;
-  const from = activeLayer();
-  const to = idleLayer();
-  /* soft crossfade only — no big slide/scale jump */
-  const outCls = "go-fade-out";
-  const inCls = dir > 0 ? "go-fade-in-next" : "go-fade-in-prev";
-
-  to.style.backgroundImage = "url('" + items[next].u + "')";
-  to.className = (to === layerA ? "cr-pic cr-pic-a" : "cr-pic cr-pic-b") + " " + inCls;
-  to.removeAttribute("aria-hidden");
-  from.className = (from === layerA ? "cr-pic cr-pic-a" : "cr-pic cr-pic-b") + " is-active " + outCls;
-  void to.offsetWidth;
-
-  cur = next;
-  activeIsA = to === layerA;
-  setCounter();
-  warm(cur + 1); warm(cur - 1);
-
-  const dur = isTouch ? 320 : 400;
-  clearTimeout(v._travelT);
-  v._travelT = setTimeout(() => {
-    from.className = from === layerA ? "cr-pic cr-pic-a" : "cr-pic cr-pic-b";
-    from.style.backgroundImage = "";
-    from.setAttribute("aria-hidden", "true");
-    /* keep is-active without re-triggering open animation */
-    to.className = (to === layerA ? "cr-pic cr-pic-a" : "cr-pic cr-pic-b") + " is-active is-settled";
-    busy = false;
-  }, dur);
-};
-
-const show = (k, dir) => {
-  if (!items.length) return;
-  if (dir === undefined || dir === 0 || reduceWorld) paintInstant(k);
-  else travel(k, dir);
-};
-
-function openWorld(k) {
-  if (!items.length || !v || !layerA) return;
-  syncHudLang();
-  busy = false;
-  clearTimeout(v._travelT);
-  activeIsA = true;
-  clearLayers();
-  paintInstant(k);
-  /* one soft entrance on open only */
-  const a0 = activeLayer();
-  if (a0) {
-    a0.classList.remove("is-settled");
-    a0.classList.add("is-enter");
-    clearTimeout(v._enterT);
-    v._enterT = setTimeout(() => {
-      a0.classList.remove("is-enter");
-      a0.classList.add("is-settled");
-    }, 450);
-  }
-
-  v.style.display = "grid";
-  v.classList.add("open");
-  v.setAttribute("aria-hidden", "false");
-  freezeScroll();
-
+function open(k) {
+  v.classList.add("open"); v.setAttribute("aria-hidden", "false"); document.body.style.overflow = "hidden"; show(k);
   try {
-    if (typeof window.playOpenSound === "function") window.playOpenSound();
-    else {
+    if (typeof window.playOpenSound === "function") {
+      window.playOpenSound();
+    } else {
       const now = performance.now();
       if (!window.__openSoundAt) window.__openSoundAt = 0;
       if (now - window.__openSoundAt >= 280) {
@@ -365,120 +180,12 @@ function openWorld(k) {
     }
   } catch (_) {}
 }
-
-function closeWorld() {
-  v.classList.remove("open");
-  v.setAttribute("aria-hidden", "true");
-  v.style.display = "none";
-  busy = false;
-  clearTimeout(v._travelT);
-  unfreezeScroll();
-}
-
-/* alias used by tile handlers built earlier in this IIFE */
-function open(k) { openWorld(k); }
-
-window.__crWorldOpen = openWorld;
-window.__crWorldClose = closeWorld;
-
-v.querySelector(".cr-x").addEventListener("click", e => {
-  e.preventDefault();
-  e.stopPropagation();
-  closeWorld();
-});
-
-let suppressClick = false;
-v.addEventListener("click", e => {
-  if (suppressClick) { suppressClick = false; return; }
-  /* only close on empty backdrop — never on arrows, image, hud, or X */
-  if (e.target.closest(".cr-x, .cr-nav-btn, .cr-edge, .cr-hud, .cr-frame, .cr-pic, .cr-stage, .cr-n, .cr-world-tag, .cr-nav-hint")) return;
-  if (e.target === v || e.target.classList.contains("cr-vignette") || e.target.classList.contains("cr-world-bg") || e.target.classList.contains("cr-stars") || e.target.classList.contains("cr-nebula")) {
-    closeWorld();
-  }
-});
-
-document.addEventListener("keydown", e => {
-  if (!v.classList.contains("open")) return;
-  if (e.key === "Escape") { e.preventDefault(); closeWorld(); return; }
-  if (busy) return;
-  if (e.key === "ArrowRight" || e.key === "ArrowDown") { e.preventDefault(); show(cur + 1, 1); }
-  if (e.key === "ArrowLeft" || e.key === "ArrowUp") { e.preventDefault(); show(cur - 1, -1); }
-});
-
-/* wheel only on the viewer element — never on document */
-v.addEventListener("wheel", e => {
-  if (!v.classList.contains("open")) return;
-  e.preventDefault();
-  e.stopPropagation();
-  if (busy) return;
-  const now = performance.now();
-  if (now - wheelLock < (isTouch ? 400 : 500)) return;
-  const dy = e.deltaY, dx = e.deltaX;
-  const dominant = Math.abs(dy) >= Math.abs(dx) ? dy : dx;
-  if (Math.abs(dominant) < 6) return;
-  wheelLock = now;
-  show(cur + (dominant > 0 ? 1 : -1), dominant > 0 ? 1 : -1);
-}, { passive: false });
-
-const onDown = (x, y) => { drag = { x, y, moved: false }; };
-const onMove = (x, y) => {
-  if (!drag) return;
-  if (Math.hypot(x - drag.x, y - drag.y) > 12) drag.moved = true;
-};
-const onUp = (x, y) => {
-  if (!drag || busy) { drag = null; return; }
-  const dx = x - drag.x, dy = y - drag.y;
-  const absX = Math.abs(dx), absY = Math.abs(dy);
-  const th = isTouch ? 40 : 52;
-  if (drag.moved || Math.max(absX, absY) >= th) suppressClick = true;
-  if (Math.max(absX, absY) >= th) {
-    if (absX >= absY) show(cur + (dx < 0 ? 1 : -1), dx < 0 ? 1 : -1);
-    else show(cur + (dy < 0 ? 1 : -1), dy < 0 ? 1 : -1);
-  }
-  drag = null;
-};
-
-v.addEventListener("pointerdown", e => {
-  if (!v.classList.contains("open")) return;
-  if (e.target.closest("button, .cr-nav-btn, .cr-x, .cr-hud")) return;
-  if (e.pointerType === "mouse" && e.button !== 0) return;
-  onDown(e.clientX, e.clientY);
-  try { v.setPointerCapture(e.pointerId); } catch (_) {}
-});
-v.addEventListener("pointermove", e => { if (drag) onMove(e.clientX, e.clientY); });
-v.addEventListener("pointerup", e => onUp(e.clientX, e.clientY));
-v.addEventListener("pointercancel", () => { drag = null; });
-
-/* Visible prev/next — never close the world */
-const mkArrow = (side, labelEn, labelAr) => {
-  const b = document.createElement("button");
-  b.type = "button";
-  b.className = "cr-nav-btn cr-nav-" + side;
-  b.setAttribute("aria-label", labelEn);
-  b.innerHTML = side === "next" ? "›" : "‹";
-  const go = e => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (busy) return;
-    show(cur + (side === "next" ? 1 : -1), side === "next" ? 1 : -1);
-  };
-  b.addEventListener("click", go);
-  b.addEventListener("pointerdown", e => { e.stopPropagation(); });
-  v.appendChild(b);
-  return b;
-};
-const btnPrev = mkArrow("prev", "Previous", "السابق");
-const btnNext = mkArrow("next", "Next", "التالي");
-const syncArrowLang = () => {
-  btnPrev.setAttribute("aria-label", arUI() ? "السابق" : "Previous");
-  btnNext.setAttribute("aria-label", arUI() ? "التالي" : "Next");
-};
-const _syncHud = syncHudLang;
-syncHudLang = () => { _syncHud(); syncArrowLang(); };
-
-new MutationObserver(() => {
-  if (v.classList.contains("open")) syncHudLang();
-}).observe(document.documentElement, { attributes: true, attributeFilter: ["lang", "dir"] });
+const close = () => { v.classList.remove("open"); v.setAttribute("aria-hidden", "true"); document.body.style.overflow = ""; };
+v.querySelector(".cr-x").onclick = close; v.querySelector(".cr-pv").onclick = () => show(cur - 1); v.querySelector(".cr-nx").onclick = () => show(cur + 1);
+v.addEventListener("click", e => { if (e.target === v) close(); });
+document.addEventListener("keydown", e => { if (!v.classList.contains("open")) return; if (e.key === "Escape") close(); if (e.key === "ArrowRight") show(cur + 1); if (e.key === "ArrowLeft") show(cur - 1); });
+let sx = 0; v.addEventListener("touchstart", e => { sx = e.touches[0].clientX; }, { passive: true });
+v.addEventListener("touchend", e => { const d = e.changedTouches[0].clientX - sx; if (Math.abs(d) > 50) show(cur + (d < 0 ? 1 : -1)); }, { passive: true });
 })();
 
 /* ===== Scroll motion for 04 + 06 — same behaviour as Services / Work (title-first rise + scroll-velocity heading shift) ===== */
@@ -581,7 +288,7 @@ new MutationObserver(() => {
     if (lx !== null) {
       const dt = Math.max(8, now - lt), vx = (e.clientX - lx) / dt, vy = (e.clientY - ly) / dt;          // px per ms
       const prox = clamp(1.15 - Math.hypot(e.clientX - cx, e.clientY - cy) / (r.width * 3.2), .12, 1);
-      yawV = clamp(yawV + vx * 14 * prox, -90, 90); pitV = clamp(pitV - vy * 14 * prox, -60, 60);
+      yawV = clamp(yawV + vx * 70 * prox, -620, 620); pitV = clamp(pitV - vy * 70 * prox, -420, 420);
     }
     lx = e.clientX; ly = e.clientY; lt = now;
   }, { passive: true });
@@ -589,11 +296,11 @@ new MutationObserver(() => {
   const frame = t => {
     if (!on || document.hidden) { raf = 0; last = 0; return; }
     const dt = clamp((t - (last || t)) / 1000, 0, .05); last = t;
-    yaw += (7 + yawV) * dt;                                   // calm base spin + soft mouse push
+    yaw += (14 + yawV) * dt;                                  // 14 deg/s own spin + mouse push
     yawV *= Math.exp(-dt * 1.9);
     pitV += (-(pit - py * -14) * 7 - pitV * 2.2) * dt;   // pitch behaves like a damped spring (it also leans a little towards the pointer)
     pit += pitV * dt;
-    const tr = Math.sin(t / 3200) * .35 + px * .35 + clamp(yawV / 120, -1, 1) * .25, tx = py * -.3 + clamp(pitV / 100, -1, 1) * -.25;
+    const tr = Math.sin(t / 2700) * .5 + px * .5 + clamp(yawV / 320, -1, 1) * .55, tx = py * -.45 + clamp(pitV / 260, -1, 1) * -.4;
     ry += (clamp(tr, -1, 1) - ry) * .1; rx += (clamp(tx, -1, 1) - rx) * .1;
     globe.style.transform = "rotateX(" + pit.toFixed(2) + "deg) rotateY(" + yaw.toFixed(2) + "deg)";
     orb.style.setProperty("--ry", ry.toFixed(3)); orb.style.setProperty("--rx", rx.toFixed(3));

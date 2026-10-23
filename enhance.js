@@ -2,7 +2,7 @@
    Independent of script.js / motion.js. Safe to remove if needed. */
 (() => {
   "use strict";
-  const reduced = () => false; /* project policy (README + script.js): animations always run, whatever the OS reduce-motion setting is */
+  const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
   const mobile = () => innerWidth <= 900 || matchMedia("(pointer: coarse)").matches;
 
   /* =========================================================
@@ -46,9 +46,8 @@
       window.__lenis = lenis;
       document.documentElement.classList.add("lenis", "lenis-smooth", "tm-scroll-live");
 
-      /* Lenis moves the real scroll position, so the browser already fires genuine "scroll" events.
-         (A synthetic dispatchEvent("scroll") here re-triggered Lenis itself → endless recursion → "Maximum call stack size exceeded".) */
       lenis.on("scroll", (e) => {
+        try { window.dispatchEvent(new Event("scroll")); } catch (_) {}
         try { window.__tmOnLenis && window.__tmOnLenis(e); } catch (_) {}
       });
 
@@ -74,20 +73,21 @@
         (CSS orbits hide when canvas is ready; TM music orb stays)
      ========================================================= */
   async function initHeroGL() {
-    /* Original hero layout stays; Three.js rings sit around the TM orb only */
     const host = document.querySelector(".hero-visual");
     if (!host || reduced()) return;
 
     try {
-      const THREE = window.THREE || (await import("https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js"));
+      if (!window.THREE) {
+        await loadScript("https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.min.js");
+      }
+      const THREE = window.THREE;
       if (!THREE) return;
 
       const canvas = document.createElement("canvas");
       canvas.className = "tm-hero-gl";
       canvas.setAttribute("aria-hidden", "true");
       host.insertBefore(canvas, host.firstChild);
-      /* do NOT hide CSS orbits — new rings complement them */
-      host.classList.add("has-webgl-rings");
+      host.classList.add("has-webgl");
 
       const renderer = new THREE.WebGLRenderer({
         canvas,
@@ -95,26 +95,25 @@
         antialias: true,
         powerPreference: "high-performance",
       });
-      renderer.setPixelRatio(Math.min(devicePixelRatio || 1, mobile() ? 1.25 : 1.6));
+      renderer.setPixelRatio(Math.min(devicePixelRatio || 1, mobile() ? 1.25 : 1.75));
       renderer.setClearColor(0x000000, 0);
 
       const scene = new THREE.Scene();
-      const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 50);
-      /* closer camera = field hugs the orb, nothing clipped oddly */
-      camera.position.z = 6.35;
+      const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
+      camera.position.z = 6.2;
 
       const group = new THREE.Group();
       scene.add(group);
 
-      /* tight dust cloud around the core */
-      const count = mobile() ? 280 : 560;
+      /* particle sphere */
+      const count = mobile() ? 420 : 900;
       const pos = new Float32Array(count * 3);
       for (let i = 0; i < count; i++) {
         const u = Math.random();
         const v = Math.random();
         const theta = 2 * Math.PI * u;
         const phi = Math.acos(2 * v - 1);
-        const r = 1.35 + Math.random() * 0.5;
+        const r = 2.15 + Math.random() * 0.55;
         pos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
         pos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
         pos[i * 3 + 2] = r * Math.cos(phi);
@@ -122,10 +121,10 @@
       const pGeo = new THREE.BufferGeometry();
       pGeo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
       const pMat = new THREE.PointsMaterial({
-        size: mobile() ? 0.024 : 0.018,
+        size: mobile() ? 0.028 : 0.022,
         color: 0xb794ff,
         transparent: true,
-        opacity: 0.7,
+        opacity: 0.85,
         depthWrite: false,
         blending: THREE.AdditiveBlending,
         sizeAttenuation: true,
@@ -133,11 +132,12 @@
       const points = new THREE.Points(pGeo, pMat);
       group.add(points);
 
-      const pos2 = new Float32Array(Math.floor(count * 0.28) * 3);
+      /* cyan accent dust */
+      const pos2 = new Float32Array(Math.floor(count * 0.35) * 3);
       for (let i = 0; i < pos2.length / 3; i++) {
         const u = Math.random(), v = Math.random();
         const theta = 2 * Math.PI * u, phi = Math.acos(2 * v - 1);
-        const r = 1.5 + Math.random() * 0.4;
+        const r = 2.4 + Math.random() * 0.7;
         pos2[i * 3] = r * Math.sin(phi) * Math.cos(theta);
         pos2[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
         pos2[i * 3 + 2] = r * Math.cos(phi);
@@ -147,19 +147,19 @@
       const points2 = new THREE.Points(
         pGeo2,
         new THREE.PointsMaterial({
-          size: 0.014,
+          size: 0.018,
           color: 0x16d8ff,
           transparent: true,
-          opacity: 0.55,
+          opacity: 0.7,
           depthWrite: false,
           blending: THREE.AdditiveBlending,
         })
       );
       group.add(points2);
 
-      /* rings slightly larger than the CSS orbits — complete the set, not cut off */
-      function ring(radius, color, tiltX, tiltZ, opacity) {
-        const segs = 96;
+      /* orbital rings (line loops) */
+      function ring(radius, color, tiltX, tiltZ) {
+        const segs = 128;
         const arr = [];
         for (let i = 0; i <= segs; i++) {
           const a = (i / segs) * Math.PI * 2;
@@ -170,7 +170,7 @@
         const m = new THREE.LineBasicMaterial({
           color,
           transparent: true,
-          opacity: opacity,
+          opacity: 0.55,
           blending: THREE.AdditiveBlending,
           depthWrite: false,
         });
@@ -180,10 +180,9 @@
         group.add(line);
         return line;
       }
-      /* radii kept inside the projected view so ellipses are never square-clipped */
-      const r1 = ring(1.55, 0x8b35ff, 0.42, 0.1, 0.45);
-      const r2 = ring(1.75, 0x16d8ff, -0.28, -0.3, 0.38);
-      const r3 = ring(1.95, 0xc4b5fd, 0.85, 0.15, 0.28);
+      const r1 = ring(2.55, 0x8b35ff, 0.55, 0.15);
+      const r2 = ring(2.9, 0x16d8ff, -0.35, -0.4);
+      const r3 = ring(3.25, 0xc4b5fd, 1.05, 0.2);
 
       let w = 0, h = 0;
       const resize = () => {
@@ -213,10 +212,6 @@
         ).observe(host);
       }
 
-      const orb = document.getElementById("tmOrb");
-      let boost = 0;
-      const playing = () => !!(orb && orb.classList.contains("is-playing"));
-
       let t0 = performance.now();
       const tick = (now) => {
         requestAnimationFrame(tick);
@@ -225,31 +220,23 @@
         mx += (tx - mx) * 0.06;
         my += (ty - my) * 0.06;
 
-        /* calm rings: soft idle, gentle lift when music plays (not a race) */
-        /* Normal interactive speed restored; only the ramp-in on play is soft */
-        const want = playing() ? 1 : 0;
-        boost += (want - boost) * 0.018;
-        const spd = 1 + boost * 1.0;
+        group.rotation.y = t * 0.12 + mx * 0.25;
+        group.rotation.x = my * 0.18;
+        points.rotation.y = t * 0.08;
+        points2.rotation.y = -t * 0.11;
+        r1.rotation.z = t * 0.2;
+        r2.rotation.z = -t * 0.15;
+        r3.rotation.y = t * 0.1;
 
-        group.rotation.y = t * 0.1 * spd + mx * 0.18;
-        group.rotation.x = my * 0.12;
-        points.rotation.y = t * 0.07 * spd;
-        points2.rotation.y = -t * 0.09 * spd;
-        r1.rotation.z = t * 0.16 * spd;
-        r2.rotation.z = -t * 0.12 * spd;
-        r3.rotation.y = t * 0.08 * spd;
-
-        pMat.opacity = 0.65 + boost * 0.22;
-        points2.material.opacity = 0.5 + boost * 0.28;
-
-        camera.position.x = mx * 0.22;
-        camera.position.y = -my * 0.16;
+        camera.position.x = mx * 0.35;
+        camera.position.y = -my * 0.25;
         camera.lookAt(0, 0, 0);
         renderer.render(scene, camera);
       };
       requestAnimationFrame(tick);
     } catch (_) {
-      host.classList.remove("has-webgl-rings");
+      /* keep CSS orbits if WebGL fails */
+      host.classList.remove("has-webgl");
     }
   }
 
@@ -631,113 +618,6 @@
     onScroll();
   }
 
-  /* =========================================================
-     8 · WORDS — scroll-linked word lighting (Lando-style)
-        About paragraph + AI Creation paragraph. Safe with the AR/EN
-        switch (script.js rewrites innerHTML → we re-split).
-     ========================================================= */
-  function initWords() {
-    if (reduced()) return;
-    const sels = ["#about .section-title > p", "#creation .cr-head > div > p"];
-    const items = [];
-    const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-
-    const split = (it) => {
-      const el = it.el;
-      it.busy = true;
-      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-      const nodes = [];
-      while (walker.nextNode()) nodes.push(walker.currentNode);
-      nodes.forEach((n) => {
-        if (!n.nodeValue.trim()) return;
-        const frag = document.createDocumentFragment();
-        n.nodeValue.split(/(\s+)/).forEach((tok) => {
-          if (!tok) return;
-          if (/^\s+$/.test(tok)) { frag.appendChild(document.createTextNode(tok)); return; }
-          const sp = document.createElement("span");
-          sp.className = "tm-lw";
-          sp.textContent = tok;
-          frag.appendChild(sp);
-        });
-        n.parentNode.replaceChild(frag, n);
-      });
-      it.words = [...el.querySelectorAll(".tm-lw")];
-      it.lit = 0;
-      el.classList.add("tm-words");
-      it.busy = false;
-    };
-
-    const paint = (it) => {
-      const vh = innerHeight || 1;
-      const r = it.el.getBoundingClientRect();
-      let p;
-      if (r.bottom < 0) p = 1;
-      else if (r.top > vh) p = 0;
-      else p = clamp((vh * 0.88 - r.top) / (vh * 0.33 + r.height), 0, 1);
-      const n = it.words.length;
-      const lit = Math.round(p * n);
-      if (lit === it.lit) return;
-      for (let i = Math.min(lit, it.lit); i < Math.max(lit, it.lit); i++) {
-        it.words[i] && it.words[i].classList.toggle("on", i < lit);
-      }
-      it.lit = lit;
-    };
-
-    sels.forEach((sel) => {
-      document.querySelectorAll(sel).forEach((el) => {
-        const it = { el, words: [], lit: 0, busy: false };
-        items.push(it);
-        split(it);
-        /* language switch replaces innerHTML → split again */
-        new MutationObserver(() => {
-          if (it.busy || el.querySelector(".tm-lw")) return;
-          split(it);
-          paint(it);
-        }).observe(el, { childList: true });
-      });
-    });
-    if (!items.length) return;
-
-    let raf = 0;
-    const run = () => { raf = 0; items.forEach(paint); };
-    const kick = () => { if (!raf) raf = requestAnimationFrame(run); };
-    addEventListener("scroll", kick, { passive: true });
-    addEventListener("resize", kick, { passive: true });
-    kick();
-  }
-
-  /* =========================================================
-     9 · AI CREATION — the glass frame "opens" as you arrive
-        (starts as a smaller rounded card, expands to full width while the
-        wall inside pulls back from a closer camera). Desktop / fine pointer only.
-     ========================================================= */
-  function initAiOpen() {
-    if (reduced()) return;
-    if (!matchMedia("(hover:hover) and (pointer:fine)").matches || innerWidth <= 900) return;
-    const sec = document.getElementById("creation");
-    if (!sec) return;
-    let glass = null;
-    let raf = 0;
-    const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-    const ease = (t) => 1 - Math.pow(1 - t, 3);
-    const run = () => {
-      raf = 0;
-      glass = glass || sec.querySelector(".cr-glass");
-      if (!glass) return;
-      const vh = innerHeight || 1;
-      const top = glass.getBoundingClientRect().top;
-      /* 0 when the frame's top edge is at the bottom of the screen, 1 once it reached ~38% of the screen */
-      const p = ease(clamp((vh * 0.98 - top) / (vh * 0.6), 0, 1));
-      glass.style.setProperty("--ao", p.toFixed(3));
-    };
-    const kick = () => { if (!raf) raf = requestAnimationFrame(run); };
-    addEventListener("scroll", kick, { passive: true });
-    addEventListener("resize", kick, { passive: true });
-    setTimeout(kick, 300);
-    setTimeout(kick, 1500);
-    kick();
-  }
-
   /* boot after DOM ready */
   const boot = () => {
     initLenis();
@@ -747,8 +627,6 @@
     initCreationField();
     initAboutParallax();
     initAiPortal();
-    initWords();
-    initAiOpen();
   };
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", boot, { once: true });

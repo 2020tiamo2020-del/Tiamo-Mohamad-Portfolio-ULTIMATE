@@ -979,28 +979,12 @@ if (canvas && ctx && !reduceMotion) {
       orb.setAttribute("aria-pressed", on ? "true" : "false");
       if (!on) {
         orb.classList.remove("is-buffering");
-        /* ease motion vars to 0 instead of a hard snap */
-        orb.style.setProperty("--beat", "0");
-        orb.style.setProperty("--sway", "0");
-        orb.style.setProperty("--spin", "0");
+        orb.style.removeProperty("--beat"); orb.style.removeProperty("--sway"); orb.style.removeProperty("--spin");
         if (mini) {
           mini.classList.remove("is-live");
-          mini.style.setProperty("--beat", "0");
-          mini.style.setProperty("--sway", "0");
-          mini.style.setProperty("--spin", "0");
+          mini.style.removeProperty("--beat"); mini.style.removeProperty("--sway"); mini.style.removeProperty("--spin");
         }
         eqBars.concat(miniBars).forEach(b => (b.style.transform = ""));
-        beatS = 0; avgB = -1;
-        sBeat = sSway = sSpin = 0;
-      } else {
-        /* fresh averages so the first second of music does not jolt the hero */
-        mean.fill(0.45);
-        cur.fill(0.3);
-        beatS = 0; avgB = -1;
-        sBeat = sSway = sSpin = 0;
-        orb.style.setProperty("--beat", "0");
-        orb.style.setProperty("--sway", "0");
-        orb.style.setProperty("--spin", "0");
       }
       const noFFT = on && !analyser;
       orb.classList.toggle("no-fft", noFFT);
@@ -1048,15 +1032,14 @@ if (canvas && ctx && !reduceMotion) {
     };
 
     const cur = new Float32Array(BINS.length + MINI_BINS.length).fill(0.3);   // smoothed bar heights (no flicker)
-    let sBeat = 0, sSway = 0, sSpin = 0;   // display-smoothed motion (avoids play/pause jolts)
     const tick = () => {
       if (!playing || !analyser) return;
       analyser.getByteFrequencyData(data);
       const level = (bin, i, floor) => {               // relative to the bar's own recent average, then eased
         const v = data[bin] / 255;
         mean[i] += (v - mean[i]) * 0.04;
-        const target = Math.max(floor, Math.min(1, 0.5 + (v - mean[i]) * 1.6 + (v - 0.5) * 0.2));
-        cur[i] += (target - cur[i]) * (target > cur[i] ? 0.28 : 0.12);
+        const target = Math.max(floor, Math.min(1, 0.5 + (v - mean[i]) * 2.4 + (v - 0.5) * 0.3));
+        cur[i] += (target - cur[i]) * (target > cur[i] ? 0.5 : 0.13);
         return cur[i];
       };
       for (let k = 0; k < eqBars.length; k++) eqBars[k].style.transform = "scaleY(" + level(BINS[k], k, 0.24).toFixed(3) + ")";
@@ -1068,24 +1051,22 @@ if (canvas && ctx && !reduceMotion) {
       const bass = (data[0] + data[1] + data[2]) / (3 * 255);
       const mid = (data[6] + data[8] + data[10]) / (3 * 255);
       const high = (data[16] + data[20] + data[24]) / (3 * 255);
-      /* warm up avg before reacting to hits — kills the play-button jolt */
-      if (avgB < 0) { avgB = bass; beatS = 0; }
-      else avgB += (bass - avgB) * 0.08;
-      const hit = Math.max(0, Math.min(1, (bass - avgB) * 3.5));
-      beatS = Math.max(hit, beatS * 0.88);
-      const swayT = Math.max(-8, Math.min(8, (mid - 0.4) * 10 + (bass - 0.35) * 5));
-      const spinT = Math.max(-4, Math.min(4, (high - 0.3) * 6 + (mid - 0.35) * 4));
-      /* smooth follow — play/pause still starts from 0 via setUI reset */
-      sBeat += (beatS - sBeat) * 0.18;
-      sSway += (swayT - sSway) * 0.14;
-      sSpin += (spinT - sSpin) * 0.14;
-      orb.style.setProperty("--beat", sBeat.toFixed(3));
-      orb.style.setProperty("--sway", sSway.toFixed(2));
-      orb.style.setProperty("--spin", sSpin.toFixed(2));
+      avgB = avgB < 0 ? bass : avgB + (bass - avgB) * 0.05;
+      const hit = Math.max(0, Math.min(1, (bass - avgB) * 4.5));
+      beatS = Math.max(hit, beatS * 0.88);                               // instant attack, quick release (v1 feel)
+      // elegant ↔ cheerful dance: sway + micro spin from mid/high, scaled by beat
+      const sway = (mid - 0.35) * 10 + (beatS - 0.2) * 6;
+      const spin = (high - 0.3) * 8 + (mid - 0.35) * 5;
+      const swayV = (Math.max(-7, Math.min(7, sway))).toFixed(2);
+      const spinV = (Math.max(-5, Math.min(5, spin))).toFixed(2);
+      const beatV = beatS.toFixed(3);
+      orb.style.setProperty("--beat", beatV);
+      orb.style.setProperty("--sway", swayV);
+      orb.style.setProperty("--spin", spinV);
       if (mini && miniOn) {
-        mini.style.setProperty("--beat", sBeat.toFixed(3));
-        mini.style.setProperty("--sway", sSway.toFixed(2));
-        mini.style.setProperty("--spin", sSpin.toFixed(2));
+        mini.style.setProperty("--beat", beatV);
+        mini.style.setProperty("--sway", swayV);
+        mini.style.setProperty("--spin", spinV);
         mini.classList.add("is-live");
       }
       raf = requestAnimationFrame(tick);
