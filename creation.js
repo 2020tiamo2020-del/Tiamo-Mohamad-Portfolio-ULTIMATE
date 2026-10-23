@@ -195,32 +195,37 @@ const show = (k, mode) => {
   busy = true;
   cur = next;
 
-  pic.classList.remove("in", "enter", "from-right", "from-top", "from-left", "from-scale", "swap");
-  void pic.offsetWidth;
-
-  if (how === "enter") pic.classList.add("enter");
-  else if (how === "prev") pic.classList.add("from-left");
-  else {
-    const cycle = ["from-right", "from-top", "from-scale"];
-    pic.classList.add(cycle[dirIdx % cycle.length]);
-    dirIdx++;
-  }
-  pic.classList.add("swap");
-
   const url = items[cur].u;
-  const apply = () => {
+  const run = () => {
+    pic.classList.remove("in", "enter", "from-right", "from-top", "from-left", "from-scale", "swap");
+    /* force style flush so the next classes always trigger a transition */
+    void pic.offsetWidth;
+
+    if (how === "enter") pic.classList.add("enter");
+    else if (how === "prev") pic.classList.add("from-left");
+    else {
+      const cycle = ["from-right", "from-top", "from-scale"];
+      pic.classList.add(cycle[dirIdx % cycle.length]);
+      dirIdx++;
+    }
+    pic.classList.add("swap");
     pic.style.backgroundImage = "url('" + url + "')";
+    setCounter();
+
     requestAnimationFrame(() => {
-      pic.classList.remove("swap");
-      pic.classList.add("in");
-      setTimeout(() => { busy = false; }, how === "enter" ? ENTER_MS : SWAP_MS);
+      requestAnimationFrame(() => {
+        pic.classList.remove("swap");
+        pic.classList.add("in");
+        setTimeout(() => { busy = false; }, how === "enter" ? ENTER_MS : SWAP_MS);
+      });
     });
   };
+
   const im = new Image();
-  im.onload = apply;
-  im.onerror = apply;
-  im.src = url;
-  setCounter();
+  im.onload = run;
+  im.onerror = run;
+  if (im.complete && im.naturalWidth) run();
+  else im.src = url;
 };
 
 function open(k) {

@@ -510,3 +510,99 @@
   .cr-view .cr-pv{left:18px !important}
   .cr-view .cr-nx{right:18px !important}
 }
+
+
+/* =========================================================
+   Worlds Portal — must live here (creation.css loads AFTER enhance.css)
+   ========================================================= */
+.cr-view{
+  background:rgba(4,2,12,.78) !important;
+  -webkit-backdrop-filter:blur(28px) saturate(145%) !important;
+  backdrop-filter:blur(28px) saturate(145%) !important;
+}
+.cr-view .cr-space{
+  position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden;
+  background:
+    radial-gradient(ellipse 55% 40% at 50% 42%,rgba(139,53,255,.22),transparent 70%),
+    radial-gradient(ellipse 40% 35% at 72% 68%,rgba(22,216,255,.12),transparent 65%),
+    radial-gradient(ellipse 32% 28% at 22% 72%,rgba(255,61,200,.07),transparent 60%);
+}
+.cr-view .cr-space i{
+  position:absolute;border-radius:50%;filter:blur(80px);opacity:.2;
+  animation:crSpaceFloat 14s ease-in-out infinite alternate;
+}
+.cr-view .cr-space i:nth-child(1){width:42vw;height:42vw;left:-8%;top:10%;background:#8b35ff}
+.cr-view .cr-space i:nth-child(2){width:36vw;height:36vw;right:-6%;bottom:8%;background:#16d8ff;animation-duration:18s}
+.cr-view .cr-space i:nth-child(3){width:28vw;height:28vw;left:40%;top:50%;background:#c4b5fd;animation-duration:16s;opacity:.14}
+@keyframes crSpaceFloat{
+  from{transform:translate3d(0,0,0) scale(1)}
+  to{transform:translate3d(4vw,-3vh,0) scale(1.12)}
+}
+
+.cr-view .cr-pic{
+  z-index:1 !important;
+  transform-origin:center center !important;
+  will-change:transform,opacity,filter;
+  transition:
+    transform .6s cubic-bezier(.16,1,.3,1),
+    opacity .45s ease,
+    filter .5s ease !important;
+  filter:drop-shadow(0 24px 70px rgba(139,53,255,.35));
+}
+
+/* override creation.css .cr-view.open .cr-pic{transform:none} during anim states */
+.cr-view.open .cr-pic.swap{
+  opacity:0 !important;
+}
+.cr-view.open .cr-pic.enter.swap{
+  transform:scale(.4) !important;
+  filter:blur(14px) brightness(.65) !important;
+}
+.cr-view.open .cr-pic.from-right.swap{
+  transform:translate3d(14%,0,0) scale(.9) !important;
+  filter:blur(6px) brightness(.8) !important;
+}
+.cr-view.open .cr-pic.from-top.swap{
+  transform:translate3d(0,-12%,0) scale(.92) !important;
+  filter:blur(6px) brightness(.8) !important;
+}
+.cr-view.open .cr-pic.from-left.swap{
+  transform:translate3d(-14%,0,0) scale(.9) !important;
+  filter:blur(6px) brightness(.8) !important;
+}
+.cr-view.open .cr-pic.from-scale.swap{
+  transform:scale(1.12) !important;
+  filter:blur(10px) brightness(.7) !important;
+}
+.cr-view.open .cr-pic.in{
+  opacity:1 !important;
+  transform:none !important;
+  filter:drop-shadow(0 24px 70px rgba(139,53,255,.35)) !important;
+}
+
+.cr-view .cr-n{
+  z-index:5 !important;
+  font-size:13px !important;
+  letter-spacing:3px !important;
+  color:rgba(255,255,255,.75) !important;
+  text-shadow:0 0 18px rgba(139,53,255,.5);
+}
+.cr-view .cr-n-cur{
+  color:#fff !important;
+  font-weight:800 !important;
+  font-size:16px !important;
+}
+.cr-view .cr-hint{
+  position:absolute;z-index:5;left:50%;bottom:52px;transform:translateX(-50%);
+  font-size:10px;letter-spacing:3.5px;color:rgba(255,255,255,.45);
+  opacity:0;pointer-events:none;transition:opacity .5s ease;
+  text-transform:uppercase;
+}
+.cr-view .cr-hint.show{opacity:1}
+body.tm-cr-view-open{overflow:hidden !important}
+
+@media (max-width:900px){
+  .cr-view .cr-pic{transition-duration:.42s !important}
+  .cr-view .cr-space i{opacity:.12;filter:blur(55px)}
+  .cr-view .cr-hint{bottom:68px}
+}
