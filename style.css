@@ -2557,13 +2557,13 @@ section.social-strip{
 }
 
 .core.is-playing{
-  scale:calc(1 + var(--beat,0)*.03);
-  transform:rotate(calc(var(--spin,0) * 0.35deg)) translateX(calc(var(--sway,0) * 0.35px));
-  transition: scale .35s ease, transform .35s ease;
+  scale:calc(1 + var(--beat,0)*.05);
+  transform:rotate(calc(var(--spin,0) * 0.85deg)) translateX(calc(var(--sway,0) * 0.85px));
+  transition: scale .4s ease, transform .4s ease;
 }
 .core.is-playing .tm-phones{
-  transform:rotate(calc(var(--spin,0) * -0.2deg));
-  transition: transform .35s ease;
+  transform:rotate(calc(var(--spin,0) * -0.45deg));
+  transition: transform .4s ease;
 }
 .core.is-playing .wave{
   animation-duration:calc(2.6s - var(--beat,0)*.6s);

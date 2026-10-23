@@ -226,17 +226,18 @@
         my += (ty - my) * 0.06;
 
         /* calm rings: soft idle, gentle lift when music plays (not a race) */
+        /* Normal interactive speed restored; only the ramp-in on play is soft */
         const want = playing() ? 1 : 0;
-        boost += (want - boost) * 0.012; /* slow ease when pressing play/pause */
-        const spd = 1 + boost * 0.18;
+        boost += (want - boost) * 0.018;
+        const spd = 1 + boost * 1.0;
 
-        group.rotation.y = t * 0.045 * spd + mx * 0.12;
-        group.rotation.x = my * 0.08;
-        points.rotation.y = t * 0.03 * spd;
-        points2.rotation.y = -t * 0.04 * spd;
-        r1.rotation.z = t * 0.06 * spd;
-        r2.rotation.z = -t * 0.05 * spd;
-        r3.rotation.y = t * 0.035 * spd;
+        group.rotation.y = t * 0.1 * spd + mx * 0.18;
+        group.rotation.x = my * 0.12;
+        points.rotation.y = t * 0.07 * spd;
+        points2.rotation.y = -t * 0.09 * spd;
+        r1.rotation.z = t * 0.16 * spd;
+        r2.rotation.z = -t * 0.12 * spd;
+        r3.rotation.y = t * 0.08 * spd;
 
         pMat.opacity = 0.65 + boost * 0.22;
         points2.material.opacity = 0.5 + boost * 0.28;

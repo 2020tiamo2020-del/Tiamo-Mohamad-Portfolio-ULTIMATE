@@ -1071,13 +1071,14 @@ if (canvas && ctx && !reduceMotion) {
       /* warm up avg before reacting to hits — kills the play-button jolt */
       if (avgB < 0) { avgB = bass; beatS = 0; }
       else avgB += (bass - avgB) * 0.08;
-      const hit = Math.max(0, Math.min(0.55, (bass - avgB) * 2.2));
-      beatS = Math.max(hit, beatS * 0.9);
-      const swayT = Math.max(-2.2, Math.min(2.2, (mid - 0.4) * 3 + (bass - 0.35) * 1.5));
-      const spinT = Math.max(-1.1, Math.min(1.1, (high - 0.3) * 1.2 + (mid - 0.35) * 0.8));
-      sBeat += (beatS - sBeat) * 0.12;
-      sSway += (swayT - sSway) * 0.08;
-      sSpin += (spinT - sSpin) * 0.08;
+      const hit = Math.max(0, Math.min(1, (bass - avgB) * 3.5));
+      beatS = Math.max(hit, beatS * 0.88);
+      const swayT = Math.max(-8, Math.min(8, (mid - 0.4) * 10 + (bass - 0.35) * 5));
+      const spinT = Math.max(-4, Math.min(4, (high - 0.3) * 6 + (mid - 0.35) * 4));
+      /* smooth follow — play/pause still starts from 0 via setUI reset */
+      sBeat += (beatS - sBeat) * 0.18;
+      sSway += (swayT - sSway) * 0.14;
+      sSpin += (spinT - sSpin) * 0.14;
       orb.style.setProperty("--beat", sBeat.toFixed(3));
       orb.style.setProperty("--sway", sSway.toFixed(2));
       orb.style.setProperty("--spin", sSpin.toFixed(2));

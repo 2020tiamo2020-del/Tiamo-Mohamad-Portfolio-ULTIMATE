@@ -267,7 +267,7 @@ const paintInstant = k => {
   cur = ((k % items.length) + items.length) % items.length;
   const a = activeLayer(), b = idleLayer();
   a.style.backgroundImage = "url('" + items[cur].u + "')";
-  a.className = (activeIsA ? "cr-pic cr-pic-a" : "cr-pic cr-pic-b") + " is-active";
+  a.className = (activeIsA ? "cr-pic cr-pic-a" : "cr-pic cr-pic-b") + " is-active is-settled";
   a.removeAttribute("aria-hidden");
   b.className = activeIsA ? "cr-pic cr-pic-b" : "cr-pic cr-pic-a";
   b.style.backgroundImage = "";
@@ -287,8 +287,9 @@ const travel = (k, dir) => {
   busy = true;
   const from = activeLayer();
   const to = idleLayer();
-  const outCls = dir > 0 ? "go-out-left" : "go-out-right";
-  const inCls = dir > 0 ? "go-in-right" : "go-in-left";
+  /* soft crossfade only — no big slide/scale jump */
+  const outCls = "go-fade-out";
+  const inCls = dir > 0 ? "go-fade-in-next" : "go-fade-in-prev";
 
   to.style.backgroundImage = "url('" + items[next].u + "')";
   to.className = (to === layerA ? "cr-pic cr-pic-a" : "cr-pic cr-pic-b") + " " + inCls;
@@ -301,13 +302,14 @@ const travel = (k, dir) => {
   setCounter();
   warm(cur + 1); warm(cur - 1);
 
-  const dur = isTouch ? 420 : 620;
+  const dur = isTouch ? 320 : 400;
   clearTimeout(v._travelT);
   v._travelT = setTimeout(() => {
     from.className = from === layerA ? "cr-pic cr-pic-a" : "cr-pic cr-pic-b";
     from.style.backgroundImage = "";
     from.setAttribute("aria-hidden", "true");
-    to.className = (to === layerA ? "cr-pic cr-pic-a" : "cr-pic cr-pic-b") + " is-active";
+    /* keep is-active without re-triggering open animation */
+    to.className = (to === layerA ? "cr-pic cr-pic-a" : "cr-pic cr-pic-b") + " is-active is-settled";
     busy = false;
   }, dur);
 };
@@ -326,6 +328,17 @@ function openWorld(k) {
   activeIsA = true;
   clearLayers();
   paintInstant(k);
+  /* one soft entrance on open only */
+  const a0 = activeLayer();
+  if (a0) {
+    a0.classList.remove("is-settled");
+    a0.classList.add("is-enter");
+    clearTimeout(v._enterT);
+    v._enterT = setTimeout(() => {
+      a0.classList.remove("is-enter");
+      a0.classList.add("is-settled");
+    }, 450);
+  }
 
   v.style.display = "grid";
   v.classList.add("open");
