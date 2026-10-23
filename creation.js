@@ -147,7 +147,7 @@ let rw = 0; addEventListener("resize", () => { clearTimeout(rw); rw = setTimeout
 /* ----- protection: no right-click menu, no drag, no long-press save inside this section ----- */
 ["contextmenu", "dragstart", "selectstart"].forEach(ev => sec.addEventListener(ev, e => e.preventDefault()));
 
-/* ----- viewer: Worlds Portal (scroll / swipe worlds, first open = expand) ----- */
+/* ----- viewer: Worlds Portal (slow cinematic travel) ----- */
 const v = document.createElement("div");
 v.className = "cr-view";
 v.setAttribute("role", "dialog");
@@ -168,12 +168,17 @@ const portalHint = v.querySelector(".cr-hint");
 let cur = 0;
 let busy = false;
 let dirIdx = 0;
-const ENTER_MS = 520;
-const SWAP_MS = 480;
+let savedScroll = 0;
+const ENTER_MS = 900;
+const SWAP_MS = 850;
 ["contextmenu", "dragstart"].forEach(ev => v.addEventListener(ev, e => e.preventDefault()));
 
 const pad = n => String(n).padStart(2, "0");
-const lenisPause = on => {
+const setCounter = () => {
+  if (cntCur) cntCur.textContent = pad(cur + 1);
+  if (cntTot) cntTot.textContent = pad(items.length || 0);
+};
+const lenisHold = on => {
   try {
     if (window.__lenis) {
       if (on) window.__lenis.stop();
@@ -183,22 +188,15 @@ const lenisPause = on => {
   document.body.classList.toggle("tm-cr-view-open", on);
 };
 
-const setCounter = () => {
-  if (cntCur) cntCur.textContent = pad(cur + 1);
-  if (cntTot) cntTot.textContent = pad(items.length || 0);
-};
-
 const show = (k, mode) => {
   if (!items.length || busy) return;
-  const next = (k + items.length) % items.length;
   const how = mode || "next";
   busy = true;
-  cur = next;
-
+  cur = (k + items.length) % items.length;
   const url = items[cur].u;
+
   const run = () => {
     pic.classList.remove("in", "enter", "from-right", "from-top", "from-left", "from-scale", "swap");
-    /* force style flush so the next classes always trigger a transition */
     void pic.offsetWidth;
 
     if (how === "enter") pic.classList.add("enter");
@@ -212,6 +210,7 @@ const show = (k, mode) => {
     pic.style.backgroundImage = "url('" + url + "')";
     setCounter();
 
+    /* two frames so the browser paints the "from" state before animating to "in" */
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         pic.classList.remove("swap");
@@ -224,22 +223,23 @@ const show = (k, mode) => {
   const im = new Image();
   im.onload = run;
   im.onerror = run;
+  im.src = url;
   if (im.complete && im.naturalWidth) run();
-  else im.src = url;
 };
 
 function open(k) {
   if (!items.length) return;
+  savedScroll = window.scrollY || document.documentElement.scrollTop || 0;
   v.classList.add("open");
   v.setAttribute("aria-hidden", "false");
   document.body.style.overflow = "hidden";
-  lenisPause(true);
+  lenisHold(true);
   dirIdx = 0;
   show(k, "enter");
   if (portalHint) {
     portalHint.textContent = document.documentElement.lang === "ar" ? "مرّر" : "SCROLL";
     portalHint.classList.add("show");
-    setTimeout(() => portalHint.classList.remove("show"), 2200);
+    setTimeout(() => portalHint.classList.remove("show"), 2600);
   }
   try {
     if (typeof window.playOpenSound === "function") window.playOpenSound();
@@ -266,39 +266,59 @@ const close = () => {
   v.classList.remove("open");
   v.setAttribute("aria-hidden", "true");
   document.body.style.overflow = "";
-  lenisPause(false);
+  lenisHold(false);
   busy = false;
   pic.classList.remove("in", "enter", "from-right", "from-top", "from-left", "from-scale", "swap");
+  /* stay in the same section — restore exact scroll */
+  requestAnimationFrame(() => {
+    try {
+      if (window.__lenis && typeof window.__lenis.scrollTo === "function") {
+        window.__lenis.scrollTo(savedScroll, { immediate: true });
+      } else {
+        window.scrollTo(0, savedScroll);
+      }
+    } catch (_) {
+      window.scrollTo(0, savedScroll);
+    }
+  });
 };
 
 v.querySelector(".cr-x").onclick = close;
 v.querySelector(".cr-pv").onclick = () => show(cur - 1, "prev");
 v.querySelector(".cr-nx").onclick = () => show(cur + 1, "next");
-v.addEventListener("click", e => { if (e.target === v || e.target.classList.contains("cr-space")) close(); });
+v.addEventListener("click", e => {
+  if (e.target === v || (e.target.classList && e.target.classList.contains("cr-space"))) close();
+});
 
 document.addEventListener("keydown", e => {
   if (!v.classList.contains("open")) return;
-  if (e.key === "Escape") close();
-  if (e.key === "ArrowRight") show(cur + 1, "next");
-  if (e.key === "ArrowLeft") show(cur - 1, "prev");
-  if (e.key === "ArrowDown") show(cur + 1, "next");
-  if (e.key === "ArrowUp") show(cur - 1, "prev");
+  if (e.key === "Escape") { e.preventDefault(); close(); }
+  if (e.key === "ArrowRight" || e.key === "ArrowDown") { e.preventDefault(); show(cur + 1, "next"); }
+  if (e.key === "ArrowLeft" || e.key === "ArrowUp") { e.preventDefault(); show(cur - 1, "prev"); }
 });
 
-/* wheel = travel between worlds (threshold + lock avoids freeze/spam) */
+/* wheel only changes worlds — never the page behind */
 let wheelLock = 0;
 v.addEventListener("wheel", e => {
   if (!v.classList.contains("open")) return;
   e.preventDefault();
+  e.stopPropagation();
   const now = performance.now();
-  if (now - wheelLock < 600 || busy) return;
-  if (Math.abs(e.deltaY) < 18 && Math.abs(e.deltaX) < 18) return;
+  if (now - wheelLock < 750 || busy) return;
+  if (Math.abs(e.deltaY) < 12 && Math.abs(e.deltaX) < 12) return;
   wheelLock = now;
   const forward = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY > 0 : e.deltaX > 0;
   show(cur + (forward ? 1 : -1), forward ? "next" : "prev");
 }, { passive: false });
 
-/* touch swipe: horizontal + vertical */
+/* also block wheel on document while open (Lenis / page) */
+document.addEventListener("wheel", e => {
+  if (v.classList.contains("open")) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+}, { passive: false, capture: true });
+
 let sx = 0, sy = 0;
 v.addEventListener("touchstart", e => {
   sx = e.touches[0].clientX;
@@ -308,7 +328,7 @@ v.addEventListener("touchend", e => {
   if (!v.classList.contains("open") || busy) return;
   const dx = e.changedTouches[0].clientX - sx;
   const dy = e.changedTouches[0].clientY - sy;
-  if (Math.abs(dx) < 40 && Math.abs(dy) < 40) return;
+  if (Math.abs(dx) < 45 && Math.abs(dy) < 45) return;
   if (Math.abs(dx) > Math.abs(dy)) show(cur + (dx < 0 ? 1 : -1), dx < 0 ? "next" : "prev");
   else show(cur + (dy < 0 ? 1 : -1), dy < 0 ? "next" : "prev");
 }, { passive: true });
