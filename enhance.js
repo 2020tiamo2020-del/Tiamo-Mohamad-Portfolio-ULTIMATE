@@ -792,20 +792,36 @@ function initAboutGlassTitle() {
     p.querySelectorAll(".tm-lw").forEach(w => w.classList.add("on"));
   };
 
-  const play = () => {
-    build();
-    h2.classList.remove("tm-lines-on");
-    void h2.offsetWidth;
-    requestAnimationFrame(() => {
-      h2.classList.add("tm-lines-on");
-      /* paragraph fully visible while section is active — not half-dim until extra scroll */
-      lightAboutPara();
-      setTimeout(lightAboutPara, 400);
-    });
-  };
+  let playT = 0;
+  let playing = false;
 
   const reset = () => {
-    h2.classList.remove("tm-lines-on");
+    clearTimeout(playT);
+    playing = false;
+    h2.classList.remove("tm-lines-on", "tm-lines-ready");
+  };
+
+  /* only after page/scroll has settled on About — no bars while still moving */
+  const play = (delayMs) => {
+    clearTimeout(playT);
+    const wait = typeof delayMs === "number" ? delayMs : 420;
+    playT = setTimeout(() => {
+      if (!sec.classList.contains("about-in")) return;
+      if (playing) return;
+      playing = true;
+      build();
+      h2.classList.remove("tm-lines-on");
+      /* show bars only at the moment the reveal starts */
+      h2.classList.add("tm-lines-ready");
+      void h2.offsetWidth;
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          h2.classList.add("tm-lines-on");
+          lightAboutPara();
+          setTimeout(lightAboutPara, 500);
+        });
+      });
+    }, wait);
   };
 
   build();
@@ -823,7 +839,8 @@ function initAboutGlassTitle() {
   window.__sectionEnter = window.__sectionEnter || {};
   window.__sectionEnter.about = () => {
     sec.classList.add("about-in");
-    play();
+    /* nav click: wait for Lenis to settle first */
+    play(720);
   };
 
   /* rebuild lines after language switch */

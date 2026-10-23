@@ -597,7 +597,7 @@ section.hero.hero-enter h1 .word{
   display:flex;
   flex-direction:column;
   align-items:flex-start;
-  gap:.12em;
+  gap:0.02em;
 }
 [dir=rtl] #about .section-title h2{ align-items:flex-end; }
 
@@ -607,8 +607,9 @@ section.hero.hero-enter h1 .word{
   overflow:hidden;
   width:max-content;
   max-width:100%;
-  line-height:1.15;
-  padding:.06em 0;
+  line-height:1.12;
+  padding:0;
+  margin:0;
 }
 
 #about .section-title h2 .tm-line-text{
@@ -677,7 +678,21 @@ section.hero.hero-enter h1 .word{
   transform:translate3d(-105%, 0, 0);
 }
 
-/* let the glass lines own the h2 entrance — disable old slide */
+/* idle: no visible bars or text while scrolling past / before settle */
+.js #about .section-title h2:not(.tm-lines-ready) .tm-line-text,
+.js #about .section-title h2:not(.tm-lines-ready) .tm-gbar{
+  opacity:0 !important;
+  visibility:hidden;
+  transition:none !important;
+}
+.js #about .section-title h2:not(.tm-lines-ready) .tm-line-text{
+  transform:translate3d(0, 112%, 0);
+}
+.js #about .section-title h2:not(.tm-lines-ready) .tm-gbar{
+  transform:translate3d(0, 0, 0);
+}
+
+/* let glass lines own h2 entrance */
 .js #about:not(.about-in) .section-title h2{
   opacity:1 !important;
   transform:none !important;
@@ -685,12 +700,23 @@ section.hero.hero-enter h1 .word{
 .js #about:not(.about-in) .section-title h2 .tm-line-text{
   transform:translate3d(0, 112%, 0);
   opacity:0;
+  visibility:hidden;
   transition:none;
 }
 .js #about:not(.about-in) .section-title h2 .tm-gbar{
   transform:translate3d(0, 0, 0);
-  opacity:1;
+  opacity:0;
+  visibility:hidden;
   transition:none;
+}
+
+/* ready = bars may show for the wipe */
+#about .section-title h2.tm-lines-ready .tm-gbar{
+  visibility:visible;
+  opacity:1;
+}
+#about .section-title h2.tm-lines-ready .tm-line-text{
+  visibility:visible;
 }
 
 @media (max-width:900px){
@@ -718,4 +744,31 @@ section.hero.hero-enter h1 .word{
 }
 #about.about-in .section-title > p{
   opacity:1 !important;
+}
+
+/* keep em purple visible through glass */
+#about .section-title h2 .tm-line-text em{
+  color:inherit;
+  font-style:normal;
+  background:linear-gradient(120deg,#c4b5fd,#8b35ff 40%,#16d8ff);
+  -webkit-background-clip:text;
+  background-clip:text;
+  color:transparent;
+  /* fallback if clip unsupported */
+}
+@supports not (background-clip:text){
+  #about .section-title h2 .tm-line-text em{ color:#b07cff; background:none; }
+}
+
+
+/* about title compact — avoid pushing certificate off / clipping */
+#about .section-title h2.tm-lines-ready,
+#about .section-title h2.tm-lines-on{
+  margin-bottom:0.15em;
+}
+#about{
+  overflow:visible;
+}
+#about .cert{
+  overflow:visible;
 }
