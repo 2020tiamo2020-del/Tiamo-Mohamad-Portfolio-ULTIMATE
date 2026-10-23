@@ -442,7 +442,6 @@ body.gate-locked section.hero .hero-actions,
 body.gate-locked section.hero .hero-visual{
   opacity:0 !important;
   pointer-events:none;
-  filter:blur(10px);
 }
 
 /* starting poses (only before .hero-enter) */
@@ -452,12 +451,12 @@ section.hero:not(.hero-enter) .lead,
 section.hero:not(.hero-enter) .hero-actions{
   opacity:0;
   transform:translate3d(-72px, 12px, 0);
-  filter:blur(12px);
+  filter:blur(5px);
 }
 section.hero:not(.hero-enter) .hero-visual{
   opacity:0;
-  transform:translate3d(88px, 16px, 0) scale(.88);
-  filter:blur(14px);
+  transform:translate3d(88px, 16px, 0) scale(.92);
+  filter:none;
 }
 /* title still uses hero-pending / wordIn — reinforce from-top */
 section.hero:not(.hero-enter) h1.hero-pending{
@@ -468,16 +467,16 @@ section.hero.hero-enter .eyebrow{
   animation:heroInFromStart 1.55s cubic-bezier(.19,1,.22,1) .12s both;
 }
 section.hero.hero-enter .role{
-  animation:heroInFromStart 1.65s cubic-bezier(.19,1,.22,1) .48s both;
+  animation:heroInFromStart 1.65s cubic-bezier(.19,1,.22,1) .75s both;
 }
 section.hero.hero-enter .lead{
-  animation:heroInFromStart 1.7s cubic-bezier(.19,1,.22,1) .68s both;
+  animation:heroInFromStart 1.7s cubic-bezier(.19,1,.22,1) .95s both;
 }
 section.hero.hero-enter .hero-actions{
-  animation:heroInFromStart 1.75s cubic-bezier(.19,1,.22,1) .9s both;
+  animation:heroInFromStart 1.75s cubic-bezier(.19,1,.22,1) 1.15s both;
 }
 section.hero.hero-enter .hero-visual{
-  animation:heroInFromEnd 1.9s cubic-bezier(.19,1,.22,1) .35s both;
+  animation:heroInFromEnd 1.75s cubic-bezier(.19,1,.22,1) .28s both;
 }
 /* title words — slower drop from under the header */
 section.hero.hero-enter h1 .word{
@@ -488,21 +487,18 @@ section.hero.hero-enter h1 .word{
 }
 
 @keyframes heroInFromStart{
-  0%{ opacity:0; transform:translate3d(-80px, 22px, 0); filter:blur(14px); }
-  35%{ opacity:.55; filter:blur(6px); }
-  70%{ opacity:1; filter:blur(0); }
+  0%{ opacity:0; transform:translate3d(-80px, 22px, 0); filter:blur(5px); }
+  40%{ opacity:.65; filter:blur(2px); }
   100%{ opacity:1; transform:translate3d(0, 0, 0); filter:blur(0); }
 }
 @keyframes heroInFromEnd{
-  0%{ opacity:0; transform:translate3d(96px, 18px, 0) scale(.86); filter:blur(16px); }
-  30%{ opacity:.4; filter:blur(8px); }
-  65%{ opacity:1; filter:blur(0); }
-  100%{ opacity:1; transform:translate3d(0, 0, 0) scale(1); filter:blur(0); }
+  0%{ opacity:0; transform:translate3d(96px, 18px, 0) scale(.92); filter:none; }
+  40%{ opacity:.55; }
+  100%{ opacity:1; transform:translate3d(0, 0, 0) scale(1); filter:none; }
 }
 @keyframes heroWordFromHeader{
-  0%{ opacity:0; transform:translate3d(0, -56px, 0); filter:blur(12px); }
-  40%{ opacity:.6; filter:blur(5px); }
-  75%{ opacity:1; filter:blur(0); }
+  0%{ opacity:0; transform:translate3d(0, -56px, 0); filter:blur(5px); }
+  45%{ opacity:.7; filter:blur(2px); }
   100%{ opacity:1; transform:translate3d(0, 0, 0); filter:blur(0); }
 }
 
@@ -526,16 +522,14 @@ section.hero.hero-enter h1 .word{
   animation-name:heroInFromEndRTL;
 }
 @keyframes heroInFromStartRTL{
-  0%{ opacity:0; transform:translate3d(80px, 22px, 0); filter:blur(14px); }
-  35%{ opacity:.55; filter:blur(6px); }
-  70%{ opacity:1; filter:blur(0); }
+  0%{ opacity:0; transform:translate3d(80px, 22px, 0); filter:blur(5px); }
+  40%{ opacity:.65; filter:blur(2px); }
   100%{ opacity:1; transform:translate3d(0, 0, 0); filter:blur(0); }
 }
 @keyframes heroInFromEndRTL{
-  0%{ opacity:0; transform:translate3d(-96px, 18px, 0) scale(.86); filter:blur(16px); }
-  30%{ opacity:.4; filter:blur(8px); }
-  65%{ opacity:1; filter:blur(0); }
-  100%{ opacity:1; transform:translate3d(0, 0, 0) scale(1); filter:blur(0); }
+  0%{ opacity:0; transform:translate3d(-96px, 18px, 0) scale(.92); filter:none; }
+  40%{ opacity:.55; }
+  100%{ opacity:1; transform:translate3d(0, 0, 0) scale(1); filter:none; }
 }
 
 @media (max-width:900px){
@@ -570,14 +564,14 @@ section.hero.hero-enter h1 .word{
     animation-name:heroInFromEndMobile;
   }
   @keyframes heroInFromStartMobile{
-    0%{ opacity:0; transform:translate3d(0, 40px, 0); filter:blur(10px); }
-    40%{ opacity:.5; filter:blur(4px); }
+    0%{ opacity:0; transform:translate3d(0, 40px, 0); filter:blur(4px); }
+    45%{ opacity:.6; filter:blur(1.5px); }
     100%{ opacity:1; transform:translate3d(0, 0, 0); filter:blur(0); }
   }
   @keyframes heroInFromEndMobile{
-    0%{ opacity:0; transform:translate3d(0, 48px, 0) scale(.92); filter:blur(12px); }
-    40%{ opacity:.45; filter:blur(5px); }
-    100%{ opacity:1; transform:translate3d(0, 0, 0) scale(1); filter:blur(0); }
+    0%{ opacity:0; transform:translate3d(0, 48px, 0) scale(.94); filter:none; }
+    45%{ opacity:.55; }
+    100%{ opacity:1; transform:translate3d(0, 0, 0) scale(1); filter:none; }
   }
 }
 
