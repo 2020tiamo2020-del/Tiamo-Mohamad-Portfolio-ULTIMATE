@@ -761,6 +761,7 @@ function initAboutGlassTitle() {
   const sec = document.getElementById("about");
   const h2 = sec && sec.querySelector(".section-title h2");
   if (!h2) return;
+  h2.setAttribute("data-tm-glass", "1");
 
   const LINES = {
     en: [
@@ -774,19 +775,24 @@ function initAboutGlassTitle() {
     ]
   };
 
-  let builtFor = "";
   let playT = 0;
   let gen = 0;
+  let busyBuild = false;
 
-  const build = () => {
+  const build = (force) => {
+    if (busyBuild) return;
     const lang = document.documentElement.lang === "ar" ? "ar" : "en";
-    if (builtFor === lang && h2.querySelector(".tm-line")) return;
-    builtFor = lang;
+    if (!force && h2.querySelector(".tm-line") && h2.dataset.tmLang === lang) return;
+    busyBuild = true;
+    h2.dataset.tmLang = lang;
+    h2.setAttribute("data-tm-glass", "1");
+    h2.classList.remove("tm-lines-on", "tm-lines-ready");
     const lines = LINES[lang];
     h2.innerHTML = lines.map((html, i) => {
       const accent = /<em[\s>]/i.test(html) ? " tm-line-accent" : "";
       return `<span class="tm-line${accent}" style="--li:${i}"><span class="tm-line-text">${html}</span><span class="tm-gbar" aria-hidden="true"></span></span>`;
     }).join("");
+    busyBuild = false;
   };
 
   const lightAboutPara = () => {
@@ -801,57 +807,76 @@ function initAboutGlassTitle() {
     h2.classList.remove("tm-lines-on", "tm-lines-ready");
   };
 
-  /**
-   * Bars + text stay fully hidden until the section has settled.
-   * Then bars appear covering the lines and wipe away to reveal text.
-   */
   const play = (delayMs) => {
     clearTimeout(playT);
     const my = ++gen;
-    const wait = typeof delayMs === "number" ? delayMs : 480;
+    const wait = typeof delayMs === "number" ? delayMs : 500;
     playT = setTimeout(() => {
       if (my !== gen) return;
-      if (!sec.classList.contains("about-in")) return;
-      build();
+      /* force rebuild — language switch / data-en writers may have wiped lines */
+      build(true);
+      if (!h2.querySelector(".tm-line")) return;
+
       h2.classList.remove("tm-lines-on", "tm-lines-ready");
       void h2.offsetWidth;
-      /* 1) show bars covering (ready) */
+
+      /* phase 1: bars visible, covering lines — hold so the rectangles are readable */
       h2.classList.add("tm-lines-ready");
       void h2.offsetWidth;
-      /* 2) next frames: wipe bars + rise text */
-      requestAnimationFrame(() => {
+
+      /* phase 2: after a short beat, wipe bars + reveal text */
+      setTimeout(() => {
         if (my !== gen) return;
-        requestAnimationFrame(() => {
-          if (my !== gen) return;
-          h2.classList.add("tm-lines-on");
-          lightAboutPara();
-          setTimeout(lightAboutPara, 450);
-          try { window.__fillAboutBA && window.__fillAboutBA(); } catch (_) {}
-        });
-      });
+        h2.classList.add("tm-lines-on");
+        lightAboutPara();
+        setTimeout(lightAboutPara, 400);
+      }, 320);
     }, wait);
   };
 
-  build();
+  /* initial structure (hidden until play) */
+  build(true);
 
-  if ("MutationObserver" in window) {
-    new MutationObserver(() => {
-      if (sec.classList.contains("about-in")) play(480);
-      else reset();
-    }).observe(sec, { attributes: true, attributeFilter: ["class"] });
+  /* own IO — more reliable than depending only on about-in races */
+  if ("IntersectionObserver" in window) {
+    let wasIn = false;
+    new IntersectionObserver((entries) => {
+      const on = entries.some(e => e.isIntersecting && e.intersectionRatio > 0.2);
+      if (on && !wasIn) {
+        wasIn = true;
+        sec.classList.add("about-in");
+        play(550);
+      } else if (!on && wasIn) {
+        wasIn = false;
+        reset();
+      }
+    }, { threshold: [0, 0.2, 0.35, 0.5] }).observe(sec);
   }
-  if (sec.classList.contains("about-in")) play(200);
+
+  /* still watch about-in for nav-driven class toggles */
+  new MutationObserver(() => {
+    if (sec.classList.contains("about-in")) play(600);
+    else reset();
+  }).observe(sec, { attributes: true, attributeFilter: ["class"] });
 
   window.__sectionEnter = window.__sectionEnter || {};
   window.__sectionEnter.about = () => {
     sec.classList.add("about-in");
-    play(850); /* after nav Lenis settles */
+    play(900);
   };
 
+  /* if something rewrites h2 (lang apply), restore lines */
   new MutationObserver(() => {
-    builtFor = "";
-    build();
-    if (sec.classList.contains("about-in")) play(300);
+    if (busyBuild) return;
+    if (!h2.querySelector(".tm-line")) {
+      build(true);
+      if (sec.classList.contains("about-in")) play(200);
+    }
+  }).observe(h2, { childList: true, characterData: true, subtree: true });
+
+  new MutationObserver(() => {
+    build(true);
+    if (sec.classList.contains("about-in")) play(250);
   }).observe(document.documentElement, { attributes: true, attributeFilter: ["lang"] });
 }
 

@@ -153,6 +153,8 @@ const setLanguage = lang => {
   document.documentElement.lang = lang;
   document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
   document.querySelectorAll("[data-en]").forEach(el => {
+    /* glass title manages its own HTML — don't wipe the line bars */
+    if (el.hasAttribute("data-tm-glass") || el.closest("[data-tm-glass]")) return;
     const v = el.getAttribute(lang === "ar" ? "data-ar" : "data-en");
     if (v !== null) el.innerHTML = v;
   });
