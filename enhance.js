@@ -666,7 +666,10 @@
       const vh = innerHeight || 1;
       const r = it.el.getBoundingClientRect();
       let p;
-      if (r.bottom < 0) p = 1;
+      /* About body: once the section is active, keep every word fully lit */
+      if (it.el.closest("#about") && document.getElementById("about")?.classList.contains("about-in")) {
+        p = 1;
+      } else if (r.bottom < 0) p = 1;
       else if (r.top > vh) p = 0;
       else p = clamp((vh * 0.88 - r.top) / (vh * 0.33 + r.height), 0, 1);
       const n = it.words.length;
@@ -777,16 +780,28 @@ function initAboutGlassTitle() {
     if (builtFor === lang && h2.querySelector(".tm-line")) return;
     builtFor = lang;
     const lines = LINES[lang];
-    h2.innerHTML = lines.map((html, i) =>
-      `<span class="tm-line" style="--li:${i}"><span class="tm-line-text">${html}</span><span class="tm-gbar" aria-hidden="true"></span></span>`
-    ).join("");
+    h2.innerHTML = lines.map((html, i) => {
+      const accent = /<em[\s>]/i.test(html) ? " tm-line-accent" : "";
+      return `<span class="tm-line${accent}" style="--li:${i}"><span class="tm-line-text">${html}</span><span class="tm-gbar" aria-hidden="true"></span></span>`;
+    }).join("");
+  };
+
+  const lightAboutPara = () => {
+    const p = sec.querySelector(".section-title > p");
+    if (!p) return;
+    p.querySelectorAll(".tm-lw").forEach(w => w.classList.add("on"));
   };
 
   const play = () => {
     build();
     h2.classList.remove("tm-lines-on");
     void h2.offsetWidth;
-    requestAnimationFrame(() => h2.classList.add("tm-lines-on"));
+    requestAnimationFrame(() => {
+      h2.classList.add("tm-lines-on");
+      /* paragraph fully visible while section is active — not half-dim until extra scroll */
+      lightAboutPara();
+      setTimeout(lightAboutPara, 400);
+    });
   };
 
   const reset = () => {

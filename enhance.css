@@ -627,24 +627,38 @@ section.hero.hero-enter h1 .word{
   inset:0;
   z-index:2;
   border-radius:10px;
+  /* default: frosted white glass matching white title words */
   background:linear-gradient(
     105deg,
-    rgba(139,53,255,.22) 0%,
-    rgba(22,216,255,.14) 55%,
-    rgba(255,255,255,.06) 100%
+    rgba(255,255,255,.2) 0%,
+    rgba(255,255,255,.1) 45%,
+    rgba(200,190,255,.08) 100%
   );
-  border:1px solid rgba(255,255,255,.14);
+  border:1px solid rgba(255,255,255,.22);
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.18),
-    0 8px 28px rgba(139,53,255,.12);
-  -webkit-backdrop-filter:blur(10px) saturate(140%);
-  backdrop-filter:blur(10px) saturate(140%);
+    inset 0 1px 0 rgba(255,255,255,.28),
+    0 8px 28px rgba(0,0,0,.18);
+  -webkit-backdrop-filter:blur(12px) saturate(130%);
+  backdrop-filter:blur(12px) saturate(130%);
   transform:translate3d(0, 0, 0);
   transform-origin:left center;
   transition:
     transform 1.05s cubic-bezier(.19,1,.22,1) calc(var(--li, 0) * 0.18s),
     opacity .4s ease calc(var(--li, 0) * 0.18s + 0.7s);
   pointer-events:none;
+}
+/* accent line (purple "image & motion") — glass takes that hue */
+#about .section-title h2 .tm-line-accent .tm-gbar{
+  background:linear-gradient(
+    105deg,
+    rgba(139,53,255,.38) 0%,
+    rgba(176,124,255,.28) 40%,
+    rgba(22,216,255,.12) 100%
+  );
+  border-color:rgba(176,124,255,.35);
+  box-shadow:
+    inset 0 1px 0 rgba(220,200,255,.25),
+    0 8px 32px rgba(139,53,255,.28);
 }
 [dir=rtl] #about .section-title h2 .tm-gbar{
   transform-origin:right center;
@@ -695,4 +709,13 @@ section.hero.hero-enter h1 .word{
     opacity:1 !important;
   }
   #about .section-title h2 .tm-gbar{ display:none !important; }
+}
+
+
+/* About paragraph: fully readable while section is on screen */
+#about.about-in .section-title > p.tm-words .tm-lw{
+  opacity:1 !important;
+}
+#about.about-in .section-title > p{
+  opacity:1 !important;
 }
