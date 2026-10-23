@@ -751,3 +751,78 @@
     boot();
   }
 })();
+
+
+/* ---------- About title: glass bar line reveal (B+C) ---------- */
+function initAboutGlassTitle() {
+  const sec = document.getElementById("about");
+  const h2 = sec && sec.querySelector(".section-title h2");
+  if (!h2) return;
+
+  const LINES = {
+    en: [
+      "A creative signature,",
+      "built across",
+      "<em>image &amp; motion.</em>"
+    ],
+    ar: [
+      "بصمة إبداعية تجمع بين",
+      "<em>الصورة والحركة.</em>"
+    ]
+  };
+
+  let builtFor = "";
+  const build = () => {
+    const lang = document.documentElement.lang === "ar" ? "ar" : "en";
+    if (builtFor === lang && h2.querySelector(".tm-line")) return;
+    builtFor = lang;
+    const lines = LINES[lang];
+    h2.innerHTML = lines.map((html, i) =>
+      `<span class="tm-line" style="--li:${i}"><span class="tm-line-text">${html}</span><span class="tm-gbar" aria-hidden="true"></span></span>`
+    ).join("");
+  };
+
+  const play = () => {
+    build();
+    h2.classList.remove("tm-lines-on");
+    void h2.offsetWidth;
+    requestAnimationFrame(() => h2.classList.add("tm-lines-on"));
+  };
+
+  const reset = () => {
+    h2.classList.remove("tm-lines-on");
+  };
+
+  build();
+
+  /* sync with existing about-in class */
+  if ("MutationObserver" in window) {
+    new MutationObserver(() => {
+      if (sec.classList.contains("about-in")) play();
+      else reset();
+    }).observe(sec, { attributes: true, attributeFilter: ["class"] });
+  }
+  if (sec.classList.contains("about-in")) play();
+
+  /* nav / scrollspy hook */
+  window.__sectionEnter = window.__sectionEnter || {};
+  window.__sectionEnter.about = () => {
+    sec.classList.add("about-in");
+    play();
+  };
+
+  /* rebuild lines after language switch */
+  const mo = new MutationObserver(() => {
+    builtFor = "";
+    build();
+    if (sec.classList.contains("about-in")) play();
+  });
+  mo.observe(document.documentElement, { attributes: true, attributeFilter: ["lang"] });
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initAboutGlassTitle);
+} else {
+  initAboutGlassTitle();
+}
+
