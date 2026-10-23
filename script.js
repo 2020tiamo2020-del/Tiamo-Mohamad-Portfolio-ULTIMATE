@@ -219,7 +219,9 @@ function updateScrollOrbit(force = false) {
 scrollOrbit?.addEventListener("click", () => {
   window.__scrollOrbitDir = orbitUp ? "up" : "down";
   try { window.playScrollOrbitSound && window.playScrollOrbitSound(); } catch (_) {}
-  window.scrollTo({ top: orbitUp ? 0 : document.documentElement.scrollHeight, behavior: reduceMotion ? "auto" : "smooth" });
+  const goTop = !!orbitUp;
+  window.scrollTo({ top: goTop ? 0 : document.documentElement.scrollHeight, behavior: reduceMotion ? "auto" : "smooth" });
+  if (goTop) setTimeout(() => { try { window.__heroOnArrive && window.__heroOnArrive(); } catch (_) {} }, 180);
 });
 addEventListener("scroll", () => {
   if (ticking) return;
@@ -452,7 +454,13 @@ nav?.querySelectorAll("a").forEach(a => a.addEventListener("click", closeMenu));
     if (id === "services") return frameServices();
     if (id === "beforeafter") return frameBeforeAfter();
     if (id === "contact") return frameContact();
-    if (id === "home") { scrollYTo(0); setTimeout(() => { try { window.__updateActiveNav && window.__updateActiveNav(); } catch (_) {} }, 350); return; }
+    if (id === "home") {
+      scrollYTo(0);
+      /* play home entrance after scroll starts (nav Home button) */
+      setTimeout(() => { try { window.__heroOnArrive && window.__heroOnArrive(); } catch (_) {} }, 120);
+      setTimeout(() => { try { window.__updateActiveNav && window.__updateActiveNav(); } catch (_) {} }, 350);
+      return;
+    }
     const el = document.getElementById(id);
     if (!el) return;
     frameUnderHeader(el);
@@ -2406,14 +2414,24 @@ updateScrollOrbit(true);
   window.__heroEnterScene = () => {
     const hero = document.querySelector("section.hero");
     if (!hero) return;
+    /* throttle: avoid double-fire from nav click + scrollspy in the same beat */
+    const now = performance.now();
+    if (window.__heroEnterAt && now - window.__heroEnterAt < 900) return;
+    window.__heroEnterAt = now;
+
     const h1 = hero.querySelector("h1");
     if (h1) h1.classList.remove("hero-pending");
     restaggerHero();
     hero.classList.remove("hero-enter");
     void hero.offsetWidth;
     requestAnimationFrame(() => {
-      hero.classList.add("hero-enter");
+      requestAnimationFrame(() => hero.classList.add("hero-enter"));
     });
+  };
+
+  /* Replay hero when arriving at Home (nav click or scroll) — not while already there */
+  window.__heroOnArrive = () => {
+    if (typeof window.__heroEnterScene === "function") window.__heroEnterScene();
   };
 
   if (document.getElementById("enterGate")) {
@@ -2484,6 +2502,7 @@ updateScrollOrbit(true);
   let activeId = "";
   const setActive = id => {
     if (id === activeId) return;
+    const prev = activeId;
     activeId = id;
     navLinks.forEach(a => {
       const on = !!(id && a.getAttribute("href") === "#" + id);
@@ -2491,6 +2510,14 @@ updateScrollOrbit(true);
       if (on) a.setAttribute("aria-current", "page");
       else a.removeAttribute("aria-current");
     });
+    /* scrolled (or jumped) back to Home from another section → replay entrance */
+    if (id === "home" && prev && prev !== "home") {
+      try { window.__heroOnArrive && window.__heroOnArrive(); } catch (_) {}
+    }
+    /* generic hook for future section entrances: window.__sectionEnter = { about: fn, ... } */
+    if (id && prev !== id && window.__sectionEnter && typeof window.__sectionEnter[id] === "function") {
+      try { window.__sectionEnter[id](); } catch (_) {}
+    }
   };
   const updateActiveNav = () => {
     if (!sections.length) return;
