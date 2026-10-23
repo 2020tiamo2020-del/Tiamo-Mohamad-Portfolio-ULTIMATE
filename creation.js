@@ -147,22 +147,98 @@ let rw = 0; addEventListener("resize", () => { clearTimeout(rw); rw = setTimeout
 /* ----- protection: no right-click menu, no drag, no long-press save inside this section ----- */
 ["contextmenu", "dragstart", "selectstart"].forEach(ev => sec.addEventListener(ev, e => e.preventDefault()));
 
-/* ----- viewer ----- */
-const v = document.createElement("div"); v.className = "cr-view"; v.setAttribute("role", "dialog"); v.setAttribute("aria-hidden", "true");
-v.innerHTML = '<div class="cr-pic"></div><button class="cr-x" type="button" aria-label="Close">×</button><button class="cr-pv" type="button" aria-label="Previous">‹</button><button class="cr-nx" type="button" aria-label="Next">›</button><div class="cr-n"></div>';
+/* ----- viewer: Worlds Portal (scroll / swipe worlds, first open = expand) ----- */
+const v = document.createElement("div");
+v.className = "cr-view";
+v.setAttribute("role", "dialog");
+v.setAttribute("aria-hidden", "true");
+v.innerHTML =
+  '<div class="cr-space" aria-hidden="true"><i></i><i></i><i></i></div>' +
+  '<div class="cr-pic" role="img"></div>' +
+  '<button class="cr-x" type="button" aria-label="Close">×</button>' +
+  '<button class="cr-pv" type="button" aria-label="Previous">‹</button>' +
+  '<button class="cr-nx" type="button" aria-label="Next">›</button>' +
+  '<div class="cr-n" aria-live="polite"><span class="cr-n-cur">01</span><span class="cr-n-sep"> / </span><span class="cr-n-tot">00</span></div>' +
+  '<div class="cr-hint" aria-hidden="true">SCROLL</div>';
 document.body.appendChild(v);
-const pic = v.querySelector(".cr-pic"), cnt = v.querySelector(".cr-n"); let cur = 0;
+const pic = v.querySelector(".cr-pic");
+const cntCur = v.querySelector(".cr-n-cur");
+const cntTot = v.querySelector(".cr-n-tot");
+const portalHint = v.querySelector(".cr-hint");
+let cur = 0;
+let busy = false;
+let dirIdx = 0;
+const ENTER_MS = 520;
+const SWAP_MS = 480;
 ["contextmenu", "dragstart"].forEach(ev => v.addEventListener(ev, e => e.preventDefault()));
-const show = k => { cur = (k + items.length) % items.length; pic.classList.add("swap");
-  setTimeout(() => { pic.style.backgroundImage = "url('" + items[cur].u + "')"; pic.classList.remove("swap"); }, 160);
-  cnt.textContent = String(cur + 1).padStart(2, "0") + " / " + String(items.length).padStart(2, "0");
-};
-function open(k) {
-  v.classList.add("open"); v.setAttribute("aria-hidden", "false"); document.body.style.overflow = "hidden"; show(k);
+
+const pad = n => String(n).padStart(2, "0");
+const lenisPause = on => {
   try {
-    if (typeof window.playOpenSound === "function") {
-      window.playOpenSound();
-    } else {
+    if (window.__lenis) {
+      if (on) window.__lenis.stop();
+      else window.__lenis.start();
+    }
+  } catch (_) {}
+  document.body.classList.toggle("tm-cr-view-open", on);
+};
+
+const setCounter = () => {
+  if (cntCur) cntCur.textContent = pad(cur + 1);
+  if (cntTot) cntTot.textContent = pad(items.length || 0);
+};
+
+const show = (k, mode) => {
+  if (!items.length || busy) return;
+  const next = (k + items.length) % items.length;
+  const how = mode || "next";
+  busy = true;
+  cur = next;
+
+  pic.classList.remove("in", "enter", "from-right", "from-top", "from-left", "from-scale", "swap");
+  void pic.offsetWidth;
+
+  if (how === "enter") pic.classList.add("enter");
+  else if (how === "prev") pic.classList.add("from-left");
+  else {
+    const cycle = ["from-right", "from-top", "from-scale"];
+    pic.classList.add(cycle[dirIdx % cycle.length]);
+    dirIdx++;
+  }
+  pic.classList.add("swap");
+
+  const url = items[cur].u;
+  const apply = () => {
+    pic.style.backgroundImage = "url('" + url + "')";
+    requestAnimationFrame(() => {
+      pic.classList.remove("swap");
+      pic.classList.add("in");
+      setTimeout(() => { busy = false; }, how === "enter" ? ENTER_MS : SWAP_MS);
+    });
+  };
+  const im = new Image();
+  im.onload = apply;
+  im.onerror = apply;
+  im.src = url;
+  setCounter();
+};
+
+function open(k) {
+  if (!items.length) return;
+  v.classList.add("open");
+  v.setAttribute("aria-hidden", "false");
+  document.body.style.overflow = "hidden";
+  lenisPause(true);
+  dirIdx = 0;
+  show(k, "enter");
+  if (portalHint) {
+    portalHint.textContent = document.documentElement.lang === "ar" ? "مرّر" : "SCROLL";
+    portalHint.classList.add("show");
+    setTimeout(() => portalHint.classList.remove("show"), 2200);
+  }
+  try {
+    if (typeof window.playOpenSound === "function") window.playOpenSound();
+    else {
       const now = performance.now();
       if (!window.__openSoundAt) window.__openSoundAt = 0;
       if (now - window.__openSoundAt >= 280) {
@@ -180,12 +256,57 @@ function open(k) {
     }
   } catch (_) {}
 }
-const close = () => { v.classList.remove("open"); v.setAttribute("aria-hidden", "true"); document.body.style.overflow = ""; };
-v.querySelector(".cr-x").onclick = close; v.querySelector(".cr-pv").onclick = () => show(cur - 1); v.querySelector(".cr-nx").onclick = () => show(cur + 1);
-v.addEventListener("click", e => { if (e.target === v) close(); });
-document.addEventListener("keydown", e => { if (!v.classList.contains("open")) return; if (e.key === "Escape") close(); if (e.key === "ArrowRight") show(cur + 1); if (e.key === "ArrowLeft") show(cur - 1); });
-let sx = 0; v.addEventListener("touchstart", e => { sx = e.touches[0].clientX; }, { passive: true });
-v.addEventListener("touchend", e => { const d = e.changedTouches[0].clientX - sx; if (Math.abs(d) > 50) show(cur + (d < 0 ? 1 : -1)); }, { passive: true });
+
+const close = () => {
+  v.classList.remove("open");
+  v.setAttribute("aria-hidden", "true");
+  document.body.style.overflow = "";
+  lenisPause(false);
+  busy = false;
+  pic.classList.remove("in", "enter", "from-right", "from-top", "from-left", "from-scale", "swap");
+};
+
+v.querySelector(".cr-x").onclick = close;
+v.querySelector(".cr-pv").onclick = () => show(cur - 1, "prev");
+v.querySelector(".cr-nx").onclick = () => show(cur + 1, "next");
+v.addEventListener("click", e => { if (e.target === v || e.target.classList.contains("cr-space")) close(); });
+
+document.addEventListener("keydown", e => {
+  if (!v.classList.contains("open")) return;
+  if (e.key === "Escape") close();
+  if (e.key === "ArrowRight") show(cur + 1, "next");
+  if (e.key === "ArrowLeft") show(cur - 1, "prev");
+  if (e.key === "ArrowDown") show(cur + 1, "next");
+  if (e.key === "ArrowUp") show(cur - 1, "prev");
+});
+
+/* wheel = travel between worlds (threshold + lock avoids freeze/spam) */
+let wheelLock = 0;
+v.addEventListener("wheel", e => {
+  if (!v.classList.contains("open")) return;
+  e.preventDefault();
+  const now = performance.now();
+  if (now - wheelLock < 600 || busy) return;
+  if (Math.abs(e.deltaY) < 18 && Math.abs(e.deltaX) < 18) return;
+  wheelLock = now;
+  const forward = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY > 0 : e.deltaX > 0;
+  show(cur + (forward ? 1 : -1), forward ? "next" : "prev");
+}, { passive: false });
+
+/* touch swipe: horizontal + vertical */
+let sx = 0, sy = 0;
+v.addEventListener("touchstart", e => {
+  sx = e.touches[0].clientX;
+  sy = e.touches[0].clientY;
+}, { passive: true });
+v.addEventListener("touchend", e => {
+  if (!v.classList.contains("open") || busy) return;
+  const dx = e.changedTouches[0].clientX - sx;
+  const dy = e.changedTouches[0].clientY - sy;
+  if (Math.abs(dx) < 40 && Math.abs(dy) < 40) return;
+  if (Math.abs(dx) > Math.abs(dy)) show(cur + (dx < 0 ? 1 : -1), dx < 0 ? "next" : "prev");
+  else show(cur + (dy < 0 ? 1 : -1), dy < 0 ? "next" : "prev");
+}, { passive: true });
 })();
 
 /* ===== Scroll motion for 04 + 06 — same behaviour as Services / Work (title-first rise + scroll-velocity heading shift) ===== */
