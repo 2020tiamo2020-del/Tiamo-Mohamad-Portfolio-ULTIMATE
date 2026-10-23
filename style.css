@@ -958,7 +958,7 @@ html{overflow-x:clip}
 .core.is-playing .wave.w2{animation-delay:1.05s}
 .core.is-playing .wave.w3{animation-delay:2.1s}
 /* bass pulse (from v1): the sphere itself swells on every bass hit; the halo below (from v3) brightens with it */
-.core.is-playing{scale:calc(1 + var(--beat,0)*.05)}
+.core.is-playing{scale:calc(1 + var(--beat,0)*.03);transition:scale .35s ease}
 /* halo: soft gradient glow ring behind the sphere */
 .core::before{content:"";position:absolute;inset:-64%;border-radius:50%;z-index:-2;pointer-events:none;opacity:0;background:radial-gradient(circle,transparent 0,transparent 30%,rgba(139,53,255,.32) 38%,rgba(22,216,255,.16) 50%,rgba(160,120,255,.08) 60%,transparent 74%)}
 .core.is-playing::before{opacity:calc(.28 + var(--beat,0)*.4);transform:scale(calc(.94 + var(--beat,0)*.12));filter:blur(calc(3px + var(--beat,0)*3px))}
@@ -989,14 +989,10 @@ html{overflow-x:clip}
 /* Free float: wide path, not boxed — rise high, drift, settle */
 @keyframes mmBob{
   0%   { translate: 0px 0px; }
-  10%  { translate: 10px -36px; }
-  22%  { translate: 22px -88px; }
-  35%  { translate: 8px -150px; }
-  48%  { translate: -6px -200px; }  /* peak — open vertical room */
-  58%  { translate: 14px -168px; }
-  70%  { translate: 26px -110px; }
-  82%  { translate: 12px -52px; }
-  92%  { translate: 4px -14px; }
+  20%  { translate: 6px -18px; }
+  40%  { translate: 10px -32px; }
+  60%  { translate: 4px -22px; }
+  80%  { translate: -4px -10px; }
   100% { translate: 0px 0px; }
 }
 .music-mini.show{
@@ -1008,8 +1004,8 @@ html{overflow-x:clip}
 .music-mini:focus-visible{outline:2px solid rgba(22,216,255,.85);outline-offset:4px;border-radius:50%}
 /* Beat layers on top of float (individual transform props compose with translate animation) */
 .music-mini.is-live{
-  scale:calc(1 + var(--beat) * 0.09);
-  rotate:calc(var(--spin) * 1.4deg);
+  scale:calc(1 + var(--beat) * 0.04);
+  rotate:calc(var(--spin) * 0.4deg);
   animation-duration:5s; /* free long path while music plays */
   box-shadow:
     0 12px 28px rgba(0,0,0,.42),
@@ -2561,11 +2557,13 @@ section.social-strip{
 }
 
 .core.is-playing{
-  scale:calc(1 + var(--beat,0)*.06);
-  transform:rotate(calc(var(--spin,0) * 1deg)) translateX(calc(var(--sway,0) * 1px));
+  scale:calc(1 + var(--beat,0)*.05);
+  transform:rotate(calc(var(--spin,0) * 0.85deg)) translateX(calc(var(--sway,0) * 0.85px));
+  transition: scale .4s ease, transform .4s ease;
 }
 .core.is-playing .tm-phones{
-  transform:rotate(calc(var(--spin,0) * -0.55deg));
+  transform:rotate(calc(var(--spin,0) * -0.45deg));
+  transition: transform .4s ease;
 }
 .core.is-playing .wave{
   animation-duration:calc(2.6s - var(--beat,0)*.6s);
