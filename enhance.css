@@ -395,3 +395,15 @@ main#home > .tm-hero-space {
 /* body{overflow-x:hidden} made <body> a scroll container, which disables position:sticky for the AI fly-through.
    html already has overflow-x:clip, so clipping on body gives the same "no sideways scroll" without that side effect. */
 body { overflow-x: clip; }
+
+/* =========================================================
+   ABOUT photo card — silky entrance
+   .tm-scroll-card (scroll vitality) replaced the card's own entrance transition with only
+   "translate/scale .15s", so the photo snapped in instantly. The entrance is now a keyframe animation
+   (it never fights the pointer-tilt inline transform) and the card fades out softly when it leaves.
+   ========================================================= */
+@keyframes tmAboutIn {
+  from { opacity: 0; transform: translate3d(110px, 0, 0) scale(.985); }
+}
+.about-photo.show { animation: tmAboutIn 2.2s cubic-bezier(.4, .1, .2, 1) backwards; }
+.about-photo.tm-scroll-card { transition: translate .15s linear, scale .15s linear, opacity .8s ease; }
