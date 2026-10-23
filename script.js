@@ -433,8 +433,19 @@ nav?.querySelectorAll("a").forEach(a => a.addEventListener("click", closeMenu));
     if (!sec) return;
     try { window.__fillAboutBA && window.__fillAboutBA(); } catch (_) {}
     const kicker = sec.querySelector(".section-kicker");
-    // Sit a bit lower under the bar (user request)
-    scrollYTo(absTop(kicker || sec) - headerPad() - 40);
+    const cert = sec.querySelector(".cert");
+    const headY = absTop(kicker || sec) - headerPad() - 24;
+    /* If certificate would be cut, bias scroll so more of About fits in the viewport */
+    if (cert) {
+      const certBottom = absTop(cert) + cert.offsetHeight + 24;
+      const viewH = innerHeight;
+      const maxY = Math.max(0, certBottom - viewH);
+      scrollYTo(Math.min(headY, maxY));
+    } else {
+      scrollYTo(headY);
+    }
+    setTimeout(() => { try { window.__sectionEnter && window.__sectionEnter.about && window.__sectionEnter.about(); } catch (_) {} }, 200);
+    setTimeout(() => { try { window.__updateActiveNav && window.__updateActiveNav(); } catch (_) {} }, 500);
   };
 
   const frameContact = () => {

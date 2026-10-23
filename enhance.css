@@ -665,58 +665,51 @@ section.hero.hero-enter h1 .word{
   transform-origin:right center;
 }
 
-/* play */
-#about .section-title h2.tm-lines-on .tm-line-text{
+/* play rules unified above */
+
+/* DEFAULT: nothing printed until About has settled and play starts */
+#about .section-title h2 .tm-line-text{
+  opacity:0;
+  visibility:hidden;
+  transform:translate3d(0, 115%, 0);
+}
+#about .section-title h2 .tm-gbar{
+  opacity:0;
+  visibility:hidden;
   transform:translate3d(0, 0, 0);
+}
+
+/* READY: bars cover the lines (text still hidden under bar) */
+#about .section-title h2.tm-lines-ready .tm-gbar{
   opacity:1;
+  visibility:visible;
+  transform:translate3d(0, 0, 0);
+}
+#about .section-title h2.tm-lines-ready .tm-line-text{
+  opacity:0;
+  visibility:visible;
+  transform:translate3d(0, 115%, 0);
+}
+
+/* ON: wipe bars away + text settles */
+#about .section-title h2.tm-lines-on .tm-line-text{
+  opacity:1;
+  visibility:visible;
+  transform:translate3d(0, 0, 0);
 }
 #about .section-title h2.tm-lines-on .tm-gbar{
+  opacity:.25;
+  visibility:visible;
   transform:translate3d(105%, 0, 0);
-  opacity:.35;
 }
 [dir=rtl] #about .section-title h2.tm-lines-on .tm-gbar{
   transform:translate3d(-105%, 0, 0);
 }
 
-/* idle: no visible bars or text while scrolling past / before settle */
-.js #about .section-title h2:not(.tm-lines-ready) .tm-line-text,
-.js #about .section-title h2:not(.tm-lines-ready) .tm-gbar{
-  opacity:0 !important;
-  visibility:hidden;
-  transition:none !important;
-}
-.js #about .section-title h2:not(.tm-lines-ready) .tm-line-text{
-  transform:translate3d(0, 112%, 0);
-}
-.js #about .section-title h2:not(.tm-lines-ready) .tm-gbar{
-  transform:translate3d(0, 0, 0);
-}
-
-/* let glass lines own h2 entrance */
-.js #about:not(.about-in) .section-title h2{
+/* keep h2 from old slide animation */
+.js #about .section-title h2{
   opacity:1 !important;
   transform:none !important;
-}
-.js #about:not(.about-in) .section-title h2 .tm-line-text{
-  transform:translate3d(0, 112%, 0);
-  opacity:0;
-  visibility:hidden;
-  transition:none;
-}
-.js #about:not(.about-in) .section-title h2 .tm-gbar{
-  transform:translate3d(0, 0, 0);
-  opacity:0;
-  visibility:hidden;
-  transition:none;
-}
-
-/* ready = bars may show for the wipe */
-#about .section-title h2.tm-lines-ready .tm-gbar{
-  visibility:visible;
-  opacity:1;
-}
-#about .section-title h2.tm-lines-ready .tm-line-text{
-  visibility:visible;
 }
 
 @media (max-width:900px){
@@ -771,4 +764,18 @@ section.hero.hero-enter h1 .word{
 }
 #about .cert{
   overflow:visible;
+}
+
+
+/* cert clip fix — keep certificate fully inside About frame */
+#about{
+  overflow:visible !important;
+}
+#about .about-grid,
+#about .section-title,
+#about .cert{
+  overflow:visible !important;
+}
+#about .cert{
+  margin-bottom:12px;
 }

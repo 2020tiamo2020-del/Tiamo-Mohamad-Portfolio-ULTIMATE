@@ -775,6 +775,9 @@ function initAboutGlassTitle() {
   };
 
   let builtFor = "";
+  let playT = 0;
+  let gen = 0;
+
   const build = () => {
     const lang = document.documentElement.lang === "ar" ? "ar" : "en";
     if (builtFor === lang && h2.querySelector(".tm-line")) return;
@@ -792,33 +795,38 @@ function initAboutGlassTitle() {
     p.querySelectorAll(".tm-lw").forEach(w => w.classList.add("on"));
   };
 
-  let playT = 0;
-  let playing = false;
-
   const reset = () => {
     clearTimeout(playT);
-    playing = false;
+    gen++;
     h2.classList.remove("tm-lines-on", "tm-lines-ready");
   };
 
-  /* only after page/scroll has settled on About — no bars while still moving */
+  /**
+   * Bars + text stay fully hidden until the section has settled.
+   * Then bars appear covering the lines and wipe away to reveal text.
+   */
   const play = (delayMs) => {
     clearTimeout(playT);
-    const wait = typeof delayMs === "number" ? delayMs : 420;
+    const my = ++gen;
+    const wait = typeof delayMs === "number" ? delayMs : 480;
     playT = setTimeout(() => {
+      if (my !== gen) return;
       if (!sec.classList.contains("about-in")) return;
-      if (playing) return;
-      playing = true;
       build();
-      h2.classList.remove("tm-lines-on");
-      /* show bars only at the moment the reveal starts */
+      h2.classList.remove("tm-lines-on", "tm-lines-ready");
+      void h2.offsetWidth;
+      /* 1) show bars covering (ready) */
       h2.classList.add("tm-lines-ready");
       void h2.offsetWidth;
+      /* 2) next frames: wipe bars + rise text */
       requestAnimationFrame(() => {
+        if (my !== gen) return;
         requestAnimationFrame(() => {
+          if (my !== gen) return;
           h2.classList.add("tm-lines-on");
           lightAboutPara();
-          setTimeout(lightAboutPara, 500);
+          setTimeout(lightAboutPara, 450);
+          try { window.__fillAboutBA && window.__fillAboutBA(); } catch (_) {}
         });
       });
     }, wait);
@@ -826,30 +834,25 @@ function initAboutGlassTitle() {
 
   build();
 
-  /* sync with existing about-in class */
   if ("MutationObserver" in window) {
     new MutationObserver(() => {
-      if (sec.classList.contains("about-in")) play();
+      if (sec.classList.contains("about-in")) play(480);
       else reset();
     }).observe(sec, { attributes: true, attributeFilter: ["class"] });
   }
-  if (sec.classList.contains("about-in")) play();
+  if (sec.classList.contains("about-in")) play(200);
 
-  /* nav / scrollspy hook */
   window.__sectionEnter = window.__sectionEnter || {};
   window.__sectionEnter.about = () => {
     sec.classList.add("about-in");
-    /* nav click: wait for Lenis to settle first */
-    play(720);
+    play(850); /* after nav Lenis settles */
   };
 
-  /* rebuild lines after language switch */
-  const mo = new MutationObserver(() => {
+  new MutationObserver(() => {
     builtFor = "";
     build();
-    if (sec.classList.contains("about-in")) play();
-  });
-  mo.observe(document.documentElement, { attributes: true, attributeFilter: ["lang"] });
+    if (sec.classList.contains("about-in")) play(300);
+  }).observe(document.documentElement, { attributes: true, attributeFilter: ["lang"] });
 }
 
 if (document.readyState === "loading") {
