@@ -730,6 +730,7 @@
       let p;
       if (r.bottom < 0) p = 1;
       else if (r.top > vh) p = 0;
+      else if (it.el.closest("#about")) p = clamp((vh * 0.97 - r.top) / (vh * 0.04 + r.height), 0, 1); /* About: fully lit while you stand on the section */
       else p = clamp((vh * 0.88 - r.top) / (vh * 0.33 + r.height), 0, 1);
       const n = it.words.length;
       const lit = Math.round(p * n);
@@ -1025,4 +1026,258 @@
   } else {
     boot();
   }
+})();
+
+
+/* =====================================================================
+   HOME ENTRANCE + ABOUT GLASS TITLE  (v6)
+   - Home: music orb glides in from the right, the big title drops from under
+     the top bar word by word, the copy + both buttons arrive from the left in
+     sequence and meet in their natural place. Replays on scroll / nav return.
+   - About: the headline is veiled by crystal-glass blocks (white / purple, each
+     tinted like the text beneath) that retract line by line.
+   Everything is transform/opacity only (no layout change). If this block ever
+   fails, the original behaviour is untouched (CSS is gated by html.tm-hero-armed).
+   ===================================================================== */
+(() => {
+  "use strict";
+  const EXPO = "cubic-bezier(.16,1,.3,1)";
+  const clampN = (v, a, b) => Math.max(a, Math.min(b, v));
+  const isRtl = () => (document.documentElement.getAttribute("dir") || document.body.getAttribute("dir") || "") === "rtl";
+  const hasTranslate = !!(window.CSS && CSS.supports && CSS.supports("translate", "1px 1px"));
+  const slideKF = (x) => hasTranslate
+    ? [{ translate: x + " 0" }, { translate: "0 0" }]
+    : [{ transform: "translateX(" + x + ")" }, { transform: "translateX(0)" }];
+
+  /* ---------------------------- HOME ---------------------------- */
+  function initHomeEntrance() {
+    const hero = document.querySelector(".hero");
+    if (!hero) return;
+    const h1 = hero.querySelector("h1");
+    const gate = () => document.getElementById("enterGate");
+    let anims = [], clipT = 0, lastPlay = 0, left = false, armed = false;
+
+    const stop = () => { anims.forEach((a) => { try { a.cancel(); } catch (_) {} }); anims = []; clearTimeout(clipT); if (h1) h1.classList.remove("tm-clip"); };
+
+    const play = () => {
+      const now = performance.now();
+      if (now - lastPlay < 700) return;
+      lastPlay = now;
+      stop();
+      hero.classList.remove("tm-hin");
+      const sx = isRtl() ? -1 : 1;
+      const header = document.querySelector(".site-header");
+      const hb = header ? header.getBoundingClientRect().bottom : 0;
+
+      /* measure the words at rest (before any offset exists) */
+      const words = h1 ? [...h1.querySelectorAll(".word")] : [];
+      const dys = words.map((w) => {
+        const r = w.getBoundingClientRect();
+        return Math.min(-40, hb - r.top - r.height * 0.95 - 6); /* each word starts hidden behind the bar */
+      });
+      if (h1) {
+        const clip = Math.max(0, hb - h1.getBoundingClientRect().top);
+        h1.style.setProperty("--tm-clip", clip.toFixed(1) + "px");
+        h1.classList.add("tm-clip");
+      }
+      hero.classList.add("tm-hin");
+
+      const add = (el, kf, opt) => { if (!el) return; try { anims.push(el.animate(kf, Object.assign({ fill: "backwards", easing: EXPO }, opt))); } catch (_) {} };
+
+      /* 1 · music orb — from the right */
+      const vis = hero.querySelector(".hero-visual");
+      add(vis, [
+        { transform: "translateX(" + (sx * 62) + "vw)", opacity: 0 },
+        { opacity: 1, offset: 0.22 },
+        { transform: "translateX(0)", opacity: 1 }
+      ], { duration: 1750, delay: 0 });
+
+      /* 2 · big title — drops from under the top bar, word by word */
+      let titleEnd = 0;
+      words.forEach((w, i) => {
+        const d = 420 + i * 105, dur = 1300;
+        titleEnd = Math.max(titleEnd, d + dur);
+        add(w, [
+          { transform: "translateY(" + dys[i].toFixed(1) + "px)", opacity: 0, filter: "blur(10px)" },
+          { opacity: 1, offset: 0.2 },
+          { transform: "translateY(0)", opacity: 1, filter: "blur(0px)" }
+        ], { duration: dur, delay: d });
+      });
+      clipT = setTimeout(() => { if (h1) h1.classList.remove("tm-clip"); }, titleEnd + 120);
+
+      /* 3 · copy + buttons — from the left, in sequence */
+      const x = (sx * -62) + "vw";
+      const seq = [
+        [".eyebrow", 700],
+        [".role", 1150],
+        [".lead", 1320],
+        [".hero-actions .btn.primary", 1560],
+        [".hero-actions .btn.ghost", 1720]
+      ];
+      seq.forEach(([sel, d]) => {
+        const el = hero.querySelector(sel);
+        const kf = slideKF(x).map((f, i) => Object.assign(f, i ? { opacity: 1, filter: "blur(0px)" } : { opacity: 0, filter: "blur(9px)" }));
+        add(el, kf, { duration: 1500, delay: d });
+      });
+    };
+
+    const arm = () => { armed = true; };
+    const startFirst = () => { arm(); play(); };
+
+    /* hook: the enter gate calls this when it opens */
+    const orig = window.__restaggerHero;
+    window.__restaggerHero = function () {
+      try { if (typeof orig === "function") orig.apply(this, arguments); } catch (_) {}
+      startFirst();
+    };
+    /* backup: the gate element disappears */
+    if (gate()) {
+      const mo = new MutationObserver(() => { if (!gate()) { mo.disconnect(); setTimeout(() => { if (!armed || !hero.classList.contains("tm-hin")) startFirst(); }, 260); } });
+      mo.observe(document.body, { childList: true });
+    }
+
+    document.documentElement.classList.add("tm-hero-armed");
+    if (!gate()) startFirst();
+
+    /* replay when you come back to Home (scroll up or the nav button) */
+    new IntersectionObserver((es) => {
+      es.forEach((e) => {
+        if (!armed) return;
+        if (e.intersectionRatio < 0.05) {
+          if (!left) { left = true; stop(); hero.classList.remove("tm-hin"); }
+        } else if (e.intersectionRatio >= 0.45 && left) {
+          left = false; play();
+        }
+      });
+    }, { threshold: [0, 0.05, 0.45] }).observe(hero);
+  }
+
+  /* ---------------------------- ABOUT ---------------------------- */
+  function initAboutGlass() {
+    const host = document.querySelector("#about .section-title");
+    const h2 = host && host.querySelector("h2");
+    if (!h2) return;
+    let wrap = null, lines = [], anims = [], played = false, timer = 0, rebuildT = 0;
+
+    const cancel = () => { anims.forEach((a) => { try { a.cancel(); } catch (_) {} }); anims = []; clearTimeout(timer); };
+
+    let build = () => {
+      cancel();
+      if (wrap) wrap.remove();
+      wrap = document.createElement("span");
+      wrap.className = "tm-gl-wrap";
+      wrap.setAttribute("aria-hidden", "true");
+      host.appendChild(wrap);
+      lines = [];
+      const hr = host.getBoundingClientRect();
+      const rtl = getComputedStyle(h2).direction === "rtl";
+      const words = [];
+      const walker = document.createTreeWalker(h2, NodeFilter.SHOW_TEXT);
+      while (walker.nextNode()) {
+        const n = walker.currentNode;
+        if (!n.nodeValue.trim()) continue;
+        const pu = !!(n.parentElement && n.parentElement.closest("em"));
+        const re = /\S+/g; let m;
+        while ((m = re.exec(n.nodeValue))) {
+          const rg = document.createRange();
+          rg.setStart(n, m.index); rg.setEnd(n, m.index + m[0].length);
+          for (const r of rg.getClientRects()) {
+            if (r.width > 0.5 && r.height > 0.5) words.push({ l: r.left - hr.left, r: r.right - hr.left, t: r.top - hr.top, b: r.bottom - hr.top, pu });
+          }
+        }
+      }
+      if (!words.length) return;
+      words.sort((a, b) => a.t - b.t);
+      const rows = [];
+      words.forEach((w) => {
+        const row = rows[rows.length - 1];
+        if (row && Math.abs(w.t - row.t) < (w.b - w.t) * 0.5) { row.w.push(w); row.b = Math.max(row.b, w.b); row.t = Math.min(row.t, w.t); }
+        else rows.push({ t: w.t, b: w.b, w: [w] });
+      });
+      /* stacked, touching rows (no overlap) */
+      for (let i = 0; i < rows.length - 1; i++) {
+        if (rows[i].b > rows[i + 1].t) { const mid = (rows[i].b + rows[i + 1].t) / 2; rows[i].b = mid; rows[i + 1].t = mid; }
+      }
+      const PAD = 7;
+      rows.forEach((row) => {
+        row.w.sort((a, b) => a.l - b.l);
+        const segs = [];
+        row.w.forEach((w) => {
+          const s = segs[segs.length - 1];
+          if (s && s.pu === w.pu) s.r = w.r; else segs.push({ l: w.l, r: w.r, pu: w.pu });
+        });
+        segs[0].l -= PAD; segs[segs.length - 1].r += PAD;
+        for (let i = 0; i < segs.length - 1; i++) { const mid = (segs[i].r + segs[i + 1].l) / 2; segs[i].r = mid; segs[i + 1].l = mid; }
+        const els = segs.map((s) => {
+          const seg = document.createElement("span");
+          seg.className = "tm-gl-seg";
+          seg.style.cssText = "left:" + s.l.toFixed(1) + "px;top:" + (row.t - 2).toFixed(1) + "px;width:" + (s.r - s.l).toFixed(1) + "px;height:" + (row.b - row.t + 4).toFixed(1) + "px";
+          const gl = document.createElement("i");
+          gl.className = "tm-gl " + (s.pu ? "pu" : "wh");
+          seg.appendChild(gl); wrap.appendChild(seg);
+          return gl;
+        });
+        lines.push({ els: rtl ? els.reverse() : els, rtl });
+      });
+      if (played) wrap.classList.add("done");
+    };
+
+    const play = () => {
+      played = true;
+      cancel();
+      if (!wrap) build();
+      wrap.classList.remove("done");
+      let end = 0;
+      lines.forEach((ln, li) => {
+        ln.els.forEach((gl, si) => {
+          const d = 160 + li * 230 + si * 120, dur = 1000;
+          end = Math.max(end, d + dur);
+          try {
+            anims.push(gl.animate(
+              [{ transform: "translateX(0)" }, { transform: "translateX(" + (ln.rtl ? "-" : "") + "104%)" }],
+              { duration: dur, delay: d, easing: "cubic-bezier(.72,0,.16,1)", fill: "both" }
+            ));
+          } catch (_) { gl.style.visibility = "hidden"; }
+        });
+      });
+      timer = setTimeout(() => { if (wrap) wrap.classList.add("done"); }, end + 80);
+    };
+
+    const reset = () => {
+      played = false;
+      cancel();
+      if (wrap) wrap.classList.remove("done");
+    };
+
+    build();
+    new IntersectionObserver((es) => {
+      es.forEach((e) => {
+        if (e.intersectionRatio >= 0.6 && !played) play();
+        else if (e.intersectionRatio === 0 && played) reset();
+      });
+    }, { threshold: [0, 0.6] }).observe(h2);
+
+    /* rebuild only when the headline's geometry really changed (a stray resize event must never cut the animation) */
+    const signature = () => {
+      const rg = document.createRange(); rg.selectNodeContents(h2);
+      let sum = 0; const rs = rg.getClientRects(); for (const r of rs) sum += r.width;
+      const cs = getComputedStyle(h2);
+      return [h2.offsetWidth, h2.offsetHeight, rs.length, Math.round(sum), cs.fontSize, cs.direction, h2.textContent].join("|");
+    };
+    let sig = signature();
+    const baseBuild = build;
+    build = function () { sig = signature(); baseBuild(); };
+    const rebuild = () => { clearTimeout(rebuildT); rebuildT = setTimeout(() => { if (signature() !== sig) build(); }, 140); };
+    if (window.ResizeObserver) new ResizeObserver(rebuild).observe(h2);
+    new MutationObserver(rebuild).observe(h2, { childList: true, characterData: true, subtree: true });
+    addEventListener("resize", rebuild, { passive: true });
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(rebuild);
+  }
+
+  const boot2 = () => {
+    try { initHomeEntrance(); } catch (e) { document.documentElement.classList.remove("tm-hero-armed"); }
+    try { initAboutGlass(); } catch (e) {}
+  };
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot2, { once: true });
+  else boot2();
 })();

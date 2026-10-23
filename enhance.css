@@ -431,3 +431,37 @@ body { overflow-x: clip; }
   .js #about .about-photo:not(.show) { opacity: 1; translate: none; }
   #about .about-photo { transition: none; }
 }
+
+
+/* =====================================================================
+   HOME ENTRANCE + ABOUT GLASS TITLE (v6) — transform / opacity only
+   ===================================================================== */
+/* pre-state: only when enhance.js armed it (otherwise the original animation is untouched) */
+html.tm-hero-armed .hero h1 .word { animation: none !important; opacity: 1; transform: none; filter: none; }
+html.tm-hero-armed .hero:not(.tm-hin) .hero-visual,
+html.tm-hero-armed .hero:not(.tm-hin) .hero-copy :is(.eyebrow, .role, .lead, .btn),
+html.tm-hero-armed .hero:not(.tm-hin) h1 .word { opacity: 0 !important; }
+/* words emerge from under the top bar: clipped at the bar's lower edge while they travel */
+.hero h1.tm-clip { clip-path: inset(var(--tm-clip, 0px) -100vw -100vw -100vw); }
+
+/* About headline: crystal-glass blocks */
+.js #about .section-title h2 { opacity: 1 !important; transform: none !important; }
+.tm-gl-wrap { position: absolute; left: 0; top: 0; width: 0; height: 0; z-index: 4; pointer-events: none; }
+.tm-gl-wrap.done { visibility: hidden; }
+.tm-gl-seg { position: absolute; overflow: hidden; pointer-events: none; }
+.tm-gl {
+  position: absolute; inset: 0; display: block; border-radius: 5px; will-change: transform;
+  -webkit-backdrop-filter: blur(14px) saturate(1.6) brightness(1.12);
+  backdrop-filter: blur(14px) saturate(1.6) brightness(1.12);
+}
+.tm-gl.wh {
+  background:
+    linear-gradient(112deg, rgba(255,255,255,.52) 0%, rgba(255,255,255,.14) 36%, rgba(255,255,255,.30) 64%, rgba(255,255,255,.12) 100%);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.42), inset 0 1px 0 rgba(255,255,255,.7), inset 3px 0 0 rgba(255,255,255,.55), 0 0 26px rgba(255,255,255,.10);
+}
+.tm-gl.pu {
+  background:
+    linear-gradient(112deg, rgba(190,145,255,.62) 0%, rgba(139,53,255,.26) 36%, rgba(160,100,255,.42) 64%, rgba(139,53,255,.22) 100%);
+  box-shadow: inset 0 0 0 1px rgba(205,175,255,.55), inset 0 1px 0 rgba(235,215,255,.75), inset 3px 0 0 rgba(215,190,255,.7), 0 0 30px rgba(139,53,255,.38);
+}
+@media (max-width: 900px) { .tm-gl { -webkit-backdrop-filter: blur(10px) saturate(1.5); backdrop-filter: blur(10px) saturate(1.5); } }
