@@ -2268,10 +2268,13 @@ updateScrollOrbit(true);
         setTimeout(() => gate.remove(), 500);
       }
       setTimeout(() => {
-        const h1 = document.querySelector(".hero h1");
-        if (h1) h1.classList.remove("hero-pending");
-        if (typeof window.__restaggerHero === "function") window.__restaggerHero();
-      }, 180);
+        if (typeof window.__heroEnterScene === "function") window.__heroEnterScene();
+        else {
+          const h1 = document.querySelector(".hero h1");
+          if (h1) h1.classList.remove("hero-pending");
+          if (typeof window.__restaggerHero === "function") window.__restaggerHero();
+        }
+      }, 220);
       scheduleWelcomeToast();
     };
 
@@ -2336,10 +2339,13 @@ updateScrollOrbit(true);
       setTimeout(() => gate.remove(), 480);
       // Hero title drops in AFTER the gate opens (visible animation)
       setTimeout(() => {
-        const h1 = document.querySelector(".hero h1");
-        if (h1) h1.classList.remove("hero-pending");
-        if (typeof window.__restaggerHero === "function") window.__restaggerHero();
-      }, 200);
+        if (typeof window.__heroEnterScene === "function") window.__heroEnterScene();
+        else {
+          const h1 = document.querySelector(".hero h1");
+          if (h1) h1.classList.remove("hero-pending");
+          if (typeof window.__restaggerHero === "function") window.__restaggerHero();
+        }
+      }, 260);
       // Welcome toast waits until enter sound finishes (or scene fully settled)
       scheduleWelcomeToast();
     };
@@ -2395,13 +2401,27 @@ updateScrollOrbit(true);
     }).join("");
   };
   window.__restaggerHero = restaggerHero;
-  // If enter-gate is up, keep hero text hidden until the user enters
-  // (otherwise the animation finishes behind the gate and looks static)
+
+  /* Full hero scene: title from under header, copy from start side, orb from end side */
+  window.__heroEnterScene = () => {
+    const hero = document.querySelector("section.hero");
+    if (!hero) return;
+    const h1 = hero.querySelector("h1");
+    if (h1) h1.classList.remove("hero-pending");
+    restaggerHero();
+    hero.classList.remove("hero-enter");
+    void hero.offsetWidth;
+    requestAnimationFrame(() => {
+      hero.classList.add("hero-enter");
+    });
+  };
+
   if (document.getElementById("enterGate")) {
     const h1 = document.querySelector(".hero h1");
     if (h1) h1.classList.add("hero-pending");
   } else {
     restaggerHero();
+    document.querySelector("section.hero")?.classList.add("hero-enter");
   }
 
   /* 2. Magnetic buttons */
