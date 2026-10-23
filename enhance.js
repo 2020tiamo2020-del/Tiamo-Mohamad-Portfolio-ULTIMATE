@@ -197,22 +197,29 @@
         }
         dust.geometry.attributes.position.needsUpdate = true;
       };
+      /* where the canvas sits and where the orb is — re-read every frame while playing, because the orb moves
+         when the language flips (RTL puts it on the left) and when the layout changes */
+      const place = () => {
+        const r = hero.getBoundingClientRect();
+        const hr = host.getBoundingClientRect();
+        const mr = mainEl.getBoundingClientRect();
+        const L = -mr.left, T = r.top - mr.top;
+        if (Math.abs((parseFloat(canvas.style.left) || 0) - L) > 0.5) canvas.style.left = L + "px";
+        if (Math.abs((parseFloat(canvas.style.top) || 0) - T) > 0.5) canvas.style.top = T + "px";
+        cx = hr.left + hr.width / 2 - w / 2;
+        cy = h / 2 - (hr.top + hr.height / 2 - r.top);
+      };
       const resize = () => {
         /* canvas spans the full browser width (no box edges) and the full hero height */
         const r = hero.getBoundingClientRect();
-        const hr = host.getBoundingClientRect();
         w = Math.max(1, document.documentElement.clientWidth);
         h = Math.max(1, r.height);
-        const mr = mainEl.getBoundingClientRect();
-        canvas.style.left = -mr.left + "px";
-        canvas.style.top = r.top - mr.top + "px";
         canvas.style.width = w + "px";
         canvas.style.height = h + "px";
-        cx = hr.left + hr.width / 2 - w / 2;
-        cy = h / 2 - (hr.top + hr.height / 2 - r.top);
         renderer.setSize(w, h, false);
         camera.left = -w / 2; camera.right = w / 2; camera.top = h / 2; camera.bottom = -h / 2;
         camera.updateProjectionMatrix();
+        place();
         seedDust();
       };
       resize();
@@ -250,6 +257,7 @@
         requestAnimationFrame(frame);
         if (!visible) return;
 
+        place();
         const beat = Math.max(0, Math.min(1, parseFloat(orb.style.getPropertyValue("--beat")) || 0));
         tAcc += dt * (1 + beat * 1.6);
         mx += (tx - mx) * 0.05;
@@ -293,6 +301,7 @@
         }
       };
       new MutationObserver(wake).observe(orb, { attributes: true, attributeFilter: ["class", "aria-pressed"] });
+      new MutationObserver(() => { resize(); setTimeout(resize, 350); }).observe(document.documentElement, { attributes: true, attributeFilter: ["lang", "dir"] });
       new IntersectionObserver((es) => { visible = !!(es[0] && es[0].isIntersecting); }, { threshold: 0 }).observe(hero);
       canvas.style.display = "none";
       wake();
