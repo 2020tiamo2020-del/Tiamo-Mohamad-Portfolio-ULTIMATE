@@ -495,27 +495,26 @@ new MutationObserver(() => {
   /* tm-in-fallback: never leave section 04 blank if observer misses */
   if (sec) setTimeout(() => sec.classList.add("tm-in"), 1200);
   reveal(strip, strip, "tm-in");
-  /* always reveal Find Me (links must not stay opacity:0 if observer misses) */
+  /* fallback like section 04 — if observer misses, still play Find Me animation */
   if (strip) {
-    const settle = () => {
-      strip.classList.add("tm-in", "is-settled");
-      strip.querySelectorAll(".social-links a").forEach(a => a.classList.remove("tm-st"));
+    const forceIn = () => {
+      strip.classList.add("tm-in");
+      strip.querySelectorAll(".social-links a").forEach(a => {
+        a.classList.remove("tm-st");
+        a.style.removeProperty("opacity");
+        a.style.removeProperty("visibility");
+      });
     };
-    setTimeout(() => strip.classList.add("tm-in"), 600);
-    setTimeout(settle, 2000);
-    /* when observer fires early, still settle after animations */
-    const mo = new MutationObserver(() => {
-      if (strip.classList.contains("tm-in")) setTimeout(settle, 1200);
-    });
-    mo.observe(strip, { attributes: true, attributeFilter: ["class"] });
+    setTimeout(forceIn, 900);
+    setTimeout(forceIn, 2200);
   }
 
   const items = [];
   if (sec) { const h = sec.querySelector(".cr-head"); h && items.push({ host: sec, node: h, max: 56, cur: 0 }); }
   if (strip) {
-    const t = strip.querySelector(":scope > div:first-child");
-    /* only shift the title column — not the social links (avoids pushing pills off-screen) */
-    t && items.push({ host: strip, node: t, max: 40, cur: 0 });
+    const t = strip.querySelector(":scope > div:first-child"), l = strip.querySelector(".social-links");
+    t && items.push({ host: strip, node: t, max: 18, cur: 0 });
+    l && items.push({ host: strip, node: l, max: 12, cur: 0 });
   }
   if (!items.length) return;
   const GAIN = 2.0, FOLLOW = .22, DECAY = .86;
