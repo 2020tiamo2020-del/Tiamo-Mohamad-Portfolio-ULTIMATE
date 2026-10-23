@@ -835,31 +835,49 @@ function initAboutGlassTitle() {
 
   build();
 
-  /* IntersectionObserver on the title itself */
+  /* Only after section is clearly in view — keep title area empty while still scrolling */
   if ("IntersectionObserver" in window) {
     let seen = false;
+    let scrollIdleT = 0;
+    const arm = () => {
+      clearTimeout(scrollIdleT);
+      scrollIdleT = setTimeout(() => {
+        if (!sec.classList.contains("about-in")) return;
+        const r = sec.getBoundingClientRect();
+        /* section top under header and enough of it on screen */
+        if (r.top < innerHeight * 0.55 && r.bottom > innerHeight * 0.35) {
+          play(80);
+        }
+      }, 180); /* wait for scroll to settle a beat */
+    };
     new IntersectionObserver((ents) => {
-      const hit = ents.some(e => e.isIntersecting);
-      if (hit && !seen) {
-        seen = true;
+      const hit = ents.some(e => e.isIntersecting && e.intersectionRatio >= 0.28);
+      if (hit) {
         sec.classList.add("about-in");
-        play(350);
-      } else if (!hit && seen) {
+        if (!seen) {
+          seen = true;
+          arm();
+        }
+      } else if (seen) {
         seen = false;
         reset();
       }
-    }, { threshold: 0.35 }).observe(sec.querySelector(".section-title") || sec);
+    }, { threshold: [0, 0.28, 0.4, 0.55] }).observe(sec);
+
+    addEventListener("scroll", () => {
+      if (seen && !h2.classList.contains("is-revealing") && !h2.classList.contains("is-done")) arm();
+    }, { passive: true });
   }
 
   new MutationObserver(() => {
-    if (sec.classList.contains("about-in")) play(500);
-    else reset();
+    if (!sec.classList.contains("about-in")) reset();
   }).observe(sec, { attributes: true, attributeFilter: ["class"] });
 
   window.__sectionEnter = window.__sectionEnter || {};
   window.__sectionEnter.about = () => {
     sec.classList.add("about-in");
-    play(700);
+    /* nav: wait Lenis settle, area stays empty until then */
+    play(780);
   };
 
   new MutationObserver(() => {
