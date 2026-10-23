@@ -302,7 +302,8 @@
 
 /* ===== Scroll motion for 04 (AI Creation) and 06 (Find Me) — same system as Services / Work:
    title-first rise on entry + heading that leads/follows the scroll speed (added at the end; nothing above is changed) ===== */
-.cr-head,.social-strip>div:first-child,.social-strip .social-links{--tm-scroll-shift:0px;transform:translate3d(0,var(--tm-scroll-shift),0);will-change:transform;backface-visibility:hidden}
+.cr-head{--tm-scroll-shift:0px;transform:translate3d(0,var(--tm-scroll-shift),0);will-change:transform;backface-visibility:hidden}
+.social-strip>div:first-child,.social-strip .social-links{transform:none;will-change:auto}
 .js #creation.reveal:not(.visible){opacity:1;transform:none}
 /* visible by default; tm-in only adds entrance motion (never permanently hide section 04) */
 .js #creation:not(.tm-in) :is(.section-kicker,.cr-head h2,.cr-head p,.cr-chips,.cr-count,.cr-glass,.cr-hint){opacity:1}
@@ -314,24 +315,34 @@
 .js #creation.tm-in .cr-chips{animation-delay:.4s}
 .js #creation.tm-in .cr-glass{animation-delay:.55s;animation-duration:1.2s}
 .js #creation.tm-in .cr-hint{animation-delay:.9s}
-/* Title can wait for tm-in; social links must NEVER stay invisible */
-.js .social-strip:not(.tm-in) :is(.section-kicker,h2){opacity:0}
-.js .social-strip.tm-in :is(.section-kicker,h2){animation:tmRise 1s var(--ease,cubic-bezier(.22,1,.36,1)) backwards}
-.js .social-strip.tm-in h2{animation-delay:.12s}
-/* Links always visible (beat the tm-st opacity:0 from motion.css) */
-.social-links a,
-.js .social-strip .social-links a,
-.js .social-strip:not(.tm-in) .social-links a,
-.social-links a.tm-st,
-.social-links a.tm-st:not(.tm-in){
-  opacity:1 !important;
-  visibility:visible !important;
-  transform:none;
-  animation:none !important;
-  color:#e8e2f4 !important;
-  pointer-events:auto !important;
+/* Find Me: soft entrance — then stay visible (no stuck opacity:0) */
+.js .social-strip:not(.tm-in) :is(.section-kicker,h2,.social-links a){opacity:0}
+.js .social-strip.tm-in :is(.section-kicker,h2){
+  animation:tmRise 1s var(--ease,cubic-bezier(.22,1,.36,1)) both;
 }
-.social-links a:nth-child(1){--i:0}.social-links a:nth-child(2){--i:1}.social-links a:nth-child(3){--i:2}.social-links a:nth-child(4){--i:3}
+.js .social-strip.tm-in h2{animation-delay:.12s}
+.js .social-strip.tm-in .social-links a{
+  animation:tmRise .85s var(--ease,cubic-bezier(.22,1,.36,1)) both;
+  animation-delay:calc(.28s + var(--i,0) * .1s);
+  color:#e8e2f4;
+  pointer-events:auto;
+}
+/* after the strip has revealed, links stay on even if classes change */
+.js .social-strip.tm-in.is-settled .social-links a,
+.js .social-strip.tm-in .social-links a.tm-st{
+  opacity:1;
+}
+.social-links a:nth-child(1){--i:0}
+.social-links a:nth-child(2){--i:1}
+.social-links a:nth-child(3){--i:2}
+.social-links a:nth-child(4){--i:3}
+
+/* Stop title/links sliding inside the glass frame */
+.social-strip > div:first-child,
+.social-strip .social-links{
+  --tm-scroll-shift:0px !important;
+  transform:none !important;
+}
 
 /* ===== Liquid Glass (trial) — viewer buttons + "Find Me" pills. Added at the end; delete this block to undo. ===== */
 .cr-view button,.social-links a{

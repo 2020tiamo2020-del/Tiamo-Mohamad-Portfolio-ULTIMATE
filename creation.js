@@ -497,15 +497,17 @@ new MutationObserver(() => {
   reveal(strip, strip, "tm-in");
   /* always reveal Find Me (links must not stay opacity:0 if observer misses) */
   if (strip) {
-    setTimeout(() => strip.classList.add("tm-in"), 800);
-    setTimeout(() => {
-      strip.classList.add("tm-in");
-      strip.querySelectorAll(".social-links a").forEach(a => {
-        a.classList.remove("tm-st");
-        a.style.opacity = "1";
-        a.style.visibility = "visible";
-      });
-    }, 1600);
+    const settle = () => {
+      strip.classList.add("tm-in", "is-settled");
+      strip.querySelectorAll(".social-links a").forEach(a => a.classList.remove("tm-st"));
+    };
+    setTimeout(() => strip.classList.add("tm-in"), 600);
+    setTimeout(settle, 2000);
+    /* when observer fires early, still settle after animations */
+    const mo = new MutationObserver(() => {
+      if (strip.classList.contains("tm-in")) setTimeout(settle, 1200);
+    });
+    mo.observe(strip, { attributes: true, attributeFilter: ["class"] });
   }
 
   const items = [];
