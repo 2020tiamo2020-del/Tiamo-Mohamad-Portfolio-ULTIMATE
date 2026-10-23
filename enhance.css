@@ -397,13 +397,37 @@ main#home > .tm-hero-space {
 body { overflow-x: clip; }
 
 /* =========================================================
-   ABOUT photo card — silky entrance
-   .tm-scroll-card (scroll vitality) replaced the card's own entrance transition with only
-   "translate/scale .15s", so the photo snapped in instantly. The entrance is now a keyframe animation
-   (it never fights the pointer-tilt inline transform) and the card fades out softly when it leaves.
+   ABOUT photo card — silky entrance (same recipe as the text and the certificate)
+   - transition (not keyframes) with the same expo-out curve + the same trigger (.show, threshold .35)
+   - uses the independent `translate` property, so the pointer tilt (inline `transform`) and the
+     float animation (.about-float) can never fight it
+   - scroll-vitality no longer touches this card (it wrote translate/scale every frame)
+   - heavy decorative animations (neon pulse / spin / float) start only after the card has landed
    ========================================================= */
-@keyframes tmAboutIn {
-  from { opacity: 0; transform: translate3d(110px, 0, 0) scale(.985); }
+#about .about-photo,
+#about .about-photo.show {
+  animation: none;
+  transform: none;
+  will-change: translate, opacity;
+  transition:
+    translate 1.5s cubic-bezier(.22, 1, .36, 1) .12s,
+    opacity 1.3s ease .12s,
+    transform .6s cubic-bezier(.22, 1, .36, 1);
 }
-.about-photo.show { animation: tmAboutIn 2.2s cubic-bezier(.4, .1, .2, 1) backwards; }
-.about-photo.tm-scroll-card { transition: translate .15s linear, scale .15s linear, opacity .8s ease; }
+.js #about .about-photo:not(.show) {
+  opacity: 0;
+  translate: 110px 0;
+  transition-duration: .5s, .5s, .6s;
+  transition-delay: 0s, 0s, 0s;
+}
+#about .about-photo.show { opacity: .95; translate: 0 0; }
+
+/* neon frame + float wait for the entrance to finish, then ease in */
+#about .about-photo picture::before { animation-delay: 1.6s; }
+#about .about-photo picture::after  { animation-delay: 1.6s; }
+#about .about-photo.show .about-float { animation-delay: 1.4s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .js #about .about-photo:not(.show) { opacity: 1; translate: none; }
+  #about .about-photo { transition: none; }
+}

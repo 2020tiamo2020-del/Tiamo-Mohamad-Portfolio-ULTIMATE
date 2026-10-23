@@ -456,7 +456,7 @@
     ];
     const cards = [
       ...document.querySelectorAll(
-        ".gallery-card, .ba-viewer, .about-photo, .contact-btn"
+        ".gallery-card, .ba-viewer, .contact-btn"
       ),
     ];
 
