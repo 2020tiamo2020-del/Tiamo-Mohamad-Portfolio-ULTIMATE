@@ -188,12 +188,23 @@ const lenisHold = on => {
   document.body.classList.toggle("tm-cr-view-open", on);
 };
 
-const show = (k, mode) => {
-  if (!items.length || busy) return;
+const show = (k, mode, force) => {
+  if (!items.length) return;
+  if (busy && !force) return;
   const how = mode || "next";
   busy = true;
   cur = (k + items.length) % items.length;
   const url = items[cur].u;
+  /* allow next click sooner than full CSS duration (feels responsive, still smooth) */
+  const lockMs = how === "enter" ? 700 : 420;
+  let unlocked = false;
+  const unlock = () => {
+    if (unlocked) return;
+    unlocked = true;
+    busy = false;
+  };
+  /* safety: never stay locked forever */
+  setTimeout(unlock, 1200);
 
   const run = () => {
     pic.classList.remove("in", "enter", "from-right", "from-top", "from-left", "from-scale", "swap");
@@ -210,12 +221,11 @@ const show = (k, mode) => {
     pic.style.backgroundImage = "url('" + url + "')";
     setCounter();
 
-    /* two frames so the browser paints the "from" state before animating to "in" */
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         pic.classList.remove("swap");
         pic.classList.add("in");
-        setTimeout(() => { busy = false; }, how === "enter" ? ENTER_MS : SWAP_MS);
+        setTimeout(unlock, lockMs);
       });
     });
   };
@@ -284,8 +294,8 @@ const close = () => {
 };
 
 v.querySelector(".cr-x").onclick = close;
-v.querySelector(".cr-pv").onclick = () => show(cur - 1, "prev");
-v.querySelector(".cr-nx").onclick = () => show(cur + 1, "next");
+v.querySelector(".cr-pv").onclick = e => { e.preventDefault(); e.stopPropagation(); show(cur - 1, "prev", true); };
+v.querySelector(".cr-nx").onclick = e => { e.preventDefault(); e.stopPropagation(); show(cur + 1, "next", true); };
 v.addEventListener("click", e => {
   if (e.target === v || (e.target.classList && e.target.classList.contains("cr-space"))) close();
 });
@@ -293,31 +303,26 @@ v.addEventListener("click", e => {
 document.addEventListener("keydown", e => {
   if (!v.classList.contains("open")) return;
   if (e.key === "Escape") { e.preventDefault(); close(); }
-  if (e.key === "ArrowRight" || e.key === "ArrowDown") { e.preventDefault(); show(cur + 1, "next"); }
-  if (e.key === "ArrowLeft" || e.key === "ArrowUp") { e.preventDefault(); show(cur - 1, "prev"); }
+  if (e.key === "ArrowRight" || e.key === "ArrowDown") { e.preventDefault(); show(cur + 1, "next", true); }
+  if (e.key === "ArrowLeft" || e.key === "ArrowUp") { e.preventDefault(); show(cur - 1, "prev", true); }
 });
 
-/* wheel only changes worlds — never the page behind */
+/* wheel: change worlds only — block page/Lenis scroll while open */
 let wheelLock = 0;
-v.addEventListener("wheel", e => {
+const onPortalWheel = e => {
   if (!v.classList.contains("open")) return;
   e.preventDefault();
   e.stopPropagation();
   const now = performance.now();
-  if (now - wheelLock < 750 || busy) return;
-  if (Math.abs(e.deltaY) < 12 && Math.abs(e.deltaX) < 12) return;
+  if (now - wheelLock < 500) return;
+  if (Math.abs(e.deltaY) < 10 && Math.abs(e.deltaX) < 10) return;
   wheelLock = now;
   const forward = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY > 0 : e.deltaX > 0;
-  show(cur + (forward ? 1 : -1), forward ? "next" : "prev");
-}, { passive: false });
-
-/* also block wheel on document while open (Lenis / page) */
-document.addEventListener("wheel", e => {
-  if (v.classList.contains("open")) {
-    e.preventDefault();
-    e.stopPropagation();
-  }
-}, { passive: false, capture: true });
+  show(cur + (forward ? 1 : -1), forward ? "next" : "prev", true);
+};
+/* capture on document so Lenis never moves the page; navigation runs here */
+document.addEventListener("wheel", onPortalWheel, { passive: false, capture: true });
+v.addEventListener("wheel", onPortalWheel, { passive: false });
 
 let sx = 0, sy = 0;
 v.addEventListener("touchstart", e => {
@@ -325,12 +330,12 @@ v.addEventListener("touchstart", e => {
   sy = e.touches[0].clientY;
 }, { passive: true });
 v.addEventListener("touchend", e => {
-  if (!v.classList.contains("open") || busy) return;
+  if (!v.classList.contains("open")) return;
   const dx = e.changedTouches[0].clientX - sx;
   const dy = e.changedTouches[0].clientY - sy;
   if (Math.abs(dx) < 45 && Math.abs(dy) < 45) return;
-  if (Math.abs(dx) > Math.abs(dy)) show(cur + (dx < 0 ? 1 : -1), dx < 0 ? "next" : "prev");
-  else show(cur + (dy < 0 ? 1 : -1), dy < 0 ? "next" : "prev");
+  if (Math.abs(dx) > Math.abs(dy)) show(cur + (dx < 0 ? 1 : -1), dx < 0 ? "next" : "prev", true);
+  else show(cur + (dy < 0 ? 1 : -1), dy < 0 ? "next" : "prev", true);
 }, { passive: true });
 })();
 
