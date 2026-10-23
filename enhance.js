@@ -1140,13 +1140,24 @@
     if (!gate()) startFirst();
 
     /* replay when you come back to Home (scroll up or the nav button) */
+    /* the replay waits until the scroll has settled, so the title never drops in the middle of a fast scroll */
+    let heroRatio = 1, idleT = 0;
+    const settle = () => {
+      clearTimeout(idleT);
+      idleT = setTimeout(() => {
+        if (armed && left && heroRatio >= 0.45) { left = false; play(); }
+      }, 170);
+    };
+    addEventListener("scroll", () => { if (left) settle(); }, { passive: true });
     new IntersectionObserver((es) => {
       es.forEach((e) => {
         if (!armed) return;
+        heroRatio = e.intersectionRatio;
         if (e.intersectionRatio < 0.05) {
           if (!left) { left = true; stop(); hero.classList.remove("tm-hin"); }
+          clearTimeout(idleT);
         } else if (e.intersectionRatio >= 0.45 && left) {
-          left = false; play();
+          settle();
         }
       });
     }, { threshold: [0, 0.05, 0.45] }).observe(hero);
@@ -1250,12 +1261,19 @@
     };
 
     build();
+    let seenT = 0, ratio = 0;
     new IntersectionObserver((es) => {
       es.forEach((e) => {
-        if (e.intersectionRatio >= 0.6 && !played) play();
-        else if (e.intersectionRatio === 0 && played) reset();
+        ratio = e.intersectionRatio;
+        if (ratio >= 0.3 && !played) { clearTimeout(seenT); play(); }
+        else if (ratio === 0) { clearTimeout(seenT); if (played) reset(); }
+        else if (!played) {
+          /* partly visible and the reader stopped: never leave the headline veiled */
+          clearTimeout(seenT);
+          seenT = setTimeout(() => { if (ratio > 0 && !played) play(); }, 650);
+        }
       });
-    }, { threshold: [0, 0.6] }).observe(h2);
+    }, { threshold: [0, 0.1, 0.3, 0.6, 1] }).observe(h2);
 
     /* rebuild only when the headline's geometry really changed (a stray resize event must never cut the animation) */
     const signature = () => {
