@@ -1057,11 +1057,13 @@
     const gate = () => document.getElementById("enterGate");
     let anims = [], clipT = 0, lastPlay = 0, left = false, armed = false;
 
-    const stop = () => { anims.forEach((a) => { try { a.cancel(); } catch (_) {} }); anims = []; clearTimeout(clipT); if (h1) h1.classList.remove("tm-clip"); };
+    const stop = () => { anims.forEach((a) => { try { a.cancel(); } catch (_) {} }); anims = []; clearTimeout(clipT); cancelAnimationFrame(clipRaf); if (h1) h1.classList.remove("tm-clip"); };
 
-    const play = () => {
+    let clipRaf = 0;
+    const play = (fast) => {
       const now = performance.now();
-      if (now - lastPlay < 700) return;
+      if (now - lastPlay < 500) return;
+      const K = fast ? 0.42 : 1; /* replays are quicker: no waiting when you scroll back to Home */
       lastPlay = now;
       stop();
       hero.classList.remove("tm-hin");
@@ -1073,7 +1075,7 @@
       const words = h1 ? [...h1.querySelectorAll(".word")] : [];
       const dys = words.map((w) => {
         const r = w.getBoundingClientRect();
-        return Math.min(-40, hb - r.top - r.height * 0.95 - 6); /* each word starts hidden behind the bar */
+        return Math.min(-40, hb - r.top - r.height * 0.95 - 60); /* each word starts hidden behind the bar */
       });
       if (h1) {
         const clip = Math.max(0, hb - h1.getBoundingClientRect().top);
@@ -1090,12 +1092,12 @@
         { transform: "translateX(" + (sx * 62) + "vw)", opacity: 0 },
         { opacity: 1, offset: 0.22 },
         { transform: "translateX(0)", opacity: 1 }
-      ], { duration: 1750, delay: 0 });
+      ], { duration: 1750 * (fast ? 0.7 : 1), delay: 0 });
 
       /* 2 · big title — drops from under the top bar, word by word */
       let titleEnd = 0;
       words.forEach((w, i) => {
-        const d = 420 + i * 105, dur = 1300;
+        const d = (420 + i * 105) * K, dur = 1300 * (fast ? 0.75 : 1);
         titleEnd = Math.max(titleEnd, d + dur);
         add(w, [
           { transform: "translateY(" + dys[i].toFixed(1) + "px)", opacity: 0, filter: "blur(10px)" },
@@ -1103,21 +1105,29 @@
           { transform: "translateY(0)", opacity: 1, filter: "blur(0px)" }
         ], { duration: dur, delay: d });
       });
-      clipT = setTimeout(() => { if (h1) h1.classList.remove("tm-clip"); }, titleEnd + 120);
+      /* the clip follows the top bar while the page keeps scrolling */
+      const follow = () => {
+        if (!h1 || !h1.classList.contains("tm-clip")) return;
+        const hb2 = header ? header.getBoundingClientRect().bottom : 0;
+        h1.style.setProperty("--tm-clip", Math.max(0, hb2 - h1.getBoundingClientRect().top).toFixed(1) + "px");
+        clipRaf = requestAnimationFrame(follow);
+      };
+      clipRaf = requestAnimationFrame(follow);
+      clipT = setTimeout(() => { cancelAnimationFrame(clipRaf); if (h1) h1.classList.remove("tm-clip"); }, titleEnd + 120);
 
       /* 3 · copy + buttons — from the left, in sequence */
       const x = (sx * -62) + "vw";
       const seq = [
-        [".eyebrow", 700],
-        [".role", 1150],
-        [".lead", 1320],
-        [".hero-actions .btn.primary", 1560],
-        [".hero-actions .btn.ghost", 1720]
+        [".eyebrow", 700 * K],
+        [".role", 1150 * K],
+        [".lead", 1320 * K],
+        [".hero-actions .btn.primary", 1560 * K],
+        [".hero-actions .btn.ghost", 1720 * K]
       ];
       seq.forEach(([sel, d]) => {
         const el = hero.querySelector(sel);
         const kf = slideKF(x).map((f, i) => Object.assign(f, i ? { opacity: 1, filter: "blur(0px)" } : { opacity: 0, filter: "blur(9px)" }));
-        add(el, kf, { duration: 1500, delay: d });
+        add(el, kf, { duration: 1500 * (fast ? 0.75 : 1), delay: d });
       });
     };
 
@@ -1140,27 +1150,17 @@
     if (!gate()) startFirst();
 
     /* replay when you come back to Home (scroll up or the nav button) */
-    /* the replay waits until the scroll has settled, so the title never drops in the middle of a fast scroll */
-    let heroRatio = 1, idleT = 0;
-    const settle = () => {
-      clearTimeout(idleT);
-      idleT = setTimeout(() => {
-        if (armed && left && heroRatio >= 0.45) { left = false; play(); }
-      }, 170);
-    };
-    addEventListener("scroll", () => { if (left) settle(); }, { passive: true });
+    /* replay: starts the moment Home is coming back into view (no waiting) */
     new IntersectionObserver((es) => {
       es.forEach((e) => {
         if (!armed) return;
-        heroRatio = e.intersectionRatio;
         if (e.intersectionRatio < 0.05) {
           if (!left) { left = true; stop(); hero.classList.remove("tm-hin"); }
-          clearTimeout(idleT);
-        } else if (e.intersectionRatio >= 0.45 && left) {
-          settle();
+        } else if (e.intersectionRatio >= 0.25 && left) {
+          left = false; play(true);
         }
       });
-    }, { threshold: [0, 0.05, 0.45] }).observe(hero);
+    }, { threshold: [0, 0.05, 0.25] }).observe(hero);
   }
 
   /* ---------------------------- ABOUT ---------------------------- */
@@ -1261,31 +1261,46 @@
     };
 
     build();
-    let seenT = 0, ratio = 0;
+    /* the glass must be SEEN: while the headline is still entering from the bottom it stays veiled and
+       the reveal starts once it is in the upper part of the screen (or when the reader stops scrolling) */
+    let seenT = 0, ratio = 0, rafC = 0;
+    const check = () => {
+      rafC = 0;
+      if (played || ratio === 0) return;
+      const r = h2.getBoundingClientRect();
+      if (r.top <= innerHeight * 0.62 && r.bottom > 0) { clearTimeout(seenT); play(); }
+    };
+    const kick = () => {
+      if (played) return;
+      if (!rafC) rafC = requestAnimationFrame(check);
+      clearTimeout(seenT);
+      seenT = setTimeout(() => { if (ratio > 0 && !played) play(); }, 600);
+    };
+    addEventListener("scroll", kick, { passive: true });
     new IntersectionObserver((es) => {
       es.forEach((e) => {
         ratio = e.intersectionRatio;
-        if (ratio >= 0.3 && !played) { clearTimeout(seenT); play(); }
-        else if (ratio === 0) { clearTimeout(seenT); if (played) reset(); }
-        else if (!played) {
-          /* partly visible and the reader stopped: never leave the headline veiled */
-          clearTimeout(seenT);
-          seenT = setTimeout(() => { if (ratio > 0 && !played) play(); }, 650);
-        }
+        if (ratio === 0) { clearTimeout(seenT); if (played) reset(); }
+        else kick();
       });
-    }, { threshold: [0, 0.1, 0.3, 0.6, 1] }).observe(h2);
+    }, { threshold: [0, 0.05, 0.3, 0.6, 1] }).observe(h2);
 
     /* rebuild only when the headline's geometry really changed (a stray resize event must never cut the animation) */
     const signature = () => {
-      const rg = document.createRange(); rg.selectNodeContents(h2);
-      let sum = 0; const rs = rg.getClientRects(); for (const r of rs) sum += r.width;
       const cs = getComputedStyle(h2);
-      return [h2.offsetWidth, h2.offsetHeight, rs.length, Math.round(sum), cs.fontSize, cs.direction, h2.textContent].join("|");
+      return [h2.offsetWidth, h2.offsetHeight, cs.fontSize, cs.direction, h2.textContent].join("|");
     };
     let sig = signature();
     const baseBuild = build;
     build = function () { sig = signature(); baseBuild(); };
-    const rebuild = () => { clearTimeout(rebuildT); rebuildT = setTimeout(() => { if (signature() !== sig) build(); }, 140); };
+    const rebuild = () => {
+      clearTimeout(rebuildT);
+      rebuildT = setTimeout(function again() {
+        if (signature() === sig) return;
+        if (anims.some((a) => a.playState === "running")) { rebuildT = setTimeout(again, 300); return; } /* never cut a running reveal */
+        build();
+      }, 140);
+    };
     if (window.ResizeObserver) new ResizeObserver(rebuild).observe(h2);
     new MutationObserver(rebuild).observe(h2, { childList: true, characterData: true, subtree: true });
     addEventListener("resize", rebuild, { passive: true });
