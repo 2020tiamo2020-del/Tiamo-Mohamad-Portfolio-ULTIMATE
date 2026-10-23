@@ -153,8 +153,6 @@ const setLanguage = lang => {
   document.documentElement.lang = lang;
   document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
   document.querySelectorAll("[data-en]").forEach(el => {
-    /* glass title manages its own HTML — don't wipe the line bars */
-    if (el.hasAttribute("data-tm-glass") || el.closest("[data-tm-glass]")) return;
     const v = el.getAttribute(lang === "ar" ? "data-ar" : "data-en");
     if (v !== null) el.innerHTML = v;
   });
@@ -435,18 +433,8 @@ nav?.querySelectorAll("a").forEach(a => a.addEventListener("click", closeMenu));
     if (!sec) return;
     try { window.__fillAboutBA && window.__fillAboutBA(); } catch (_) {}
     const kicker = sec.querySelector(".section-kicker");
-    const cert = sec.querySelector(".cert");
-    const headY = absTop(kicker || sec) - headerPad() - 12;
-    if (cert) {
-      const certBottom = absTop(cert) + cert.offsetHeight + 32;
-      const maxY = Math.max(0, certBottom - innerHeight);
-      /* prefer showing full certificate; title may sit closer under nav */
-      scrollYTo(Math.max(maxY, Math.min(headY, maxY + 40)));
-    } else {
-      scrollYTo(headY);
-    }
-    setTimeout(() => { try { window.__sectionEnter && window.__sectionEnter.about && window.__sectionEnter.about(); } catch (_) {} }, 280);
-    setTimeout(() => { try { window.__updateActiveNav && window.__updateActiveNav(); } catch (_) {} }, 550);
+    // Sit a bit lower under the bar (user request)
+    scrollYTo(absTop(kicker || sec) - headerPad() - 40);
   };
 
   const frameContact = () => {
