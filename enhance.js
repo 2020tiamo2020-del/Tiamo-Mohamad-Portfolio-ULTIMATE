@@ -74,177 +74,230 @@
         (CSS orbits hide when canvas is ready; TM music orb stays)
      ========================================================= */
   async function initHeroGL() {
-    /* Original hero layout stays; Three.js rings sit around the TM orb only */
+    /* Free asteroid field across the WHOLE hero (under the text too, no box).
+       The original CSS orbits stay exactly as they were; the asteroids only appear while the music plays. */
+    const hero = document.querySelector(".hero");
     const host = document.querySelector(".hero-visual");
-    if (!host || reduced()) return;
+    const orb = document.getElementById("tmOrb");
+    if (!hero || !host || !orb || reduced()) return;
 
     try {
       const THREE = window.THREE || (await import("https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js"));
       if (!THREE) return;
 
       const canvas = document.createElement("canvas");
-      canvas.className = "tm-hero-gl";
+      canvas.className = "tm-hero-space";
       canvas.setAttribute("aria-hidden", "true");
-      host.insertBefore(canvas, host.firstChild);
-      /* do NOT hide CSS orbits — new rings complement them */
-      host.classList.add("has-webgl-rings");
+      /* the hero itself clips horizontally (overflow-x: clip), so the canvas lives in <main> right before it */
+      const mainEl = hero.parentElement;
+      mainEl.insertBefore(canvas, hero);
 
-      const renderer = new THREE.WebGLRenderer({
-        canvas,
-        alpha: true,
-        antialias: true,
-        powerPreference: "high-performance",
-      });
-      renderer.setPixelRatio(Math.min(devicePixelRatio || 1, mobile() ? 1.25 : 1.6));
+      const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: "high-performance" });
+      renderer.setPixelRatio(Math.min(devicePixelRatio || 1, mobile() ? 1.5 : 2));
       renderer.setClearColor(0x000000, 0);
 
       const scene = new THREE.Scene();
-      const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 50);
-      /* closer camera = field hugs the orb, nothing clipped oddly */
-      camera.position.z = 6.35;
+      const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, -1500, 1500);
+      camera.position.z = 700;
+      scene.add(new THREE.AmbientLight(0x9a86ff, 1.1));
+      const sun = new THREE.DirectionalLight(0xffffff, 2.6);
+      sun.position.set(-320, 420, 560);
+      scene.add(sun);
+      const rim = new THREE.PointLight(0x16d8ff, 3.2, 1400, 1.0);
+      rim.position.set(0, 0, 260);
+      scene.add(rim);
 
-      const group = new THREE.Group();
-      scene.add(group);
+      const world = new THREE.Group();
+      scene.add(world);
 
-      /* tight dust cloud around the core */
-      const count = mobile() ? 280 : 560;
-      const pos = new Float32Array(count * 3);
-      for (let i = 0; i < count; i++) {
-        const u = Math.random();
-        const v = Math.random();
-        const theta = 2 * Math.PI * u;
-        const phi = Math.acos(2 * v - 1);
-        const r = 1.35 + Math.random() * 0.5;
-        pos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-        pos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-        pos[i * 3 + 2] = r * Math.cos(phi);
+      /* three rock shapes, each a roughened icosahedron */
+      const rnd = (a, b) => a + Math.random() * (b - a);
+      const makeRock = () => {
+        const g = new THREE.IcosahedronGeometry(1, 1);
+        const pos = g.attributes.position;
+        for (let v = 0; v < pos.count; v++) {
+          const k = rnd(0.72, 1.2);
+          pos.setXYZ(v, pos.getX(v) * k, pos.getY(v) * k * rnd(0.85, 1.1), pos.getZ(v) * k);
+        }
+        g.computeVertexNormals();
+        return g;
+      };
+      const palette = [0xb794ff, 0x16d8ff, 0xe9dcff, 0x8b35ff, 0x7ef0ff, 0xffffff].map((c) => new THREE.Color(c));
+      const N = mobile() ? 42 : 96;
+      const variants = 3;
+      const meshes = [];
+      const rocks = [];
+      for (let v = 0; v < variants; v++) {
+        const count = Math.floor(N / variants);
+        const mesh = new THREE.InstancedMesh(
+          makeRock(),
+          new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.78, metalness: 0.15, flatShading: true }),
+          count
+        );
+        mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+        for (let n = 0; n < count; n++) {
+          const big = Math.random() < 0.1;
+          rocks.push({
+            mesh, n,
+            rx: rnd(110, 760),
+            ratio: rnd(0.2, 0.55),
+            tilt: rnd(-0.75, 0.75),
+            sp: rnd(0.035, 0.13) * (Math.random() < 0.5 ? -1 : 1),
+            ph: rnd(0, Math.PI * 2),
+            size: big ? rnd(8, 14) : rnd(2.2, 6.5),
+            za: rnd(60, 320),
+            zp: rnd(0, Math.PI * 2),
+            tx: rnd(-0.8, 0.8), ty: rnd(-0.8, 0.8),
+            rot: rnd(0, 6), ap: Math.random(),
+          });
+          mesh.setColorAt(n, palette[(Math.random() * palette.length) | 0]);
+        }
+        mesh.instanceColor.needsUpdate = true;
+        mesh.frustumCulled = false;
+        world.add(mesh);
+        meshes.push(mesh);
       }
-      const pGeo = new THREE.BufferGeometry();
-      pGeo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-      const pMat = new THREE.PointsMaterial({
-        size: mobile() ? 0.024 : 0.018,
-        color: 0xb794ff,
-        transparent: true,
-        opacity: 0.7,
-        depthWrite: false,
-        blending: THREE.AdditiveBlending,
-        sizeAttenuation: true,
-      });
-      const points = new THREE.Points(pGeo, pMat);
-      group.add(points);
 
-      const pos2 = new Float32Array(Math.floor(count * 0.28) * 3);
-      for (let i = 0; i < pos2.length / 3; i++) {
-        const u = Math.random(), v = Math.random();
-        const theta = 2 * Math.PI * u, phi = Math.acos(2 * v - 1);
-        const r = 1.5 + Math.random() * 0.4;
-        pos2[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-        pos2[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-        pos2[i * 3 + 2] = r * Math.cos(phi);
-      }
-      const pGeo2 = new THREE.BufferGeometry();
-      pGeo2.setAttribute("position", new THREE.BufferAttribute(pos2, 3));
-      const points2 = new THREE.Points(
-        pGeo2,
+      /* fine dust */
+      const sprite = (() => {
+        const c = document.createElement("canvas");
+        c.width = c.height = 64;
+        const x = c.getContext("2d");
+        const g = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+        g.addColorStop(0, "rgba(255,255,255,1)");
+        g.addColorStop(0.35, "rgba(190,160,255,.55)");
+        g.addColorStop(1, "rgba(120,80,255,0)");
+        x.fillStyle = g;
+        x.fillRect(0, 0, 64, 64);
+        return new THREE.CanvasTexture(c);
+      })();
+      const DUST = mobile() ? 120 : 280;
+      const dPos = new Float32Array(DUST * 3);
+      const dVel = new Float32Array(DUST);
+      const dPh = new Float32Array(DUST);
+      const dust = new THREE.Points(
+        new THREE.BufferGeometry(),
         new THREE.PointsMaterial({
-          size: 0.014,
-          color: 0x16d8ff,
-          transparent: true,
-          opacity: 0.55,
-          depthWrite: false,
-          blending: THREE.AdditiveBlending,
+          size: mobile() ? 7 : 6, map: sprite, transparent: true, opacity: 0, depthWrite: false,
+          blending: THREE.AdditiveBlending, sizeAttenuation: false, color: 0xcdbbff,
         })
       );
-      group.add(points2);
+      dust.geometry.setAttribute("position", new THREE.BufferAttribute(dPos, 3));
+      dust.frustumCulled = false;
+      world.add(dust);
 
-      /* rings slightly larger than the CSS orbits — complete the set, not cut off */
-      function ring(radius, color, tiltX, tiltZ, opacity) {
-        const segs = 96;
-        const arr = [];
-        for (let i = 0; i <= segs; i++) {
-          const a = (i / segs) * Math.PI * 2;
-          arr.push(Math.cos(a) * radius, 0, Math.sin(a) * radius);
+      let w = 1, h = 1, cx = 0, cy = 0;
+      const seedDust = () => {
+        for (let d = 0; d < DUST; d++) {
+          dPos[d * 3] = rnd(-w / 2, w / 2);
+          dPos[d * 3 + 1] = rnd(-h / 2, h / 2);
+          dPos[d * 3 + 2] = rnd(-300, 300);
+          dVel[d] = rnd(4, 16);
+          dPh[d] = rnd(0, 6.28);
         }
-        const g = new THREE.BufferGeometry();
-        g.setAttribute("position", new THREE.Float32BufferAttribute(arr, 3));
-        const m = new THREE.LineBasicMaterial({
-          color,
-          transparent: true,
-          opacity: opacity,
-          blending: THREE.AdditiveBlending,
-          depthWrite: false,
-        });
-        const line = new THREE.Line(g, m);
-        line.rotation.x = tiltX;
-        line.rotation.z = tiltZ;
-        group.add(line);
-        return line;
-      }
-      /* radii kept inside the projected view so ellipses are never square-clipped */
-      const r1 = ring(1.55, 0x8b35ff, 0.42, 0.1, 0.45);
-      const r2 = ring(1.75, 0x16d8ff, -0.28, -0.3, 0.38);
-      const r3 = ring(1.95, 0xc4b5fd, 0.85, 0.15, 0.28);
-
-      let w = 0, h = 0;
+        dust.geometry.attributes.position.needsUpdate = true;
+      };
       const resize = () => {
-        const rect = host.getBoundingClientRect();
-        w = Math.max(1, rect.width);
-        h = Math.max(1, rect.height);
+        /* canvas spans the full browser width (no box edges) and the full hero height */
+        const r = hero.getBoundingClientRect();
+        const hr = host.getBoundingClientRect();
+        w = Math.max(1, document.documentElement.clientWidth);
+        h = Math.max(1, r.height);
+        const mr = mainEl.getBoundingClientRect();
+        canvas.style.left = -mr.left + "px";
+        canvas.style.top = r.top - mr.top + "px";
+        canvas.style.width = w + "px";
+        canvas.style.height = h + "px";
+        cx = hr.left + hr.width / 2 - w / 2;
+        cy = h / 2 - (hr.top + hr.height / 2 - r.top);
         renderer.setSize(w, h, false);
-        camera.aspect = w / h;
+        camera.left = -w / 2; camera.right = w / 2; camera.top = h / 2; camera.bottom = -h / 2;
         camera.updateProjectionMatrix();
+        seedDust();
       };
       resize();
-      new ResizeObserver(resize).observe(host);
+      setTimeout(resize, 400);
+      setTimeout(resize, 1600);
+      new ResizeObserver(resize).observe(hero);
+      addEventListener("resize", resize, { passive: true });
 
-      let mx = 0, my = 0, tx = 0, ty = 0;
-      const onMove = (e) => {
-        const rect = host.getBoundingClientRect();
-        tx = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
-        ty = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
-      };
-      host.addEventListener("pointermove", onMove, { passive: true });
+      let tx = 0, ty = 0, mx = 0, my = 0;
+      addEventListener("pointermove", (e) => {
+        const r = hero.getBoundingClientRect();
+        tx = ((e.clientX - r.left) / r.width - 0.5) * 2;
+        ty = ((e.clientY - r.top) / r.height - 0.5) * 2;
+      }, { passive: true });
 
+      const playing = () => orb.classList.contains("is-playing") || orb.getAttribute("aria-pressed") === "true";
+      let show = playing() ? 1 : 0;
+      let k = 0;
       let visible = true;
-      if ("IntersectionObserver" in window) {
-        new IntersectionObserver(
-          (es) => { visible = es[0] && es[0].isIntersecting; },
-          { threshold: 0.05 }
-        ).observe(host);
-      }
+      let running = false;
+      let last = performance.now();
+      let tAcc = 0;
+      const dummy = new THREE.Object3D();
+      const ease = (t) => 1 - Math.pow(1 - t, 3);
 
-      const orb = document.getElementById("tmOrb");
-      let boost = 0;
-      const playing = () => !!(orb && orb.classList.contains("is-playing"));
-
-      let t0 = performance.now();
-      const tick = (now) => {
-        requestAnimationFrame(tick);
+      const frame = (now) => {
+        const dt = Math.min(0.05, (now - last) / 1000);
+        last = now;
+        k += (show - k) * (show ? 0.035 : 0.05);
+        if (k < 0.004 && !show) {
+          running = false;
+          canvas.style.display = "none";
+          return;
+        }
+        requestAnimationFrame(frame);
         if (!visible) return;
-        const t = (now - t0) * 0.001;
-        mx += (tx - mx) * 0.06;
-        my += (ty - my) * 0.06;
 
-        const want = playing() ? 1 : 0;
-        boost += (want - boost) * 0.01;
-        const spd = 1 + boost * 0.28;
+        const beat = Math.max(0, Math.min(1, parseFloat(orb.style.getPropertyValue("--beat")) || 0));
+        tAcc += dt * (1 + beat * 1.6);
+        mx += (tx - mx) * 0.05;
+        my += (ty - my) * 0.05;
+        world.position.x = mx * 22;
+        world.position.y = -my * 14;
+        rim.intensity = 2.2 + beat * 5;
 
-        group.rotation.y = t * 0.1 * spd + mx * 0.18;
-        group.rotation.x = my * 0.12;
-        points.rotation.y = t * 0.07 * spd;
-        points2.rotation.y = -t * 0.09 * spd;
-        r1.rotation.z = t * 0.16 * spd;
-        r2.rotation.z = -t * 0.12 * spd;
-        r3.rotation.y = t * 0.08 * spd;
+        for (let q = 0; q < rocks.length; q++) {
+          const o = rocks[q];
+          const ap = ease(Math.max(0, Math.min(1, (k - o.ap * 0.55) / 0.45)));
+          const a = o.ph + tAcc * o.sp * 6;
+          const spread = 1 + (1 - ap) * 0.9;
+          const ex = Math.cos(a) * o.rx * spread;
+          const ey = Math.sin(a) * o.rx * o.ratio * spread;
+          const ct = Math.cos(o.tilt), st = Math.sin(o.tilt);
+          dummy.position.set(cx + ex * ct - ey * st, cy + ex * st + ey * ct, Math.sin(a * 0.7 + o.zp) * o.za);
+          dummy.rotation.set(o.rot + tAcc * o.tx, o.rot * 0.7 + tAcc * o.ty, 0);
+          dummy.scale.setScalar(o.size * ap * (1 + beat * 0.35));
+          dummy.updateMatrix();
+          o.mesh.setMatrixAt(o.n, dummy.matrix);
+        }
+        meshes.forEach((m) => (m.instanceMatrix.needsUpdate = true));
 
-        camera.position.x = mx * 0.22;
-        camera.position.y = -my * 0.16;
-        camera.lookAt(0, 0, 0);
+        for (let d = 0; d < DUST; d++) {
+          let y = dPos[d * 3 + 1] + dVel[d] * dt;
+          if (y > h / 2) { y = -h / 2; dPos[d * 3] = rnd(-w / 2, w / 2); }
+          dPos[d * 3 + 1] = y;
+        }
+        dust.geometry.attributes.position.needsUpdate = true;
+        dust.material.opacity = 0.75 * k * (0.8 + beat * 0.4);
         renderer.render(scene, camera);
       };
-      requestAnimationFrame(tick);
+      const wake = () => {
+        show = playing() ? 1 : 0;
+        if (show && !running) {
+          running = true;
+          canvas.style.display = "block";
+          last = performance.now();
+          requestAnimationFrame(frame);
+        }
+      };
+      new MutationObserver(wake).observe(orb, { attributes: true, attributeFilter: ["class", "aria-pressed"] });
+      new IntersectionObserver((es) => { visible = !!(es[0] && es[0].isIntersecting); }, { threshold: 0 }).observe(hero);
+      canvas.style.display = "none";
+      wake();
     } catch (_) {
-      host.classList.remove("has-webgl-rings");
+      /* WebGL or CDN unavailable → the CSS orbits simply stay as they are */
     }
   }
 
@@ -666,10 +719,7 @@
       const vh = innerHeight || 1;
       const r = it.el.getBoundingClientRect();
       let p;
-      /* About body: once the section is active, keep every word fully lit */
-      if (it.el.closest("#about") && document.getElementById("about")?.classList.contains("about-in")) {
-        p = 1;
-      } else if (r.bottom < 0) p = 1;
+      if (r.bottom < 0) p = 1;
       else if (r.top > vh) p = 0;
       else p = clamp((vh * 0.88 - r.top) / (vh * 0.33 + r.height), 0, 1);
       const n = it.words.length;
@@ -736,6 +786,218 @@
     kick();
   }
 
+  /* =========================================================
+     10 · AI CREATION — scroll-driven fly-through
+        The section pins and the works fly past in 3D depth while you scroll
+        (mouse tilts the camera, click opens the existing viewer). The
+        drifting wall below stays as the full archive.
+     ========================================================= */
+  function initAiFlight() {
+    if (reduced()) return;
+    const sec = document.getElementById("creation");
+    const head = sec && sec.querySelector(".cr-head");
+    const wall = sec && sec.querySelector(".cr-wall");
+    if (!sec || !head || !wall) return;
+    /* pinning needs body not to be a scroll container (see enhance.css: body{overflow-x:clip}) */
+    if (!(window.CSS && CSS.supports && CSS.supports("overflow-x", "clip"))) return;
+
+    const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+    const frac = (x) => x - Math.floor(x);
+    const coarse = () => innerWidth <= 900 || matchMedia("(pointer: coarse)").matches;
+    const isAr = () => document.documentElement.lang === "ar";
+    const STEP = 0.26; /* viewport heights of scrolling per artwork */
+
+    let fly = null, stick = null, world = null, introEl = null, numEl = null, totEl = null, barEl = null;
+    let cards = [], list = [], key = "";
+    let vw = 1, vh = 1, GAP = 640, camTotal = 1;
+    let cur = 0, mx = 0, my = 0, tmx = 0, tmy = 0, near = false, looping = false, focus = -1, hudIdx = -1;
+    let guard = false, syncT = 0;
+
+    const collect = () => {
+      const out = [], seen = new Set();
+      wall.querySelectorAll(".cr-tile:not([aria-hidden])").forEach((t) => {
+        const k = t.dataset.k;
+        if (!k || seen.has(k)) return;
+        seen.add(k);
+        const im = t.querySelector(".cr-img");
+        const pb = parseFloat(im && im.style.paddingBottom) || 133;
+        const nn = t.querySelector(".cr-num");
+        out.push({ k, u: t.dataset.u, r: clamp(pb / 100, 0.5, 2.0), n: nn ? nn.textContent : "" });
+      });
+      return out.slice(0, 36);
+    };
+
+    const loadImg = (c) => {
+      if (c.loading) return;
+      c.loading = true;
+      const im = new Image();
+      im.decoding = "async";
+      im.onload = () => { c.img.style.backgroundImage = "url('" + c.it.u + "')"; c.el.classList.add("ld"); };
+      im.src = c.it.u;
+    };
+
+    const openTile = (k) => {
+      const t = wall.querySelector('.cr-tile[data-k="' + (window.CSS && CSS.escape ? CSS.escape(k) : k) + '"]');
+      if (t) t.click();
+    };
+
+    const layout = () => {
+      if (!fly) return;
+      fly.style.marginLeft = "0px";
+      fly.style.marginRight = "0px";
+      vw = Math.max(1, document.documentElement.clientWidth);
+      const r0 = fly.getBoundingClientRect();
+      fly.style.marginLeft = -r0.left + "px";
+      fly.style.marginRight = -(vw - r0.right) + "px";
+      vh = Math.max(1, stick.clientHeight);
+      const n = list.length;
+      const D = Math.max(3 * vh, n * STEP * vh);
+      fly.style.height = vh + D + "px";
+      GAP = coarse() ? 520 : 640;
+      camTotal = (n - 1 + 1.2) * GAP + 760;
+      list.forEach((it, i) => {
+        const c = cards[i];
+        let bw = coarse() ? vw * 0.6 : clamp(vw * 0.24, 190, 400);
+        let bh = bw * it.r;
+        const maxH = vh * 0.58;
+        if (bh > maxH) { bh = maxH; bw = bh / it.r; }
+        const f1 = frac(Math.sin((i + 1) * 12.9898) * 43758.5453);
+        const f2 = frac(Math.sin((i + 1) * 78.233) * 12345.6789);
+        const ang = i * 2.39996 + 0.7;
+        const rx = vw * (coarse() ? 0.27 : 0.31) * (0.75 + 0.45 * f1);
+        const ry = vh * (coarse() ? 0.25 : 0.26) * (0.7 + 0.5 * f2);
+        c.x = Math.cos(ang) * rx;
+        c.y = Math.sin(ang) * ry;
+        c.rz = (f1 - 0.5) * 10;
+        c.yaw = -Math.cos(ang) * 13;
+        c.el.style.width = bw.toFixed(1) + "px";
+        c.el.style.height = bh.toFixed(1) + "px";
+        c.el.style.marginLeft = (-bw / 2).toFixed(1) + "px";
+        c.el.style.marginTop = (-bh / 2).toFixed(1) + "px";
+      });
+      if (totEl) totEl.textContent = "/ " + String(n).padStart(2, "0");
+    };
+
+    const frame = () => {
+      if (!fly) return;
+      const r = fly.getBoundingClientRect();
+      const span = Math.max(1, r.height - vh);
+      const p = clamp(-r.top / span, 0, 1);
+      cur += (p - cur) * 0.16;
+      if (Math.abs(p - cur) < 0.0004) cur = p;
+      mx += (tmx - mx) * 0.06;
+      my += (tmy - my) * 0.06;
+      world.style.transform = "rotateY(" + (mx * 6).toFixed(2) + "deg) rotateX(" + (-my * 4).toFixed(2) + "deg)";
+      const camZ = cur * camTotal;
+      let best = -1, bd = 1e9;
+      for (let i = 0; i < cards.length; i++) {
+        const c = cards[i];
+        const z = -(i + 1.2) * GAP + camZ;
+        if (z < -3700 || z > 800) {
+          if (c.on) { c.el.style.visibility = "hidden"; c.on = false; }
+          continue;
+        }
+        if (!c.on) { c.el.style.visibility = "visible"; c.on = true; }
+        if (!c.loading && z > -3400) loadImg(c);
+        const o = clamp((z + 3700) / 1600, 0, 1) * (1 - clamp((z - 220) / 480, 0, 1));
+        c.el.style.opacity = o.toFixed(3);
+        c.el.style.transform = "translate3d(" + c.x.toFixed(1) + "px," + c.y.toFixed(1) + "px," + z.toFixed(1) + "px) rotateZ(" + c.rz.toFixed(2) + "deg) rotateY(" + c.yaw.toFixed(2) + "deg)";
+        const d = Math.abs(z + 420);
+        if (d < bd) { bd = d; best = i; }
+      }
+      if (best !== focus) {
+        if (focus >= 0 && cards[focus]) cards[focus].el.classList.remove("focus");
+        if (best >= 0) cards[best].el.classList.add("focus");
+        focus = best;
+      }
+      if (best >= 0 && best !== hudIdx && numEl) {
+        hudIdx = best;
+        numEl.textContent = String(best + 1).padStart(2, "0");
+      }
+      barEl.style.transform = "scaleX(" + cur.toFixed(4) + ")";
+      introEl.style.opacity = (1 - clamp(cur / 0.06, 0, 1)).toFixed(3);
+    };
+
+    const loop = () => {
+      if (!near || !fly) { looping = false; return; }
+      frame();
+      requestAnimationFrame(loop);
+    };
+    const wake = () => { if (near && !looping) { looping = true; requestAnimationFrame(loop); } };
+
+    const build = () => {
+      if (fly) { fly.remove(); fly = null; }
+      cards = []; focus = -1; hudIdx = -1;
+      if (list.length < 6) return; /* too few works: keep only the wall */
+      fly = document.createElement("div");
+      fly.className = "tm-fly";
+      fly.setAttribute("aria-label", "AI artwork fly-through");
+      const touch = matchMedia("(hover: none)").matches;
+      const hintEN = touch ? "SWIPE TO FLY · TAP TO OPEN" : "SCROLL TO FLY · CLICK TO OPEN";
+      const hintAR = touch ? "اسحب للتحليق · اضغط للفتح" : "مرّر للتحليق · اضغط للفتح";
+      fly.innerHTML =
+        '<div class="tm-fly-stick">' +
+        '<div class="tm-fly-fx" aria-hidden="true"></div>' +
+        '<div class="tm-fly-world"></div>' +
+        '<div class="tm-fly-intro" aria-hidden="true"><b data-en="ENTER THE WORLD" data-ar="ادخل إلى العالم">' + (isAr() ? "ادخل إلى العالم" : "ENTER THE WORLD") + '</b>' +
+        '<span data-en="' + (touch ? "SWIPE DOWN" : "SCROLL DOWN") + '" data-ar="' + (touch ? "اسحب للأسفل" : "مرّر للأسفل") + '">' + (isAr() ? (touch ? "اسحب للأسفل" : "مرّر للأسفل") : (touch ? "SWIPE DOWN" : "SCROLL DOWN")) + '</span></div>' +
+        '<div class="tm-fly-hud"><div class="tm-fly-count"><b>01</b><span>/ 00</span></div>' +
+        '<div class="tm-fly-bar"><i></i></div>' +
+        '<div class="tm-fly-hint"><i></i><span data-en="' + hintEN + '" data-ar="' + hintAR + '">' + (isAr() ? hintAR : hintEN) + "</span></div></div>" +
+        "</div>";
+      head.after(fly);
+      stick = fly.querySelector(".tm-fly-stick");
+      world = fly.querySelector(".tm-fly-world");
+      introEl = fly.querySelector(".tm-fly-intro");
+      numEl = fly.querySelector(".tm-fly-count b");
+      totEl = fly.querySelector(".tm-fly-count span");
+      barEl = fly.querySelector(".tm-fly-bar i");
+      list.forEach((it, i) => {
+        const el = document.createElement("div");
+        el.className = "tm-fc";
+        el.setAttribute("role", "img");
+        el.setAttribute("aria-label", "AI artwork " + it.n);
+        el.innerHTML = '<div class="tm-fc-in"><div class="tm-fc-img"></div></div><span class="tm-fc-num">' + String(it.n).padStart(2, "0") + '</span><div class="tm-fc-guard"></div>';
+        el.addEventListener("click", () => openTile(it.k));
+        el.addEventListener("contextmenu", (e) => e.preventDefault());
+        world.appendChild(el);
+        cards.push({ el, img: el.querySelector(".tm-fc-img"), it, on: false, loading: false, x: 0, y: 0, rz: 0, yaw: 0 });
+      });
+      layout();
+      cards.slice(0, 4).forEach(loadImg);
+      if (!coarse()) {
+        stick.addEventListener("pointermove", (e) => {
+          const b = stick.getBoundingClientRect();
+          tmx = ((e.clientX - b.left) / b.width - 0.5) * 2;
+          tmy = ((e.clientY - b.top) / b.height - 0.5) * 2;
+        }, { passive: true });
+        stick.addEventListener("pointerleave", () => { tmx = 0; tmy = 0; }, { passive: true });
+      }
+      new IntersectionObserver((es) => { near = !!(es[0] && es[0].isIntersecting); wake(); }, { rootMargin: "30% 0px 30% 0px" }).observe(fly);
+      /* page height changed → let the other scroll-aware code (contact snap, Lenis) re-measure */
+      setTimeout(() => {
+        try { window.__lenis && window.__lenis.resize(); } catch (_) {}
+        guard = true;
+        try { dispatchEvent(new Event("resize")); } catch (_) {}
+        guard = false;
+      }, 80);
+    };
+
+    const sync = () => {
+      const next = collect();
+      const k = next.map((x) => x.k).join("|");
+      if (k === key) return;
+      key = k;
+      list = next;
+      build();
+    };
+    const schedule = () => { clearTimeout(syncT); syncT = setTimeout(sync, 700); };
+    new MutationObserver(schedule).observe(wall, { childList: true, subtree: true });
+    schedule();
+    setTimeout(sync, 2500);
+    addEventListener("resize", () => { if (!guard) layout(); }, { passive: true });
+  }
+
   /* boot after DOM ready */
   const boot = () => {
     initLenis();
@@ -747,6 +1009,7 @@
     initAiPortal();
     initWords();
     initAiOpen();
+    initAiFlight();
   };
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", boot, { once: true });
@@ -754,149 +1017,3 @@
     boot();
   }
 })();
-
-
-/* ---------- About title: glass bar line reveal (B+C) ---------- */
-function initAboutGlassTitle() {
-  const sec = document.getElementById("about");
-  const h2 = sec && sec.querySelector(".section-title h2");
-  if (!h2) return;
-  h2.setAttribute("data-tm-glass", "1");
-
-  const LINES = {
-    en: [
-      "A creative signature,",
-      "built across",
-      "<em>image &amp; motion.</em>"
-    ],
-    ar: [
-      "بصمة إبداعية تجمع بين",
-      "<em>الصورة والحركة.</em>"
-    ]
-  };
-
-  let playT = 0;
-  let gen = 0;
-  let building = false;
-
-  const build = () => {
-    if (building) return;
-    building = true;
-    const lang = document.documentElement.lang === "ar" ? "ar" : "en";
-    h2.dataset.tmLang = lang;
-    h2.classList.remove("is-revealing", "is-done");
-    h2.innerHTML = LINES[lang].map((html, i) => {
-      const accent = /<em[\s>]/i.test(html) ? " is-accent" : "";
-      return (
-        '<span class="tm-line' + accent + '" style="--li:' + i + '">' +
-          '<span class="tm-line-text">' + html + '</span>' +
-          '<span class="tm-gbar" aria-hidden="true"></span>' +
-        '</span>'
-      );
-    }).join("");
-    building = false;
-  };
-
-  const lightPara = () => {
-    const p = sec.querySelector(".section-title > p");
-    if (p) p.querySelectorAll(".tm-lw").forEach(w => w.classList.add("on"));
-  };
-
-  const reset = () => {
-    clearTimeout(playT);
-    gen++;
-    h2.classList.remove("is-revealing", "is-done");
-  };
-
-  const play = (delay) => {
-    clearTimeout(playT);
-    const my = ++gen;
-    playT = setTimeout(() => {
-      if (my !== gen) return;
-      build();
-      const lines = h2.querySelectorAll(".tm-line");
-      if (!lines.length) return;
-
-      /* start: bars covering, text hidden — forced reflow then reveal class */
-      h2.classList.remove("is-revealing", "is-done");
-      void h2.offsetWidth;
-      h2.classList.add("is-revealing");
-
-      /* after wipe finishes, mark done */
-      const total = 1200 + (lines.length - 1) * 220;
-      setTimeout(() => {
-        if (my !== gen) return;
-        h2.classList.add("is-done");
-        lightPara();
-      }, total);
-      lightPara();
-    }, typeof delay === "number" ? delay : 400);
-  };
-
-  build();
-
-  /* Only after section is clearly in view — keep title area empty while still scrolling */
-  if ("IntersectionObserver" in window) {
-    let seen = false;
-    let scrollIdleT = 0;
-    const arm = () => {
-      clearTimeout(scrollIdleT);
-      scrollIdleT = setTimeout(() => {
-        if (!sec.classList.contains("about-in")) return;
-        const r = sec.getBoundingClientRect();
-        /* section top under header and enough of it on screen */
-        if (r.top < innerHeight * 0.55 && r.bottom > innerHeight * 0.35) {
-          play(80);
-        }
-      }, 180); /* wait for scroll to settle a beat */
-    };
-    new IntersectionObserver((ents) => {
-      const hit = ents.some(e => e.isIntersecting && e.intersectionRatio >= 0.28);
-      if (hit) {
-        sec.classList.add("about-in");
-        if (!seen) {
-          seen = true;
-          arm();
-        }
-      } else if (seen) {
-        seen = false;
-        reset();
-      }
-    }, { threshold: [0, 0.28, 0.4, 0.55] }).observe(sec);
-
-    addEventListener("scroll", () => {
-      if (seen && !h2.classList.contains("is-revealing") && !h2.classList.contains("is-done")) arm();
-    }, { passive: true });
-  }
-
-  new MutationObserver(() => {
-    if (!sec.classList.contains("about-in")) reset();
-  }).observe(sec, { attributes: true, attributeFilter: ["class"] });
-
-  window.__sectionEnter = window.__sectionEnter || {};
-  window.__sectionEnter.about = () => {
-    sec.classList.add("about-in");
-    /* nav: wait Lenis settle, area stays empty until then */
-    play(780);
-  };
-
-  new MutationObserver(() => {
-    if (building) return;
-    if (!h2.querySelector(".tm-line")) {
-      build();
-      if (sec.classList.contains("about-in")) play(150);
-    }
-  }).observe(h2, { childList: true });
-
-  new MutationObserver(() => {
-    build();
-    if (sec.classList.contains("about-in")) play(200);
-  }).observe(document.documentElement, { attributes: true, attributeFilter: ["lang"] });
-}
-
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", initAboutGlassTitle);
-} else {
-  initAboutGlassTitle();
-}
-
