@@ -2403,7 +2403,7 @@ updateScrollOrbit(true);
     let i = 0;
     h1.innerHTML = parts.map(p => {
       if (!p.delay) return p.html;
-      const d = (0.08 + i * 0.09).toFixed(2);
+      const d = (0.18 + i * 0.14).toFixed(2);
       i++;
       return `<span class="word" style="animation-delay:${d}s">${p.html}</span>`;
     }).join("");
