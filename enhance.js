@@ -74,8 +74,8 @@
         (CSS orbits hide when canvas is ready; TM music orb stays)
      ========================================================= */
   async function initHeroGL() {
-    /* Free field of small orbiting dots across the WHOLE hero (under the text too, no box).
-       The original CSS orbits stay exactly as they were; the dots only appear while the music plays. */
+    /* Free asteroid field across the WHOLE hero (under the text too, no box).
+       The original CSS orbits stay exactly as they were; the asteroids only appear while the music plays. */
     const hero = document.querySelector(".hero");
     const host = document.querySelector(".hero-visual");
     const orb = document.getElementById("tmOrb");
@@ -99,62 +99,64 @@
       const scene = new THREE.Scene();
       const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, -1500, 1500);
       camera.position.z = 700;
+      scene.add(new THREE.AmbientLight(0x9a86ff, 1.1));
+      const sun = new THREE.DirectionalLight(0xffffff, 2.6);
+      sun.position.set(-320, 420, 560);
+      scene.add(sun);
+      const rim = new THREE.PointLight(0x16d8ff, 3.2, 1400, 1.0);
+      rim.position.set(0, 0, 260);
+      scene.add(rim);
+
       const world = new THREE.Group();
       scene.add(world);
 
-      /* small glowing dots on tilted elliptical orbits (same orbit system as the old rocks) */
+      /* three rock shapes, each a roughened icosahedron */
       const rnd = (a, b) => a + Math.random() * (b - a);
+      const makeRock = () => {
+        const g = new THREE.IcosahedronGeometry(1, 1);
+        const pos = g.attributes.position;
+        for (let v = 0; v < pos.count; v++) {
+          const k = rnd(0.72, 1.2);
+          pos.setXYZ(v, pos.getX(v) * k, pos.getY(v) * k * rnd(0.85, 1.1), pos.getZ(v) * k);
+        }
+        g.computeVertexNormals();
+        return g;
+      };
       const palette = [0xb794ff, 0x16d8ff, 0xe9dcff, 0x8b35ff, 0x7ef0ff, 0xffffff].map((c) => new THREE.Color(c));
-      const dotTex = (() => {
-        const c = document.createElement("canvas");
-        c.width = c.height = 64;
-        const x = c.getContext("2d");
-        const g = x.createRadialGradient(32, 32, 0, 32, 32, 32);
-        g.addColorStop(0, "rgba(255,255,255,1)");
-        g.addColorStop(0.28, "rgba(255,255,255,.9)");
-        g.addColorStop(0.6, "rgba(255,255,255,.28)");
-        g.addColorStop(1, "rgba(255,255,255,0)");
-        x.fillStyle = g;
-        x.fillRect(0, 0, 64, 64);
-        return new THREE.CanvasTexture(c);
-      })();
-      /* ---- spread knobs (px, measured from the orb) ---- */
-      const SPREAD_X = mobile() ? 300 : 480;   /* farthest a dot can drift sideways */
-      const N = mobile() ? 90 : 220;           /* number of orbiting dots */
-      const DUST = mobile() ? 70 : 150;        /* number of drifting dust specks */
-      /* three size classes: many tiny, some small, a few brighter ones */
-      const classes = [{ px: 3.2, share: 0.55 }, { px: 5, share: 0.33 }, { px: 8, share: 0.12 }];
-      const groups = [];
-      classes.forEach((cl) => {
-        const count = Math.max(1, Math.round(N * cl.share));
-        const geo = new THREE.BufferGeometry();
-        const pos = new Float32Array(count * 3);
-        const col = new Float32Array(count * 3);
-        geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-        geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
-        const mat = new THREE.PointsMaterial({
-          size: cl.px * (mobile() ? 1.1 : 1), map: dotTex, vertexColors: true, transparent: true, opacity: 0.95,
-          depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: false,
-        });
-        const pts = new THREE.Points(geo, mat);
-        pts.frustumCulled = false;
-        world.add(pts);
-        const items = [];
+      const N = mobile() ? 42 : 96;
+      const variants = 3;
+      const meshes = [];
+      const rocks = [];
+      for (let v = 0; v < variants; v++) {
+        const count = Math.floor(N / variants);
+        const mesh = new THREE.InstancedMesh(
+          makeRock(),
+          new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.78, metalness: 0.15, flatShading: true }),
+          count
+        );
+        mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
         for (let n = 0; n < count; n++) {
-          items.push({
-            rx: 70 + (SPREAD_X - 70) * Math.pow(Math.random(), 1.8),   /* dense near the orb, thinning out toward SPREAD_X */
-            ratio: rnd(0.2, 0.5),
-            tilt: rnd(-0.45, 0.45),
+          const big = Math.random() < 0.1;
+          rocks.push({
+            mesh, n,
+            rx: rnd(110, 760),
+            ratio: rnd(0.2, 0.55),
+            tilt: rnd(-0.75, 0.75),
             sp: rnd(0.035, 0.13) * (Math.random() < 0.5 ? -1 : 1),
             ph: rnd(0, Math.PI * 2),
+            size: big ? rnd(8, 14) : rnd(2.2, 6.5),
             za: rnd(60, 320),
             zp: rnd(0, Math.PI * 2),
-            ap: Math.random(),
-            c: palette[(Math.random() * palette.length) | 0],
+            tx: rnd(-0.8, 0.8), ty: rnd(-0.8, 0.8),
+            rot: rnd(0, 6), ap: Math.random(),
           });
+          mesh.setColorAt(n, palette[(Math.random() * palette.length) | 0]);
         }
-        groups.push({ pos, col, geo, mat, items, px: cl.px * (mobile() ? 1.1 : 1) });
-      });
+        mesh.instanceColor.needsUpdate = true;
+        mesh.frustumCulled = false;
+        world.add(mesh);
+        meshes.push(mesh);
+      }
 
       /* fine dust */
       const sprite = (() => {
@@ -169,6 +171,7 @@
         x.fillRect(0, 0, 64, 64);
         return new THREE.CanvasTexture(c);
       })();
+      const DUST = mobile() ? 120 : 280;
       const dPos = new Float32Array(DUST * 3);
       const dVel = new Float32Array(DUST);
       const dPh = new Float32Array(DUST);
@@ -184,11 +187,10 @@
       world.add(dust);
 
       let w = 1, h = 1, cx = 0, cy = 0;
-      let VMAX = 300;   /* dots / dust never wander further than this above or below the orb (px) */
       const seedDust = () => {
         for (let d = 0; d < DUST; d++) {
-          dPos[d * 3] = rnd(-SPREAD_X * 1.1, SPREAD_X * 1.1);       /* offsets from the orb, not from the page */
-          dPos[d * 3 + 1] = rnd(-VMAX * 1.1, VMAX * 1.1);
+          dPos[d * 3] = rnd(-w / 2, w / 2);
+          dPos[d * 3 + 1] = rnd(-h / 2, h / 2);
           dPos[d * 3 + 2] = rnd(-300, 300);
           dVel[d] = rnd(4, 16);
           dPh[d] = rnd(0, 6.28);
@@ -214,7 +216,6 @@
         h = Math.max(1, r.height);
         canvas.style.width = w + "px";
         canvas.style.height = h + "px";
-        VMAX = Math.min(250, innerHeight * 0.3);
         renderer.setSize(w, h, false);
         camera.left = -w / 2; camera.right = w / 2; camera.top = h / 2; camera.bottom = -h / 2;
         camera.updateProjectionMatrix();
@@ -241,6 +242,7 @@
       let running = false;
       let last = performance.now();
       let tAcc = 0;
+      const dummy = new THREE.Object3D();
       const ease = (t) => 1 - Math.pow(1 - t, 3);
 
       const frame = (now) => {
@@ -262,39 +264,29 @@
         my += (ty - my) * 0.05;
         world.position.x = mx * 22;
         world.position.y = -my * 14;
+        rim.intensity = 2.2 + beat * 5;
 
-        for (let gi = 0; gi < groups.length; gi++) {
-          const g = groups[gi];
-          for (let n = 0; n < g.items.length; n++) {
-            const o = g.items[n];
-            const ap = ease(Math.max(0, Math.min(1, (k - o.ap * 0.55) / 0.45)));
-            const a = o.ph + tAcc * o.sp * 6;
-            const spread = 1 + (1 - ap) * 0.9;
-            const ex = Math.cos(a) * o.rx * spread;
-            const ey = Math.sin(a) * o.rx * o.ratio * spread;
-            const ct = Math.cos(o.tilt), st = Math.sin(o.tilt);
-            const z = Math.sin(a * 0.7 + o.zp) * o.za;
-            const dy = ex * st + ey * ct;
-            g.pos[n * 3] = cx + ex * ct - ey * st;
-            g.pos[n * 3 + 1] = cy + VMAX * Math.tanh(dy / VMAX);   /* soft limit: gently squeezed, never cut off */
-            g.pos[n * 3 + 2] = z;
-            /* depth feel: dots on the far side of their orbit glow softer (additive blend → darker = dimmer) */
-            const f = ap * (0.5 + 0.5 * ((z / o.za + 1) / 2)) * (0.85 + beat * 0.5);
-            g.col[n * 3] = o.c.r * f;
-            g.col[n * 3 + 1] = o.c.g * f;
-            g.col[n * 3 + 2] = o.c.b * f;
-          }
-          g.geo.attributes.position.needsUpdate = true;
-          g.geo.attributes.color.needsUpdate = true;
-          g.mat.size = g.px * (1 + beat * 0.4);
+        for (let q = 0; q < rocks.length; q++) {
+          const o = rocks[q];
+          const ap = ease(Math.max(0, Math.min(1, (k - o.ap * 0.55) / 0.45)));
+          const a = o.ph + tAcc * o.sp * 6;
+          const spread = 1 + (1 - ap) * 0.9;
+          const ex = Math.cos(a) * o.rx * spread;
+          const ey = Math.sin(a) * o.rx * o.ratio * spread;
+          const ct = Math.cos(o.tilt), st = Math.sin(o.tilt);
+          dummy.position.set(cx + ex * ct - ey * st, cy + ex * st + ey * ct, Math.sin(a * 0.7 + o.zp) * o.za);
+          dummy.rotation.set(o.rot + tAcc * o.tx, o.rot * 0.7 + tAcc * o.ty, 0);
+          dummy.scale.setScalar(o.size * ap * (1 + beat * 0.35));
+          dummy.updateMatrix();
+          o.mesh.setMatrixAt(o.n, dummy.matrix);
         }
+        meshes.forEach((m) => (m.instanceMatrix.needsUpdate = true));
 
         for (let d = 0; d < DUST; d++) {
           let y = dPos[d * 3 + 1] + dVel[d] * dt;
-          if (y > VMAX * 1.1) { y = -VMAX * 1.1; dPos[d * 3] = rnd(-SPREAD_X * 1.1, SPREAD_X * 1.1); }
+          if (y > h / 2) { y = -h / 2; dPos[d * 3] = rnd(-w / 2, w / 2); }
           dPos[d * 3 + 1] = y;
         }
-        dust.position.set(cx, cy, 0);   /* the dust cloud follows the orb */
         dust.geometry.attributes.position.needsUpdate = true;
         dust.material.opacity = 0.75 * k * (0.8 + beat * 0.4);
         renderer.render(scene, camera);
