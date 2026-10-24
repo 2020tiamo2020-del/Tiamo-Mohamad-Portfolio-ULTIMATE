@@ -219,9 +219,7 @@ function updateScrollOrbit(force = false) {
 scrollOrbit?.addEventListener("click", () => {
   window.__scrollOrbitDir = orbitUp ? "up" : "down";
   try { window.playScrollOrbitSound && window.playScrollOrbitSound(); } catch (_) {}
-  const goTop = !!orbitUp;
-  window.scrollTo({ top: goTop ? 0 : document.documentElement.scrollHeight, behavior: reduceMotion ? "auto" : "smooth" });
-  if (goTop) setTimeout(() => { try { window.__heroOnArrive && window.__heroOnArrive(); } catch (_) {} }, 180);
+  window.scrollTo({ top: orbitUp ? 0 : document.documentElement.scrollHeight, behavior: reduceMotion ? "auto" : "smooth" });
 });
 addEventListener("scroll", () => {
   if (ticking) return;
@@ -454,13 +452,7 @@ nav?.querySelectorAll("a").forEach(a => a.addEventListener("click", closeMenu));
     if (id === "services") return frameServices();
     if (id === "beforeafter") return frameBeforeAfter();
     if (id === "contact") return frameContact();
-    if (id === "home") {
-      scrollYTo(0);
-      /* play home entrance after scroll starts (nav Home button) */
-      setTimeout(() => { try { window.__heroOnArrive && window.__heroOnArrive(); } catch (_) {} }, 120);
-      setTimeout(() => { try { window.__updateActiveNav && window.__updateActiveNav(); } catch (_) {} }, 350);
-      return;
-    }
+    if (id === "home") { scrollYTo(0); setTimeout(() => { try { window.__updateActiveNav && window.__updateActiveNav(); } catch (_) {} }, 350); return; }
     const el = document.getElementById(id);
     if (!el) return;
     frameUnderHeader(el);
@@ -501,9 +493,7 @@ if ("IntersectionObserver" in window) {
 }
 
 const aboutPhoto = document.querySelector(".about-photo"), aboutSec = document.getElementById("about");
-if (aboutPhoto && aboutSec && "IntersectionObserver" in window) {
-  new IntersectionObserver(es => es.forEach(e => aboutPhoto.classList.toggle("show", e.isIntersecting)), { threshold: 0.35 }).observe(aboutSec);
-}
+/* About photo + text are now driven by about-fx.js */
 
 /* ---------- Missing assets: logo fallback + friendly placeholders ---------- */
 document.querySelectorAll(".logo-img").forEach(img => {
@@ -937,9 +927,7 @@ if (canvas && ctx && !reduceMotion) {
   const aboutSection = document.getElementById("about");
   if (aboutSection) {
     // same trigger as the photo, so text (from the left) and photo (from the right) meet together
-    if ("IntersectionObserver" in window) {
-      new IntersectionObserver(es => es.forEach(e => aboutSection.classList.toggle("about-in", e.isIntersecting)), { threshold: 0.35 }).observe(aboutSection);
-    } else { aboutSection.classList.add("about-in"); }
+    aboutSection.classList.add("about-in");   /* About animation is handled by about-fx.js */
   }
   ["services", "work", "beforeafter"].forEach(id => {
     const sec = document.getElementById(id);
@@ -2276,13 +2264,10 @@ updateScrollOrbit(true);
         setTimeout(() => gate.remove(), 500);
       }
       setTimeout(() => {
-        if (typeof window.__heroEnterScene === "function") window.__heroEnterScene();
-        else {
-          const h1 = document.querySelector(".hero h1");
-          if (h1) h1.classList.remove("hero-pending");
-          if (typeof window.__restaggerHero === "function") window.__restaggerHero();
-        }
-      }, 220);
+        const h1 = document.querySelector(".hero h1");
+        if (h1) h1.classList.remove("hero-pending");
+        if (typeof window.__restaggerHero === "function") window.__restaggerHero();
+      }, 180);
       scheduleWelcomeToast();
     };
 
@@ -2347,13 +2332,10 @@ updateScrollOrbit(true);
       setTimeout(() => gate.remove(), 480);
       // Hero title drops in AFTER the gate opens (visible animation)
       setTimeout(() => {
-        if (typeof window.__heroEnterScene === "function") window.__heroEnterScene();
-        else {
-          const h1 = document.querySelector(".hero h1");
-          if (h1) h1.classList.remove("hero-pending");
-          if (typeof window.__restaggerHero === "function") window.__restaggerHero();
-        }
-      }, 260);
+        const h1 = document.querySelector(".hero h1");
+        if (h1) h1.classList.remove("hero-pending");
+        if (typeof window.__restaggerHero === "function") window.__restaggerHero();
+      }, 200);
       // Welcome toast waits until enter sound finishes (or scene fully settled)
       scheduleWelcomeToast();
     };
@@ -2403,43 +2385,19 @@ updateScrollOrbit(true);
     let i = 0;
     h1.innerHTML = parts.map(p => {
       if (!p.delay) return p.html;
-      const d = (0.18 + i * 0.14).toFixed(2);
+      const d = (0.08 + i * 0.09).toFixed(2);
       i++;
       return `<span class="word" style="animation-delay:${d}s">${p.html}</span>`;
     }).join("");
   };
   window.__restaggerHero = restaggerHero;
-
-  /* Full hero scene: title from under header, copy from start side, orb from end side */
-  window.__heroEnterScene = () => {
-    const hero = document.querySelector("section.hero");
-    if (!hero) return;
-    /* throttle: avoid double-fire from nav click + scrollspy in the same beat */
-    const now = performance.now();
-    if (window.__heroEnterAt && now - window.__heroEnterAt < 900) return;
-    window.__heroEnterAt = now;
-
-    const h1 = hero.querySelector("h1");
-    if (h1) h1.classList.remove("hero-pending");
-    restaggerHero();
-    hero.classList.remove("hero-enter");
-    void hero.offsetWidth;
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => hero.classList.add("hero-enter"));
-    });
-  };
-
-  /* Replay hero when arriving at Home (nav click or scroll) — not while already there */
-  window.__heroOnArrive = () => {
-    if (typeof window.__heroEnterScene === "function") window.__heroEnterScene();
-  };
-
+  // If enter-gate is up, keep hero text hidden until the user enters
+  // (otherwise the animation finishes behind the gate and looks static)
   if (document.getElementById("enterGate")) {
     const h1 = document.querySelector(".hero h1");
     if (h1) h1.classList.add("hero-pending");
   } else {
     restaggerHero();
-    document.querySelector("section.hero")?.classList.add("hero-enter");
   }
 
   /* 2. Magnetic buttons */
@@ -2502,7 +2460,6 @@ updateScrollOrbit(true);
   let activeId = "";
   const setActive = id => {
     if (id === activeId) return;
-    const prev = activeId;
     activeId = id;
     navLinks.forEach(a => {
       const on = !!(id && a.getAttribute("href") === "#" + id);
@@ -2510,14 +2467,6 @@ updateScrollOrbit(true);
       if (on) a.setAttribute("aria-current", "page");
       else a.removeAttribute("aria-current");
     });
-    /* scrolled (or jumped) back to Home from another section → replay entrance */
-    if (id === "home" && prev && prev !== "home") {
-      try { window.__heroOnArrive && window.__heroOnArrive(); } catch (_) {}
-    }
-    /* generic hook for future section entrances: window.__sectionEnter = { about: fn, ... } */
-    if (id && prev !== id && window.__sectionEnter && typeof window.__sectionEnter[id] === "function") {
-      try { window.__sectionEnter[id](); } catch (_) {}
-    }
   };
   const updateActiveNav = () => {
     if (!sections.length) return;

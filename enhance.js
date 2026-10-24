@@ -695,7 +695,7 @@
      ========================================================= */
   function initWords() {
     if (reduced()) return;
-    const sels = ["#about .section-title > p", "#creation .cr-head > div > p"];
+    const sels = ["#creation .cr-head > div > p"];   /* About paragraph is animated by about-fx.js */
     const items = [];
     const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
@@ -1165,6 +1165,7 @@
 
   /* ---------------------------- ABOUT ---------------------------- */
   function initAboutGlass() {
+    return;   /* replaced by about-fx.js (one line-sweep system for the whole About block) */
     const host = document.querySelector("#about .section-title");
     const h2 = host && host.querySelector("h2");
     if (!h2) return;
