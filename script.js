@@ -1988,7 +1988,8 @@ updateScrollOrbit(true);
   let welcomed = false;
   let welcomeAudio = null;
   try {
-    welcomeAudio = new Audio("audio/welcome.mp3");
+    welcomeAudio = document.getElementById("tm3d") ? null : new Audio("audio/welcome.mp3");   /* the 3D intro plays its own sound (intro3d.js) */
+    if (!welcomeAudio) throw 0;
     welcomeAudio.preload = "metadata";
     welcomeAudio.playsInline = true;
     welcomeAudio.setAttribute("playsinline", "");

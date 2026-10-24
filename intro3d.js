@@ -17,7 +17,9 @@ const CONFIG = {
   img: ["images/intro-logo.webp", "images/intro-logo.jpg"],
   minLoadMs: 2800,          // the ring is never drawn faster than this
   maxLoadMs: 7000,          // never wait longer than this
-  holdMs: 1750,             // length of the dive-in; the site's own entrance waits for it
+  holdMs: 2350,             // length of the dive-in = the sound's boom → riser → drop (drop lands at 2.34 s)
+  sound: "audio/intro-enter.mp3",
+  soundGain: 0.9,
   zoomEnd: 8.5,             // how deep the camera goes
   homeZoom: 1.55,           // logo size behind Home
   trailSeconds: 1.35,       // how long the light trail lingers
@@ -440,7 +442,8 @@ const frame = now => {
   /* dive-in */
   if (S.mode === "enter") {
     const k = clamp((now - S.enterT0) / CONFIG.holdMs, 0, 1);
-    S.zoom = lerp(glOK ? baseZoom() : 1, glOK ? CONFIG.zoomEnd : 5, Math.pow(k, 2.5));
+    const tSec = (now - S.enterT0) / 1000;
+    S.zoom = lerp(glOK ? baseZoom() : 1, glOK ? CONFIG.zoomEnd : 5, Math.pow(k, 2.5)) * (1 + 0.05 * Math.exp(-tSec * 9));   // small punch on the boom
     S.cd = lerp(0.553, RING.cd, smooth(0, 0.8, k));
     S.gain = lerp(1, 2.4, k);
     S.blur = smooth(0.2, 1, k);
@@ -448,6 +451,9 @@ const frame = now => {
     if (flash) flash.style.opacity = (smooth(0.62, 0.98, k)).toFixed(3);
     if (k >= 1) toHome();
   }
+
+  /* Home: the light settles from bright to calm while the sound's tail fades out */
+  if (S.mode === "home") S.gain = lerp(1.7, 0.9, smooth(0, 1, (now - S.homeT0) / 3600));
 
   /* trail decay + upload */
   const decay = Math.exp(-dt / CONFIG.trailSeconds);
@@ -476,6 +482,7 @@ const frame = now => {
 const startEnter = () => {
   if (S.entering || S.mode !== "ready") return;
   S.entering = true; S.mode = "enter"; S.enterT0 = performance.now();
+  playIntroSound();                                      // inside the click gesture: instant boom
   window.__introHold = reduce ? 260 : CONFIG.holdMs;     // the site's own entrance (hero text, toast) waits for this
   root.classList.add("go");
   document.body.classList.add("tm3d-go");
@@ -488,7 +495,7 @@ const startEnter = () => {
 
 const toHome = () => {
   if (S.mode === "home") return;
-  S.mode = "home"; S.home = 1; S.flash = 0; S.blur = 0; S.gain = 0.9;
+  S.mode = "home"; S.home = 1; S.flash = 0; S.blur = 0; S.gain = 1.7; S.homeT0 = performance.now();
   S.zoom = CONFIG.homeZoom; S.cd = 0.5; M.fill(0);
   const hero = document.querySelector(".hero");
   if (hero && glOK) {
@@ -518,8 +525,41 @@ if (gate) {
   }, true);
 }
 
+/* ------------------------------------------------------------------ intro sound
+   audio/intro-enter.mp3 (trimmed): boom at 0 s  →  riser while the camera dives  →  drop at 2.34 s (flash)  →  settle tail.
+   Decoded during loading, so the boom starts the instant ENTER is pressed. */
+const SND = { ctx: null, buf: null, el: null, lim: null };
+const prepSound = () => {
+  try { SND.el = new Audio(CONFIG.sound); SND.el.preload = "auto"; SND.el.volume = Math.min(1, CONFIG.soundGain); } catch (_) {}
+  if (location.protocol === "file:") return;
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    SND.ctx = new AC();
+    SND.lim = SND.ctx.createDynamicsCompressor();
+    SND.lim.threshold.value = -3; SND.lim.knee.value = 0; SND.lim.ratio.value = 20;
+    SND.lim.connect(SND.ctx.destination);
+    fetch(CONFIG.sound).then(r => (r.ok ? r.arrayBuffer() : Promise.reject()))
+      .then(ab => new Promise((res, rej) => { const p = SND.ctx.decodeAudioData(ab, res, rej); if (p && p.catch) p.catch(rej); }))
+      .then(b => { SND.buf = b; }).catch(() => {});
+  } catch (_) { SND.ctx = null; }
+};
+const playIntroSound = () => {
+  const viaTag = () => { try { if (SND.el) { SND.el.currentTime = 0; const p = SND.el.play(); if (p && p.catch) p.catch(() => {}); } } catch (_) {} };
+  if (!(SND.ctx && SND.buf)) return viaTag();
+  const go = () => {
+    try {
+      const src = SND.ctx.createBufferSource(); src.buffer = SND.buf;
+      const g = SND.ctx.createGain(); g.gain.value = CONFIG.soundGain;
+      src.connect(g); g.connect(SND.lim); src.start();
+    } catch (_) { viaTag(); }
+  };
+  if (SND.ctx.state === "suspended") SND.ctx.resume().then(go).catch(viaTag); else go();
+};
+
 /* ------------------------------------------------------------------ boot */
 const boot = async () => {
+  prepSound();
   glOK = initGL();
   resize();
   if (!glOK) {
