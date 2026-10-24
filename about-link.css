@@ -1,0 +1,27 @@
+/* ==========================================================================
+   ABOUT · portrait + certificate pair  (pairs with about-link.js)
+   Loads LAST. Everything is scoped to #about.ab-link, a class that about-link.js only
+   sets on desktop widths, so the old behaviour stays untouched everywhere else.
+   ========================================================================== */
+
+/* portrait card: position + opacity come from the scroll (independent `translate`,
+   so the pointer tilt on `transform` and the float animation keep working) */
+#about.ab-link .about-photo{
+  translate:var(--ab-px,0px) 0!important;
+  opacity:calc(.95*var(--ab-po,1))!important;
+  transition:transform .6s var(--ease,cubic-bezier(.22,1,.36,1))!important;
+  will-change:translate,opacity;
+}
+
+/* certificate: same idea, mirrored; its old "slide in from the left + blur" state is neutralised
+   (the sheen / badge animations that hang on .cert-in are left alone) */
+#about.ab-link #certBlock,
+.js #about.ab-link #certBlock:not(.cert-in),
+[dir=rtl] .js #about.ab-link #certBlock:not(.cert-in){
+  translate:var(--ab-cx,0px) 0;
+  opacity:var(--ab-co,1);
+  filter:none;
+  transform:none;
+  transition:none;
+  will-change:translate,opacity;
+}
