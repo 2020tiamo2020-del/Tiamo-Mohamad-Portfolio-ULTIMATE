@@ -21,7 +21,7 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const smooth = t => t * t * (3 - 2 * t);                               /* smoothstep */
 const ease = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2); /* in-out cubic */
 const GAP = 40;       /* extra px past the screen edge so nothing is left peeking */
-const FOLLOW = 0.1;   /* 0..1  how quickly the cards follow the scroll (lower = silkier) */
+const FOLLOW = 0.05;  /* 0..1  how quickly the cards follow the scroll (lower = silkier) */
 
 let on = false, cur = 0, raf = 0, lastT = 0, pxP = 0, pxC = 0;
 
