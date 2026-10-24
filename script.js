@@ -493,7 +493,9 @@ if ("IntersectionObserver" in window) {
 }
 
 const aboutPhoto = document.querySelector(".about-photo"), aboutSec = document.getElementById("about");
-/* About photo + text are now driven by about-fx.js */
+if (aboutPhoto && aboutSec && "IntersectionObserver" in window) {
+  new IntersectionObserver(es => es.forEach(e => aboutPhoto.classList.toggle("show", e.isIntersecting)), { threshold: 0.35 }).observe(aboutSec);
+}
 
 /* ---------- Missing assets: logo fallback + friendly placeholders ---------- */
 document.querySelectorAll(".logo-img").forEach(img => {
@@ -927,7 +929,9 @@ if (canvas && ctx && !reduceMotion) {
   const aboutSection = document.getElementById("about");
   if (aboutSection) {
     // same trigger as the photo, so text (from the left) and photo (from the right) meet together
-    aboutSection.classList.add("about-in");   /* About animation is handled by about-fx.js */
+    if ("IntersectionObserver" in window) {
+      new IntersectionObserver(es => es.forEach(e => aboutSection.classList.toggle("about-in", e.isIntersecting)), { threshold: 0.35 }).observe(aboutSection);
+    } else { aboutSection.classList.add("about-in"); }
   }
   ["services", "work", "beforeafter"].forEach(id => {
     const sec = document.getElementById(id);

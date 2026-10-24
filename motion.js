@@ -114,7 +114,7 @@ addEventListener("scroll", onScroll, { passive: true }); onScroll();
 /* 4 · Staggered rise (blur + lift) as each block enters the viewport */
 const SEL = ".section-kicker,.cr-count,.cr-more,.gallery-card,.social-links a,.contact p,.contact-btn,.ba-copy .btn";
 if ("IntersectionObserver" in window) {
-  const st = $$(SEL).filter(e => !e.closest(".section-heading-scroll") && !e.closest(".hero") && !e.closest("#about") && !e.matches("#creation .cr-head .section-kicker"));
+  const st = $$(SEL).filter(e => !e.closest(".section-heading-scroll") && !e.closest(".hero"));
   st.forEach(e => e.classList.add("tm-st"));
   st.forEach(e => { if (e.parentElement.closest(".tm-st")) e.classList.remove("tm-st"); });
   const io = new IntersectionObserver(es => {
@@ -205,7 +205,7 @@ const wrap = el => {
   return n;
 };
 if ("IntersectionObserver" in window) {
-  const hs = $$(HS).filter(e => !e.closest(".hero,#about,#services,#work,#beforeafter,#creation .cr-head"));
+  const hs = $$(HS).filter(e => !e.closest(".hero,#services,#work,#beforeafter"));
   hs.forEach(e => e.classList.add("tm-hd"));
   const io = new IntersectionObserver(es => es.forEach(x => {
     if (!x.isIntersecting) return;
@@ -230,7 +230,7 @@ if ("IntersectionObserver" in window) {
     };
     requestAnimationFrame(step);
   }), { threshold: 0.8 });
-  $$(".section-kicker").filter(e => !e.closest("#about") && !e.matches("#creation .cr-head .section-kicker")).forEach(e => ko.observe(e));
+  $$(".section-kicker").forEach(e => ko.observe(e));
 }
 
 /* C · Image viewer opens with the circular reveal, from the exact spot you clicked */
