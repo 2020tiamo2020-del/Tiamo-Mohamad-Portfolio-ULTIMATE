@@ -118,7 +118,10 @@
         x.fillRect(0, 0, 64, 64);
         return new THREE.CanvasTexture(c);
       })();
-      const N = mobile() ? 130 : 300;
+      /* ---- spread knobs (px, measured from the orb) ---- */
+      const SPREAD_X = mobile() ? 300 : 480;   /* farthest a dot can drift sideways */
+      const N = mobile() ? 90 : 220;           /* number of orbiting dots */
+      const DUST = mobile() ? 70 : 150;        /* number of drifting dust specks */
       /* three size classes: many tiny, some small, a few brighter ones */
       const classes = [{ px: 3.2, share: 0.55 }, { px: 5, share: 0.33 }, { px: 8, share: 0.12 }];
       const groups = [];
@@ -139,9 +142,9 @@
         const items = [];
         for (let n = 0; n < count; n++) {
           items.push({
-            rx: 90 + 520 * Math.pow(Math.random(), 1.35),   /* most dots stay close to the orb, a few reach far sideways */
+            rx: 70 + (SPREAD_X - 70) * Math.pow(Math.random(), 1.8),   /* dense near the orb, thinning out toward SPREAD_X */
             ratio: rnd(0.2, 0.5),
-            tilt: rnd(-0.5, 0.5),
+            tilt: rnd(-0.45, 0.45),
             sp: rnd(0.035, 0.13) * (Math.random() < 0.5 ? -1 : 1),
             ph: rnd(0, Math.PI * 2),
             za: rnd(60, 320),
@@ -166,7 +169,6 @@
         x.fillRect(0, 0, 64, 64);
         return new THREE.CanvasTexture(c);
       })();
-      const DUST = mobile() ? 120 : 280;
       const dPos = new Float32Array(DUST * 3);
       const dVel = new Float32Array(DUST);
       const dPh = new Float32Array(DUST);
@@ -185,8 +187,8 @@
       let VMAX = 300;   /* dots / dust never wander further than this above or below the orb (px) */
       const seedDust = () => {
         for (let d = 0; d < DUST; d++) {
-          dPos[d * 3] = rnd(-w / 2, w / 2);
-          dPos[d * 3 + 1] = rnd(-VMAX * 1.15, VMAX * 1.15);   /* offset from the orb's height */
+          dPos[d * 3] = rnd(-SPREAD_X * 1.1, SPREAD_X * 1.1);       /* offsets from the orb, not from the page */
+          dPos[d * 3 + 1] = rnd(-VMAX * 1.1, VMAX * 1.1);
           dPos[d * 3 + 2] = rnd(-300, 300);
           dVel[d] = rnd(4, 16);
           dPh[d] = rnd(0, 6.28);
@@ -212,7 +214,7 @@
         h = Math.max(1, r.height);
         canvas.style.width = w + "px";
         canvas.style.height = h + "px";
-        VMAX = Math.min(330, innerHeight * 0.4);
+        VMAX = Math.min(250, innerHeight * 0.3);
         renderer.setSize(w, h, false);
         camera.left = -w / 2; camera.right = w / 2; camera.top = h / 2; camera.bottom = -h / 2;
         camera.updateProjectionMatrix();
@@ -289,10 +291,10 @@
 
         for (let d = 0; d < DUST; d++) {
           let y = dPos[d * 3 + 1] + dVel[d] * dt;
-          if (y > VMAX * 1.15) { y = -VMAX * 1.15; dPos[d * 3] = rnd(-w / 2, w / 2); }
+          if (y > VMAX * 1.1) { y = -VMAX * 1.1; dPos[d * 3] = rnd(-SPREAD_X * 1.1, SPREAD_X * 1.1); }
           dPos[d * 3 + 1] = y;
         }
-        dust.position.y = cy;   /* the dust band follows the orb */
+        dust.position.set(cx, cy, 0);   /* the dust cloud follows the orb */
         dust.geometry.attributes.position.needsUpdate = true;
         dust.material.opacity = 0.75 * k * (0.8 + beat * 0.4);
         renderer.render(scene, camera);
