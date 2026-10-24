@@ -695,7 +695,7 @@
      ========================================================= */
   function initWords() {
     if (reduced()) return;
-    const sels = [];   /* About paragraph: about-fx.js · AI Creation paragraph: creation-fx.js */
+    const sels = ["#about .section-title > p", "#creation .cr-head > div > p"];
     const items = [];
     const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
@@ -730,7 +730,8 @@
       let p;
       if (r.bottom < 0) p = 1;
       else if (r.top > vh) p = 0;
-      else p = clamp((vh * 0.97 - r.top) / (vh * 0.04 + r.height), 0, 1); /* fully lit as soon as the whole paragraph is on screen (no extra scrolling needed) */
+      else if (it.el.closest("#about")) p = clamp((vh * 0.97 - r.top) / (vh * 0.04 + r.height), 0, 1); /* About: fully lit while you stand on the section */
+      else p = clamp((vh * 0.88 - r.top) / (vh * 0.33 + r.height), 0, 1);
       const n = it.words.length;
       const lit = Math.round(p * n);
       if (lit === it.lit) return;
@@ -1132,16 +1133,25 @@
 
     const arm = () => { armed = true; };
     const startFirst = () => { arm(); play(); };
+    /* the first entrance waits for the intro's camera push (window.__tmIntroDelay is set when you click Enter) */
+    let firstScheduled = false;
+    const scheduleFirst = () => {
+      if (firstScheduled) return;
+      firstScheduled = true;
+      arm();
+      const d = window.__tmIntroDelay || 0;
+      if (d) setTimeout(startFirst, d); else startFirst();
+    };
 
     /* hook: the enter gate calls this when it opens */
     const orig = window.__restaggerHero;
     window.__restaggerHero = function () {
       try { if (typeof orig === "function") orig.apply(this, arguments); } catch (_) {}
-      startFirst();
+      scheduleFirst();
     };
     /* backup: the gate element disappears */
     if (gate()) {
-      const mo = new MutationObserver(() => { if (!gate()) { mo.disconnect(); setTimeout(() => { if (!armed || !hero.classList.contains("tm-hin")) startFirst(); }, 260); } });
+      const mo = new MutationObserver(() => { if (!gate()) { mo.disconnect(); setTimeout(scheduleFirst, 260); } });
       mo.observe(document.body, { childList: true });
     }
 
@@ -1164,7 +1174,6 @@
 
   /* ---------------------------- ABOUT ---------------------------- */
   function initAboutGlass() {
-    return;   /* replaced by about-fx.js (one line-sweep system for the whole About block) */
     const host = document.querySelector("#about .section-title");
     const h2 = host && host.querySelector("h2");
     if (!h2) return;
@@ -1313,4 +1322,263 @@
   };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot2, { once: true });
   else boot2();
+})();
+
+
+/* =====================================================================
+   INTRO v7 — the logo hides in the dark; the pointer is a torch that reveals it.
+   Loading (scratch font) → "Enter with sound" → the camera pushes into the logo,
+   which then stays, transparent, behind the Home background only.
+   ===================================================================== */
+(() => {
+  "use strict";
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const IMG_BASE = "images/intro-logo.jpg", IMG_LIT = "images/intro-logo-lit.jpg";
+  const IMG_W = 1600, IMG_H = 900, RING_D = 560; /* source size and the logo ring's diameter inside it */
+
+  /* transparent logo behind Home (also used when there is no gate) */
+  function ensureHeroBg() {
+    const hero = document.querySelector(".hero");
+    if (!hero) return null;
+    let el = hero.querySelector(".hero-logo-bg");
+    if (!el) {
+      el = document.createElement("div");
+      el.className = "hero-logo-bg";
+      el.setAttribute("aria-hidden", "true");
+      el.appendChild(document.createElement("i"));
+      hero.insertBefore(el, hero.firstChild);
+    }
+    return el;
+  }
+
+  function makeSprite(seed) {
+    const c = document.createElement("canvas"); c.width = c.height = 192;
+    const g = c.getContext("2d");
+    const gr = g.createRadialGradient(96, 96, 0, 96, 96, 96);
+    gr.addColorStop(0, "rgba(255,255,255,1)"); gr.addColorStop(0.5, "rgba(255,255,255,.78)");
+    gr.addColorStop(0.85, "rgba(255,255,255,.2)"); gr.addColorStop(1, "rgba(255,255,255,0)");
+    g.fillStyle = gr; g.fillRect(0, 0, 192, 192);
+    g.globalCompositeOperation = "destination-out"; /* ragged, rock-like edge */
+    let s = seed; const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+    for (let i = 0; i < 280; i++) {
+      const a = rnd() * 6.283, r = 38 + rnd() * 58, rr = 2 + rnd() * 10;
+      g.fillStyle = "rgba(0,0,0," + (0.35 + rnd() * 0.65) + ")";
+      g.beginPath(); g.arc(96 + Math.cos(a) * r, 96 + Math.sin(a) * r, rr, 0, 6.283); g.fill();
+    }
+    return c;
+  }
+
+  function initIntro() {
+    const heroBg = ensureHeroBg();
+    const gate = document.getElementById("enterGate");
+    const cv = document.getElementById("tmIntroCv");
+    const stage = document.getElementById("tmIntroStage");
+    const btn = document.getElementById("enterGateBtn");
+    if (!gate || !cv || !stage || !btn || !gate.classList.contains("tm-intro")) return;
+    gate.classList.add("tm-js");
+    if (heroBg) heroBg.style.opacity = "0";
+
+    const numEl = document.getElementById("tmLoadNum"), barEl = document.getElementById("tmLoadBar");
+    const ctx = cv.getContext("2d");
+    const lcv = document.createElement("canvas"), lctx = lcv.getContext("2d");
+    const mcv = document.createElement("canvas"), mctx = mcv.getContext("2d");
+    const sprites = [makeSprite(11), makeSprite(97), makeSprite(2027)];
+    const imgs = { base: new Image(), lit: new Image() };
+    const state = { base: false, lit: false, fonts: false };
+    let W = 0, H = 0, dpr = 1, cx = 0, cy = 0, S = 1, R = 160, ox = 0, oy = 0, dw = 0, dh = 0;
+    let pts = [], lastEmit = null, px = -1, py = -1, lastMove = 0, moved = false;
+    let ready = false, entering = false, enterT = 0, raf = 0, shown = 0, t0 = performance.now(), alive = true, first = true;
+    const LIFE = 2100;
+
+    const size = () => {
+      dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+      W = innerWidth; H = innerHeight;
+      cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+      lcv.width = cv.width; lcv.height = cv.height;
+      mcv.width = Math.round(W * 0.5); mcv.height = Math.round(H * 0.5);
+      const target = Math.min(W * 0.8, H * 0.52);
+      S = target / RING_D; R = target / 2;
+      cx = W / 2; cy = H * 0.46;
+      dw = IMG_W * S; dh = IMG_H * S; ox = cx - dw / 2; oy = cy - dh / 2;
+      gate.style.setProperty("--tm-r", R.toFixed(1) + "px");
+    };
+    size();
+    let rsT = 0;
+    addEventListener("resize", () => { clearTimeout(rsT); rsT = setTimeout(() => { if (alive) size(); }, 120); }, { passive: true });
+
+    /* ---- loading ---- */
+    const bump = (k) => () => { state[k] = true; };
+    imgs.base.onload = bump("base"); imgs.base.onerror = bump("base");
+    imgs.lit.onload = bump("lit"); imgs.lit.onerror = bump("lit");
+    imgs.base.src = IMG_BASE; imgs.lit.src = IMG_LIT;
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { state.fonts = true; }, () => { state.fonts = true; });
+    else state.fonts = true;
+    const failsafe = setTimeout(() => { state.base = state.lit = state.fonts = true; }, 9000);
+
+    const setReady = () => {
+      ready = true;
+      numEl.textContent = "100%"; barEl.style.width = "100%";
+      gate.classList.add("is-ready");
+      try { btn.focus({ preventScroll: true }); } catch (_) {}
+    };
+    btn.disabled = true;
+
+    /* ---- the torch ---- */
+    const emit = (x, y, k) => {
+      const base = clamp(Math.min(W, H) * 0.115, 52, 108);
+      const p = { x, y, t: performance.now(), r: base * (0.85 + Math.random() * 0.35), k: k, a: Math.random() * 6.283, s: sprites[(Math.random() * 3) | 0], a2: Math.random() * 6.283, s2: sprites[(Math.random() * 3) | 0] };
+      pts.push(p);
+      if (pts.length > 240) pts.splice(0, pts.length - 240);
+    };
+    const move = (x, y, k) => {
+      if (!lastEmit) { lastEmit = { x, y }; emit(x, y, k); return; }
+      const dx = x - lastEmit.x, dy = y - lastEmit.y, d = Math.hypot(dx, dy), step = 11;
+      if (d < step) return;
+      const n = Math.floor(d / step);
+      for (let i = 1; i <= n; i++) emit(lastEmit.x + (dx * i) / n, lastEmit.y + (dy * i) / n, k);
+      lastEmit = { x, y };
+    };
+    gate.addEventListener("pointermove", (e) => {
+      if (entering) return;
+      px = e.clientX; py = e.clientY; lastMove = performance.now(); moved = true;
+      move(px, py, 1);
+    }, { passive: true });
+
+    const ease = (t) => 1 - Math.pow(1 - clamp(t, 0, 1), 3);
+
+    const frame = (now) => {
+      if (!alive) return;
+      raf = requestAnimationFrame(frame);
+      if (document.hidden) return;
+
+      /* loading counter (min ~1.9s so the scene can breathe) */
+      if (!ready) {
+        const real = (state.base ? 45 : 0) + (state.lit ? 45 : 0) + (state.fonts ? 10 : 0);
+        const cap = clamp(((now - t0) / 1900) * 100, 0, 100);
+        const target = Math.min(real, cap);
+        shown += (target - shown) * 0.14;
+        if (real >= 100 && cap >= 100 && shown > 99.4) setReady();
+        else { const v = Math.floor(shown); numEl.textContent = v + "%"; barEl.style.width = shown.toFixed(1) + "%"; }
+      }
+
+      /* ghost torch: drifts over the logo until you move the mouse (touch screens, loading, idle) */
+      if (!entering && !reduce && (!moved || now - lastMove > 2600)) {
+        const t = (now - t0) / 1000, gx = cx + Math.cos(t * 0.8) * R * 0.78 + Math.sin(t * 1.7) * R * 0.2, gy = cy + Math.sin(t * 1.05) * R * 0.62;
+        move(gx, gy, 0.8);
+      }
+
+      /* mask: the live trail, each blob fading on its own */
+      mctx.clearRect(0, 0, mcv.width, mcv.height);
+      mctx.globalCompositeOperation = "lighter";
+      for (let i = pts.length - 1; i >= 0; i--) {
+        const p = pts[i], age = (now - p.t) / LIFE;
+        if (age >= 1) { pts.splice(i, 1); continue; }
+        const al = Math.pow(1 - age, 1.5) * p.k, sz = p.r * 2 * (1 + age * 0.14) * 0.5;
+        mctx.globalAlpha = al;
+        mctx.save(); mctx.translate(p.x * 0.5, p.y * 0.5); mctx.rotate(p.a); mctx.drawImage(p.s, -sz / 2, -sz / 2, sz, sz); mctx.restore();
+        mctx.globalAlpha = al * 0.55;
+        mctx.save(); mctx.translate(p.x * 0.5 + Math.cos(p.a2) * p.r * 0.22, p.y * 0.5 + Math.sin(p.a2) * p.r * 0.22); mctx.rotate(p.a2); mctx.drawImage(p.s2, -sz * 0.36, -sz * 0.36, sz * 0.72, sz * 0.72); mctx.restore();
+      }
+      /* entering: the whole emblem lights up */
+      let open = 0;
+      if (entering) {
+        open = ease((now - enterT) / 850);
+        const rr = R * 1.7 * open * 0.5;
+        mctx.globalAlpha = 1;
+        const sp = sprites[0], z = rr * 2;
+        if (z > 1) mctx.drawImage(sp, cx * 0.5 - z / 2, cy * 0.5 - z / 2, z, z);
+      }
+      mctx.globalAlpha = 1; mctx.globalCompositeOperation = "source-over";
+
+      /* compose */
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1;
+      /* same dark backdrop as the stage CSS, so additive layers never leave a box */
+      ctx.save();
+      ctx.translate(W * 0.5, H * 0.46); ctx.scale(W * 0.9, H * 0.8);
+      const bgG = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
+      bgG.addColorStop(0, "#0b1226"); bgG.addColorStop(0.55, "#070a16"); bgG.addColorStop(1, "#04050c");
+      ctx.fillStyle = bgG; ctx.fillRect(-3, -3, 6, 6);
+      ctx.restore();
+      if (state.base && imgs.base.naturalWidth) { ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = 0.45; ctx.drawImage(imgs.base, ox, oy, dw, dh); ctx.globalCompositeOperation = "source-over"; }
+      if (state.lit && imgs.lit.naturalWidth) {
+        lctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        lctx.globalCompositeOperation = "source-over"; lctx.globalAlpha = 1;
+        lctx.clearRect(0, 0, W, H);
+        lctx.drawImage(imgs.lit, ox, oy, dw, dh);
+        lctx.globalCompositeOperation = "destination-in";
+        lctx.drawImage(mcv, 0, 0, W, H);
+        lctx.globalCompositeOperation = "source-over";
+        ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = 1;
+        ctx.drawImage(lcv, 0, 0, W, H);
+        if (open > 0) { ctx.globalAlpha = open * 0.25; ctx.drawImage(imgs.lit, ox, oy, dw, dh); }
+      }
+      /* torch glow at the real pointer */
+      if (!entering && moved && px >= 0) {
+        const fade = clamp(1 - (now - lastMove) / 1200, 0, 1);
+        if (fade > 0) {
+          const g = ctx.createRadialGradient(px, py, 0, px, py, 120);
+          g.addColorStop(0, "rgba(120,180,255," + 0.18 * fade + ")"); g.addColorStop(1, "rgba(120,180,255,0)");
+          ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = 1; ctx.fillStyle = g; ctx.fillRect(px - 120, py - 120, 240, 240);
+        }
+      }
+      ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1;
+    };
+    raf = requestAnimationFrame(frame);
+
+    /* ---- Enter: the camera pushes into the logo, which settles behind Home ---- */
+    const enter = () => {
+      if (entering || !ready) return;
+      entering = true; enterT = performance.now();
+      window.__tmIntroDelay = reduce ? 150 : 1150;
+      gate.classList.add("tm-go");
+      document.body.classList.add("tm-zoom-lock");
+      /* move the stage out of the gate so it can outlive it */
+      stage.style.transformOrigin = cx + "px " + cy + "px";
+      stage.classList.add("tm-flying");
+      document.body.appendChild(stage);
+
+      const Z = reduce ? 1 : 3.4, ZT = reduce ? 1 : 1600;
+      if (!reduce) stage.animate([{ transform: "scale(1)" }, { transform: "scale(" + Z + ")" }], { duration: ZT, easing: "cubic-bezier(.6,0,.18,1)", fill: "forwards" });
+      const fadeDelay = reduce ? 0 : 1000, fadeDur = reduce ? 300 : 1050;
+      const fade = stage.animate([{ opacity: 1 }, { opacity: 0 }], { duration: fadeDur, delay: fadeDelay, easing: "ease-in-out", fill: "forwards" });
+
+      /* Home background: the same emblem, same scale, settles back and stays faint */
+      if (heroBg) {
+        const hr = heroBg.getBoundingClientRect();
+        const sCover = Math.max(hr.width / 1280, hr.height / 720);
+        const k0 = clamp((R * 2 * Z) / (448 * sCover), 1.1, 6.5);
+        const wide = innerWidth > 900;
+        const dx = wide ? W / 2 - (hr.left + hr.width * 0.68) : 0;      /* start with the emblem at screen centre … */
+        const dy = (H * 0.46) - (hr.top + hr.height * 0.5);            /* … then glide to its resting place */
+        const a = heroBg.animate(
+          [{ transform: "translate(" + (reduce ? 0 : dx) + "px," + (reduce ? 0 : dy) + "px) scale(" + (reduce ? 0.86 : k0) + ")", opacity: 0 },
+           { opacity: 1, offset: 0.3 },
+           { transform: "translate(0px,0px) scale(0.86)", opacity: 1 }],
+          { duration: reduce ? 400 : 3600, delay: reduce ? 0 : 950, easing: "cubic-bezier(.16,1,.3,1)", fill: "both" }
+        );
+        const done = () => { heroBg.style.opacity = ""; try { a.cancel(); } catch (_) {} };
+        a.finished.then(done, done);
+      }
+      const end = () => {
+        alive = false; cancelAnimationFrame(raf); clearTimeout(failsafe);
+        try { fade.cancel(); } catch (_) {}
+        stage.remove();
+        document.body.classList.remove("tm-zoom-lock");
+      };
+      setTimeout(end, fadeDelay + fadeDur + 120);
+    };
+    btn.addEventListener("click", enter);
+
+    /* if the gate is removed some other way, clean up */
+    const mo = new MutationObserver(() => { if (!gate.isConnected && !entering) { alive = false; cancelAnimationFrame(raf); mo.disconnect(); if (heroBg) heroBg.style.opacity = ""; } });
+    mo.observe(document.body, { childList: true });
+    /* make the button usable once ready */
+    const rdy = setInterval(() => { if (ready) { btn.disabled = false; clearInterval(rdy); } }, 60);
+  }
+
+  const boot3 = () => { try { initIntro(); } catch (e) { const g = document.getElementById("enterGate"); if (g) g.classList.add("is-ready"); const b = document.getElementById("enterGateBtn"); if (b) b.disabled = false; } };
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot3, { once: true });
+  else boot3();
 })();
