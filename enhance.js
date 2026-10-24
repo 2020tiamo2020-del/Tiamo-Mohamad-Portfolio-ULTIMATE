@@ -139,9 +139,9 @@
         const items = [];
         for (let n = 0; n < count; n++) {
           items.push({
-            rx: rnd(110, 760),
-            ratio: rnd(0.2, 0.55),
-            tilt: rnd(-0.75, 0.75),
+            rx: 90 + 520 * Math.pow(Math.random(), 1.35),   /* most dots stay close to the orb, a few reach far sideways */
+            ratio: rnd(0.2, 0.5),
+            tilt: rnd(-0.5, 0.5),
             sp: rnd(0.035, 0.13) * (Math.random() < 0.5 ? -1 : 1),
             ph: rnd(0, Math.PI * 2),
             za: rnd(60, 320),
@@ -182,10 +182,11 @@
       world.add(dust);
 
       let w = 1, h = 1, cx = 0, cy = 0;
+      let VMAX = 300;   /* dots / dust never wander further than this above or below the orb (px) */
       const seedDust = () => {
         for (let d = 0; d < DUST; d++) {
           dPos[d * 3] = rnd(-w / 2, w / 2);
-          dPos[d * 3 + 1] = rnd(-h / 2, h / 2);
+          dPos[d * 3 + 1] = rnd(-VMAX * 1.15, VMAX * 1.15);   /* offset from the orb's height */
           dPos[d * 3 + 2] = rnd(-300, 300);
           dVel[d] = rnd(4, 16);
           dPh[d] = rnd(0, 6.28);
@@ -211,6 +212,7 @@
         h = Math.max(1, r.height);
         canvas.style.width = w + "px";
         canvas.style.height = h + "px";
+        VMAX = Math.min(330, innerHeight * 0.4);
         renderer.setSize(w, h, false);
         camera.left = -w / 2; camera.right = w / 2; camera.top = h / 2; camera.bottom = -h / 2;
         camera.updateProjectionMatrix();
@@ -270,8 +272,9 @@
             const ey = Math.sin(a) * o.rx * o.ratio * spread;
             const ct = Math.cos(o.tilt), st = Math.sin(o.tilt);
             const z = Math.sin(a * 0.7 + o.zp) * o.za;
+            const dy = ex * st + ey * ct;
             g.pos[n * 3] = cx + ex * ct - ey * st;
-            g.pos[n * 3 + 1] = cy + ex * st + ey * ct;
+            g.pos[n * 3 + 1] = cy + VMAX * Math.tanh(dy / VMAX);   /* soft limit: gently squeezed, never cut off */
             g.pos[n * 3 + 2] = z;
             /* depth feel: dots on the far side of their orbit glow softer (additive blend → darker = dimmer) */
             const f = ap * (0.5 + 0.5 * ((z / o.za + 1) / 2)) * (0.85 + beat * 0.5);
@@ -286,9 +289,10 @@
 
         for (let d = 0; d < DUST; d++) {
           let y = dPos[d * 3 + 1] + dVel[d] * dt;
-          if (y > h / 2) { y = -h / 2; dPos[d * 3] = rnd(-w / 2, w / 2); }
+          if (y > VMAX * 1.15) { y = -VMAX * 1.15; dPos[d * 3] = rnd(-w / 2, w / 2); }
           dPos[d * 3 + 1] = y;
         }
+        dust.position.y = cy;   /* the dust band follows the orb */
         dust.geometry.attributes.position.needsUpdate = true;
         dust.material.opacity = 0.75 * k * (0.8 + beat * 0.4);
         renderer.render(scene, camera);
