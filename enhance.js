@@ -730,8 +730,7 @@
       let p;
       if (r.bottom < 0) p = 1;
       else if (r.top > vh) p = 0;
-      else if (it.el.closest("#about")) p = clamp((vh * 0.97 - r.top) / (vh * 0.04 + r.height), 0, 1); /* About: fully lit while you stand on the section */
-      else p = clamp((vh * 0.88 - r.top) / (vh * 0.33 + r.height), 0, 1);
+      else p = clamp((vh * 0.97 - r.top) / (vh * 0.04 + r.height), 0, 1); /* fully lit as soon as the whole paragraph is on screen (no extra scrolling needed) */
       const n = it.words.length;
       const lit = Math.round(p * n);
       if (lit === it.lit) return;
