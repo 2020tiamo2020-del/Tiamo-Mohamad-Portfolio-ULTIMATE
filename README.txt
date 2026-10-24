@@ -232,3 +232,20 @@ UPDATE 2026-10-24 (Process + Brief Builder)
   It is a <button> (not a link) on purpose: script.js rewrites every <a href*="wa.me/"> when the language changes.
 - To change the WhatsApp number: WA_NUMBER at the top of the Brief section in process-brief.js. To change the service chips: the #bbService block in index.html.
 - Undo: delete the 2 files, the 2 sections and the 2 tags; set the kickers back to 06 FIND ME / 07 CONTACT.
+
+---
+UPDATE 2026-10-24 (v2: cinematic scroll scenes - REPLACES process-brief.css / process-brief.js)
+- Delete process-brief.css and process-brief.js from your project. New files: scenes.css + scenes.js (index.html now links these two instead).
+- #process (06) and #brief (08) are now PINNED SCENES: the page stops, and the mouse wheel drives a horizontal film strip (content travels sideways, then the page continues down).
+  * 3D particle field (canvas, no libraries) that MORPHS while you scroll: Process = cloud > seed > moodboard planes > sphere > torus > loop > cube.
+  * Colour-bar wipe reveals on titles/text, outlined numerals that fill with gradient, giant outlined marquee words moving against the scroll,
+    velocity skew while scrolling fast, card-open / card-close edges, panels dwell on centre (soft snap), chapter dots + progress bar (click to jump).
+  * Brief = 6 scenes: intro, services (multi), usage, quantity + deadline sliders, idea + name, ready to send.
+    A live 3D ticket (tilts with the mouse, glare, holographic strip, progress ring) mirrors your answers; the particle ring reacts
+    (speed = urgency, size = quantity, colour = deadline) and chips are magnetic. "Skip to send" jumps to the last scene.
+  * Send on WhatsApp / Copy brief work exactly as before (message in the page language, button blocked until a service is chosen).
+- Works in Arabic (everything mirrors) and on phones (particles move above the text, ticket hidden, same scroll story).
+- Quality: smoothing is frame-rate independent; on slow devices the particle count is reduced automatically.
+- Tuning (scenes.js): particle count / palette / shape order inside the Process and Brief configs; panel scroll length = .sc-process / .sc-brief height in scenes.css.
+- Reduced-motion: no idle spin / skew; the scroll story itself still works because the visitor controls it.
+- Undo: delete scenes.css / scenes.js, the two <section class="sc ..."> blocks and the 2 tags in index.html.
