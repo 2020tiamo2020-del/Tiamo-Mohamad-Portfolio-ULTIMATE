@@ -209,8 +209,12 @@ UPDATE 2026-10-24 (Story layer - inspired by the Imogen scroll-story site)
      Section kickers (02 / SERVICES ...) scramble when they enter the screen (English only).
 - 3) Side rail (screens >= 1280px): dots + vertical progress line + active capsule; labels show on hover, always on screens >= 1560px. Click = smooth scroll (uses Lenis).
 - 4) Section aura: the background glow changes colour per section (home, about, services, work, creation, before/after, contact).
-- 5) Work scenes: each gallery card scales/dims with its distance from the screen centre and a big ghost letter (A-D) drifts behind it.
-     (No hard "pin": the 4 cards sit in a 2x2 grid with carousels; a sticky stack would need a new layout.)
+- 5) Work PIN (desktop >= 1100px wide and >= 620px tall): the 2x2 grid becomes a sticky stack. Each category (A-D) pins in its own scene and the next
+     one slides up over it; the covered card shrinks slightly and fades out. A big ghost letter (A-D) sits beside the card and a chapter index (A B C D
+     with the current title) shows on the opposite side - click a letter to jump to that scene. Cards taller than the screen are scaled down to fit.
+     Below 1100px (tablet/phone) or with reduced motion, the normal grid stays (with a soft scale/fade scrub on screens >= 901px).
+     Tuning: dwell between scenes = margin-bottom 24vh in story.css (#work.st-pin .gallery-card); pin offset PIN_TOP (96) at the top of story.js scroll module.
+     To disable only the pin: in story.js change  const pin = ...  to  const pin = false;
 - 6) Headings: the <em> word in English headings is now serif italic (Instrument Serif, fallback Georgia). Arabic keeps its current style.
 - Reduced-motion: the scramble and scrub are skipped for visitors who enabled it in their OS.
 - Tuning: GL (scramble letters) and MIN/MAX (loader time) at the top of story.js; colours of each aura in story.css (.st-aura i[data-s=...]).

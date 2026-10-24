@@ -226,6 +226,30 @@
       c.appendChild(g);
     });
     const wide = matchMedia("(min-width:901px)");
+    const work = $("#work");
+    const grid = work && $(".gallery-grid", work);
+    const pinMQ = matchMedia("(min-width:1100px) and (min-height:620px)");
+    const PIN_TOP = 96;
+    const chap = document.createElement("div");
+    chap.className = "st-chap";
+    const chapBtns = cards.map((c, i) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.innerHTML = "<i>" + String.fromCharCode(65 + i) + "</i><span></span>";
+      b.addEventListener("click", () => {
+        if (!grid || !pinMQ.matches) return;
+        const vh = innerHeight;
+        const dwell = parseFloat(getComputedStyle(cards[0]).marginBottom) || vh * 0.24;
+        let y = grid.getBoundingClientRect().top + scrollY;
+        for (let j = 0; j < i; j++) y += cards[j].offsetHeight + dwell;
+        const to = y - PIN_TOP;
+        const lenis = window.__lenis;
+        lenis && lenis.scrollTo ? lenis.scrollTo(to, { duration: 1.5 }) : scrollTo({ top: to, behavior: "smooth" });
+      });
+      chap.appendChild(b);
+      return b;
+    });
+    if (cards.length > 1) document.body.appendChild(chap);
 
     /* --- one scroll controller --- */
     let active = "", flashT = 0, ticking = false;
@@ -248,17 +272,49 @@
       rail.style.setProperty("--st-prog", clamp(y / max, 0, 1).toFixed(4));
       aura.style.setProperty("--st-y", Math.round(y));
 
-      if (wide.matches && !reduce) {
-        const mid = vh / 2;
-        cards.forEach(c => {
-          const r = c.getBoundingClientRect();
-          const dist = mid < r.top ? r.top - mid : mid > r.bottom ? mid - r.bottom : 0;
-          const off = (r.top + r.height / 2 - mid) / vh;
-          c.style.setProperty("--st-d", clamp(dist / (vh * 0.9), 0, 1).toFixed(3));
-          c.style.setProperty("--st-g", clamp(off, -1.5, 1.5).toFixed(3));
+      const pin = !!grid && cards.length > 1 && pinMQ.matches && !reduce;
+      work && work.classList.toggle("st-pin", pin);
+      if (pin) {
+        cards.forEach((c, i) => {
+          const h = c.offsetHeight || 1;
+          c.style.setProperty("--st-fit", clamp((vh - PIN_TOP - 24) / h, 0.55, 1).toFixed(3));
+          const nx = cards[i + 1];
+          let cover = 0;
+          if (nx) cover = clamp((vh - nx.getBoundingClientRect().top) / (vh - PIN_TOP), 0, 1);
+          c.style.setProperty("--st-cover", cover.toFixed(3));
+          c.style.setProperty("--st-g", clamp((c.getBoundingClientRect().top - PIN_TOP) / vh, -1.5, 1.5).toFixed(3));
+          c.style.pointerEvents = cover > 0.55 ? "none" : "";
+          c.style.removeProperty("--st-d");
+        });
+        const gr = grid.getBoundingClientRect();
+        const showChap = gr.top < vh * 0.6 && gr.bottom > vh * 0.55;
+        chap.classList.toggle("show", showChap);
+        let act = 0;
+        cards.forEach((c, i) => { if (c.getBoundingClientRect().top <= vh * 0.55) act = i; });
+        chapBtns.forEach((b, i) => {
+          b.classList.toggle("on", i === act);
+          const h3 = $("h3", cards[i]);
+          const t = h3 ? h3.textContent : "";
+          const sp = b.lastChild;
+          if (sp.textContent !== t) { sp.textContent = t; b.setAttribute("aria-label", t); }
         });
       } else {
-        cards.forEach(c => { c.style.removeProperty("--st-d"); c.style.removeProperty("--st-g"); });
+        chap.classList.remove("show");
+        cards.forEach(c => {
+          c.style.removeProperty("--st-fit"); c.style.removeProperty("--st-cover"); c.style.pointerEvents = "";
+        });
+        if (wide.matches && !reduce) {
+          const mid = vh / 2;
+          cards.forEach(c => {
+            const r = c.getBoundingClientRect();
+            const dist = mid < r.top ? r.top - mid : mid > r.bottom ? mid - r.bottom : 0;
+            const off = (r.top + r.height / 2 - mid) / vh;
+            c.style.setProperty("--st-d", clamp(dist / (vh * 0.9), 0, 1).toFixed(3));
+            c.style.setProperty("--st-g", clamp(off, -1.5, 1.5).toFixed(3));
+          });
+        } else {
+          cards.forEach(c => { c.style.removeProperty("--st-d"); c.style.removeProperty("--st-g"); });
+        }
       }
     };
     const req = () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } };

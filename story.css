@@ -77,3 +77,37 @@ body.light .st-ghost{color:rgba(60,30,120,.07)}
 html[lang="en"] :is(.hero h1,.section-title h2,.contact h2,.social-strip h2) em{
   font-family:"Instrument Serif","Playfair Display",Georgia,"Times New Roman",serif;
   font-style:italic;font-weight:400;letter-spacing:-.025em;font-size:1.06em;line-height:.9}
+
+/* ---------- 7. WORK PIN (sticky stack: each category gets its own scene) ----------
+   Active only on desktop (>=1100px wide, >=620px tall, motion allowed). JS toggles .st-pin on #work.
+   Below that the normal 2x2 grid (with the soft scrub from section 5) stays. */
+#work.st-pin .gallery-grid{display:block;padding:0 0 10px;overflow:visible}
+#work.st-pin .gallery-card{
+  position:sticky;top:96px;width:min(100%,600px);margin:0 auto 24vh;
+  transform-origin:top center;background-color:#0b0815;
+  scale:calc(var(--st-fit,1) * (1 - var(--st-cover,0) * .08));
+  opacity:calc(1 - var(--st-cover,0));
+  will-change:scale,opacity}
+#work.st-pin .gallery-card:last-child{margin-bottom:0}
+body.light #work.st-pin .gallery-card{background-color:#f3eefc}
+#work.st-pin .st-ghost{inset-inline-start:calc(-.62em);inset-inline-end:auto;inset-block-start:50%;
+  font-size:clamp(220px,26vw,380px);color:rgba(255,255,255,.07);
+  translate:0 calc(-50% + var(--st-g,0) * -40px)}
+body.light #work.st-pin .st-ghost{color:rgba(60,30,120,.09)}
+
+/* chapter index on the opposite side while the stack is pinned */
+.st-chap{position:fixed;inset-inline-end:26px;top:50%;transform:translateY(-50%);z-index:24;display:flex;flex-direction:column;gap:12px;align-items:flex-end;opacity:0;visibility:hidden;transition:opacity .5s ease,visibility .5s ease}
+.st-chap.show{opacity:1;visibility:visible}
+body.gate-locked .st-chap,body.lightbox-open .st-chap{opacity:0;visibility:hidden}
+.st-chap button{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:10px;flex-direction:row-reverse;color:#9a92b3;font:600 11px/1 Inter,Cairo,sans-serif;letter-spacing:.14em;text-transform:uppercase}
+.st-chap button:focus-visible{outline:2px solid #16d8ff;outline-offset:3px;border-radius:16px}
+.st-chap button i{flex:none;width:32px;height:32px;border-radius:50%;border:1px solid rgba(255,255,255,.22);display:grid;place-items:center;font:italic 400 19px/1 "Instrument Serif","Playfair Display",Georgia,serif;letter-spacing:0;background:rgba(10,7,18,.5);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);transition:background .35s,border-color .35s,color .35s,box-shadow .35s}
+.st-chap button span{max-width:0;opacity:0;overflow:hidden;white-space:nowrap;transition:max-width .5s var(--ease,ease),opacity .3s ease}
+.st-chap button.on{color:#fff}
+.st-chap button.on i{background:linear-gradient(135deg,#8b35ff,#16d8ff);border-color:transparent;box-shadow:0 0 18px rgba(139,53,255,.55)}
+.st-chap button.on span,.st-chap button:hover span{max-width:220px;opacity:1}
+body.light .st-chap button{color:#5a5170}
+body.light .st-chap button.on{color:#1b1230}
+body.light .st-chap button i{background:rgba(255,255,255,.7);border-color:rgba(20,10,40,.2)}
+body.light .st-chap button.on i{color:#fff}
+@media (max-width:1099px),(max-height:619px){.st-chap{display:none}}
