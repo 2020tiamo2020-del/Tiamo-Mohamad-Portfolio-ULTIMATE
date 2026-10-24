@@ -695,7 +695,7 @@
      ========================================================= */
   function initWords() {
     if (reduced()) return;
-    const sels = ["#creation .cr-head > div > p"];   /* About paragraph is animated by about-fx.js */
+    const sels = [];   /* About paragraph: about-fx.js · AI Creation paragraph: creation-fx.js */
     const items = [];
     const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 

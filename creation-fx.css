@@ -1,0 +1,39 @@
+/* ==========================================================================
+   04 / AI CREATION · line-sweep reveal  (pairs with creation-fx.js)
+   Loads LAST so it wins over creation.css / motion.css / enhance.css.
+   Scope: only the kicker, headline and paragraph inside #creation .cr-head.
+   ========================================================================== */
+
+/* 1 · switch off the older entrance animations on those three elements only */
+#creation .cr-head .section-kicker,
+#creation .cr-head h2,
+#creation .cr-head > div > p{
+  position:relative;
+  translate:none!important;
+  filter:none!important;
+  animation:none!important;
+  transition:none!important;
+}
+#creation .cr-head .tm-st,#creation .cr-head .tm-hd{opacity:1!important}
+
+/* 2 · armed = empty while you are outside the section */
+#creation.cr-armed .cr-head .section-kicker,
+#creation.cr-armed .cr-head h2,
+#creation.cr-armed .cr-head > div > p{
+  opacity:0!important;
+  visibility:hidden;
+  transition:opacity .28s ease,visibility 0s linear .28s!important;
+}
+
+/* 3 · the sweeping bars (same colours as About) */
+#creation .crfx-bars{position:absolute;inset:0;pointer-events:none;z-index:3;display:block}
+#creation .crfx-bar{
+  position:absolute;display:block;border-radius:3px;
+  background:linear-gradient(100deg,#7d2cff 0%,#9d66ff 55%,#16d8ff 100%);
+  clip-path:inset(0 100% 0 0);
+  will-change:clip-path;
+}
+[dir=rtl] #creation .crfx-bar{clip-path:inset(0 0 0 100%)}
+
+/* 4 · the scroll-vitality script writes an inline opacity on titles every frame; keep them at full strength once played */
+#creation:not(.cr-armed) .cr-head :is(.section-kicker,h2){opacity:1!important}
