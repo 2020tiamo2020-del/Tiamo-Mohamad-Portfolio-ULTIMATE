@@ -141,7 +141,7 @@
   });
 
   run("kickers", () => {
-    const ks = $$("#services .section-kicker,#work .section-kicker,#creation .section-kicker,#beforeafter .section-kicker,#contact .section-kicker")
+    const ks = $$("#services .section-kicker,#work .section-kicker,#creation .section-kicker,#beforeafter .section-kicker,#process .section-kicker,#brief .section-kicker,#contact .section-kicker")
       .filter(k => !k.children.length);
     if (!ks.length || !("IntersectionObserver" in window)) return;
     const io = new IntersectionObserver(es => es.forEach(e => {
@@ -164,6 +164,8 @@
       ["work", "#work", "Work", "الأعمال"],
       ["creation", "#creation", "AI Creation", "إبداع الـ AI"],
       ["beforeafter", "#beforeafter", "Before & After", "قبل وبعد"],
+      ["process", "#process", "Process", "طريقة العمل"],
+      ["brief", "#brief", "Start a Project", "ابدأ مشروعك"],
       ["contact", "#contact", "Contact", "تواصل"]
     ].map(([id, sel, en, ar]) => ({ id, el: $(sel), en, ar })).filter(d => d.el);
     if (!defs.length) return;

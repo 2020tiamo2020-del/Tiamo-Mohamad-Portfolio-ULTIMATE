@@ -218,3 +218,17 @@ UPDATE 2026-10-24 (Story layer - inspired by the Imogen scroll-story site)
 - 6) Headings: the <em> word in English headings is now serif italic (Instrument Serif, fallback Georgia). Arabic keeps its current style.
 - Reduced-motion: the scramble and scrub are skipped for visitors who enabled it in their OS.
 - Tuning: GL (scramble letters) and MIN/MAX (loader time) at the top of story.js; colours of each aura in story.css (.st-aura i[data-s=...]).
+
+---
+UPDATE 2026-10-24 (Process + Brief Builder)
+- New files: process-brief.css + process-brief.js. index.html: 2 new <section> blocks (#process before the "Find me" strip, #brief before #contact),
+  1 <link> + 1 <script> tag, and the kickers were renumbered: 06 PROCESS, 07 FIND ME, 08 START A PROJECT, 09 CONTACT.
+  story.js / story.css were also updated so the side rail (now 9 dots) and the section aura know the 2 new sections.
+- 06 / PROCESS: 6 steps (Brief, Direction, Creation, Color & Details, Review, Delivery). A line fills and a glowing dot travels down it while you scroll;
+  each step lights up when the dot reaches it. Mobile: single column with the line on the side. Edit the texts directly in index.html (data-en / data-ar).
+- 08 / START A PROJECT (Brief Builder): services (multi-select), usage, quantity slider, deadline slider, idea, name -> live summary card + "brief ready" meter.
+  "Send on WhatsApp" opens wa.me/201278536645 with the message written in the page language (English or Arabic); "Copy brief" copies the same text.
+  The send button is blocked until at least one service is chosen. Nothing is stored or sent to any server.
+  It is a <button> (not a link) on purpose: script.js rewrites every <a href*="wa.me/"> when the language changes.
+- To change the WhatsApp number: WA_NUMBER at the top of the Brief section in process-brief.js. To change the service chips: the #bbService block in index.html.
+- Undo: delete the 2 files, the 2 sections and the 2 tags; set the kickers back to 06 FIND ME / 07 CONTACT.
