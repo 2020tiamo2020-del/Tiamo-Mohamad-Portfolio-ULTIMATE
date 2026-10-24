@@ -70,241 +70,120 @@
   }
 
   /* =========================================================
-     2 · HERO — lightweight Three.js orbits + particle cloud
-        (CSS orbits hide when canvas is ready; TM music orb stays)
+     2 · HERO — small orbiting "asteroid" dots wrapped around the TM music orb
+        (Three.js points on two spherical shells; the CSS orbits and the orb stay exactly as they are)
      ========================================================= */
   async function initHeroGL() {
-    /* Free asteroid field across the WHOLE hero (under the text too, no box).
-       The original CSS orbits stay exactly as they were; the asteroids only appear while the music plays. */
-    const hero = document.querySelector(".hero");
+    /* The dots live INSIDE .hero-visual (150% canvas, centred on the orb) so they hug the orb and never
+       spread under the hero text. Same look / spread as the original music-orb pack:
+       560 violet + 157 cyan dots, shells 1.35–1.9 around the orb, turning in opposite directions. */
     const host = document.querySelector(".hero-visual");
-    const orb = document.getElementById("tmOrb");
-    if (!hero || !host || !orb || reduced()) return;
+    if (!host || reduced()) return;
 
     try {
       const THREE = window.THREE || (await import("https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js"));
       if (!THREE) return;
 
       const canvas = document.createElement("canvas");
-      canvas.className = "tm-hero-space";
+      canvas.className = "tm-hero-gl";
       canvas.setAttribute("aria-hidden", "true");
-      /* the hero itself clips horizontally (overflow-x: clip), so the canvas lives in <main> right before it */
-      const mainEl = hero.parentElement;
-      mainEl.insertBefore(canvas, hero);
+      host.insertBefore(canvas, host.firstChild);
 
       const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: "high-performance" });
-      renderer.setPixelRatio(Math.min(devicePixelRatio || 1, mobile() ? 1.5 : 2));
+      renderer.setPixelRatio(Math.min(devicePixelRatio || 1, mobile() ? 1.25 : 1.6));
       renderer.setClearColor(0x000000, 0);
 
       const scene = new THREE.Scene();
-      const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, -1500, 1500);
-      camera.position.z = 700;
-      scene.add(new THREE.AmbientLight(0x9a86ff, 1.1));
-      const sun = new THREE.DirectionalLight(0xffffff, 2.6);
-      sun.position.set(-320, 420, 560);
-      scene.add(sun);
-      const rim = new THREE.PointLight(0x16d8ff, 3.2, 1400, 1.0);
-      rim.position.set(0, 0, 260);
-      scene.add(rim);
+      const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 50);
+      camera.position.z = 12.4;   /* far enough that the shell hugs the orb (≈ 2 orb radii), as in the original pack video */
+      const group = new THREE.Group();
+      scene.add(group);
 
-      const world = new THREE.Group();
-      scene.add(world);
-
-      /* three rock shapes, each a roughened icosahedron */
-      const rnd = (a, b) => a + Math.random() * (b - a);
-      const makeRock = () => {
-        const g = new THREE.IcosahedronGeometry(1, 1);
-        const pos = g.attributes.position;
-        for (let v = 0; v < pos.count; v++) {
-          const k = rnd(0.72, 1.2);
-          pos.setXYZ(v, pos.getX(v) * k, pos.getY(v) * k * rnd(0.85, 1.1), pos.getZ(v) * k);
+      const shell = (n, r0, r1) => {
+        const pos = new Float32Array(n * 3);
+        for (let i = 0; i < n; i++) {
+          const theta = 2 * Math.PI * Math.random();
+          const phi = Math.acos(2 * Math.random() - 1);
+          const r = r0 + Math.random() * (r1 - r0);
+          pos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+          pos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+          pos[i * 3 + 2] = r * Math.cos(phi);
         }
-        g.computeVertexNormals();
+        const g = new THREE.BufferGeometry();
+        g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
         return g;
       };
-      const palette = [0xb794ff, 0x16d8ff, 0xe9dcff, 0x8b35ff, 0x7ef0ff, 0xffffff].map((c) => new THREE.Color(c));
-      const N = mobile() ? 42 : 96;
-      const variants = 3;
-      const meshes = [];
-      const rocks = [];
-      for (let v = 0; v < variants; v++) {
-        const count = Math.floor(N / variants);
-        const mesh = new THREE.InstancedMesh(
-          makeRock(),
-          new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.78, metalness: 0.15, flatShading: true }),
-          count
-        );
-        mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-        for (let n = 0; n < count; n++) {
-          const big = Math.random() < 0.1;
-          rocks.push({
-            mesh, n,
-            rx: rnd(110, 760),
-            ratio: rnd(0.2, 0.55),
-            tilt: rnd(-0.75, 0.75),
-            sp: rnd(0.035, 0.13) * (Math.random() < 0.5 ? -1 : 1),
-            ph: rnd(0, Math.PI * 2),
-            size: big ? rnd(8, 14) : rnd(2.2, 6.5),
-            za: rnd(60, 320),
-            zp: rnd(0, Math.PI * 2),
-            tx: rnd(-0.8, 0.8), ty: rnd(-0.8, 0.8),
-            rot: rnd(0, 6), ap: Math.random(),
-          });
-          mesh.setColorAt(n, palette[(Math.random() * palette.length) | 0]);
-        }
-        mesh.instanceColor.needsUpdate = true;
-        mesh.frustumCulled = false;
-        world.add(mesh);
-        meshes.push(mesh);
-      }
 
-      /* fine dust */
-      const sprite = (() => {
-        const c = document.createElement("canvas");
-        c.width = c.height = 64;
-        const x = c.getContext("2d");
-        const g = x.createRadialGradient(32, 32, 0, 32, 32, 32);
-        g.addColorStop(0, "rgba(255,255,255,1)");
-        g.addColorStop(0.35, "rgba(190,160,255,.55)");
-        g.addColorStop(1, "rgba(120,80,255,0)");
-        x.fillStyle = g;
-        x.fillRect(0, 0, 64, 64);
-        return new THREE.CanvasTexture(c);
-      })();
-      const DUST = mobile() ? 120 : 280;
-      const dPos = new Float32Array(DUST * 3);
-      const dVel = new Float32Array(DUST);
-      const dPh = new Float32Array(DUST);
-      const dust = new THREE.Points(
-        new THREE.BufferGeometry(),
+      /* violet dots */
+      const count = mobile() ? 280 : 560;
+      const pMat = new THREE.PointsMaterial({
+        size: mobile() ? 0.07 : 0.05, color: 0xb794ff, transparent: true, opacity: 0.85,
+        depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true,
+      });
+      const points = new THREE.Points(shell(count, 1.35, 1.85), pMat);
+      group.add(points);
+
+      /* cyan accent dots, slightly further out, turning the other way */
+      const points2 = new THREE.Points(
+        shell(Math.floor(count * 0.28), 1.5, 1.9),
         new THREE.PointsMaterial({
-          size: mobile() ? 7 : 6, map: sprite, transparent: true, opacity: 0, depthWrite: false,
-          blending: THREE.AdditiveBlending, sizeAttenuation: false, color: 0xcdbbff,
+          size: 0.04, color: 0x16d8ff, transparent: true, opacity: 0.7,
+          depthWrite: false, blending: THREE.AdditiveBlending,
         })
       );
-      dust.geometry.setAttribute("position", new THREE.BufferAttribute(dPos, 3));
-      dust.frustumCulled = false;
-      world.add(dust);
+      group.add(points2);
 
-      let w = 1, h = 1, cx = 0, cy = 0;
-      const seedDust = () => {
-        for (let d = 0; d < DUST; d++) {
-          dPos[d * 3] = rnd(-w / 2, w / 2);
-          dPos[d * 3 + 1] = rnd(-h / 2, h / 2);
-          dPos[d * 3 + 2] = rnd(-300, 300);
-          dVel[d] = rnd(4, 16);
-          dPh[d] = rnd(0, 6.28);
-        }
-        dust.geometry.attributes.position.needsUpdate = true;
-      };
-      /* where the canvas sits and where the orb is — re-read every frame while playing, because the orb moves
-         when the language flips (RTL puts it on the left) and when the layout changes */
-      const place = () => {
-        const r = hero.getBoundingClientRect();
-        const hr = host.getBoundingClientRect();
-        const mr = mainEl.getBoundingClientRect();
-        const L = -mr.left, T = r.top - mr.top;
-        if (Math.abs((parseFloat(canvas.style.left) || 0) - L) > 0.5) canvas.style.left = L + "px";
-        if (Math.abs((parseFloat(canvas.style.top) || 0) - T) > 0.5) canvas.style.top = T + "px";
-        cx = hr.left + hr.width / 2 - w / 2;
-        cy = h / 2 - (hr.top + hr.height / 2 - r.top);
-      };
+      let w = 0, h = 0;
       const resize = () => {
-        /* canvas spans the full browser width (no box edges) and the full hero height */
-        const r = hero.getBoundingClientRect();
-        w = Math.max(1, document.documentElement.clientWidth);
-        h = Math.max(1, r.height);
-        canvas.style.width = w + "px";
-        canvas.style.height = h + "px";
+        const rect = host.getBoundingClientRect();
+        w = Math.max(1, rect.width);
+        h = Math.max(1, rect.height);
         renderer.setSize(w, h, false);
-        camera.left = -w / 2; camera.right = w / 2; camera.top = h / 2; camera.bottom = -h / 2;
+        camera.aspect = w / h;
         camera.updateProjectionMatrix();
-        place();
-        seedDust();
       };
       resize();
-      setTimeout(resize, 400);
-      setTimeout(resize, 1600);
-      new ResizeObserver(resize).observe(hero);
-      addEventListener("resize", resize, { passive: true });
+      new ResizeObserver(resize).observe(host);
 
-      let tx = 0, ty = 0, mx = 0, my = 0;
+      /* pointer anywhere on the page leans the shell a little (clamped so far-away mice stay calm) */
+      let mx = 0, my = 0, tx = 0, ty = 0;
       addEventListener("pointermove", (e) => {
-        const r = hero.getBoundingClientRect();
-        tx = ((e.clientX - r.left) / r.width - 0.5) * 2;
-        ty = ((e.clientY - r.top) / r.height - 0.5) * 2;
+        const rect = host.getBoundingClientRect();
+        tx = Math.max(-1.3, Math.min(1.3, ((e.clientX - rect.left) / rect.width - 0.5) * 2));
+        ty = Math.max(-1.3, Math.min(1.3, ((e.clientY - rect.top) / rect.height - 0.5) * 2));
       }, { passive: true });
 
-      const playing = () => orb.classList.contains("is-playing") || orb.getAttribute("aria-pressed") === "true";
-      let show = playing() ? 1 : 0;
-      let k = 0;
       let visible = true;
-      let running = false;
-      let last = performance.now();
-      let tAcc = 0;
-      const dummy = new THREE.Object3D();
-      const ease = (t) => 1 - Math.pow(1 - t, 3);
+      if ("IntersectionObserver" in window) {
+        new IntersectionObserver((es) => { visible = es[0] && es[0].isIntersecting; }, { threshold: 0.05 }).observe(host);
+      }
 
-      const frame = (now) => {
-        const dt = Math.min(0.05, (now - last) / 1000);
-        last = now;
-        k += (show - k) * (show ? 0.035 : 0.05);
-        if (k < 0.004 && !show) {
-          running = false;
-          canvas.style.display = "none";
-          return;
-        }
-        requestAnimationFrame(frame);
-        if (!visible) return;
+      const orb = document.getElementById("tmOrb");
+      const playing = () => !!(orb && (orb.classList.contains("is-playing") || orb.getAttribute("aria-pressed") === "true"));
+      let boost = 0;
+      const t0 = performance.now();
+      const tick = (now) => {
+        requestAnimationFrame(tick);
+        if (!visible || document.hidden) return;
+        const t = (now - t0) * 0.001;
+        mx += (tx - mx) * 0.06;
+        my += (ty - my) * 0.06;
+        /* soft idle; a gentle lift (not a race) while the music plays */
+        boost += ((playing() ? 1 : 0) - boost) * 0.018;
+        const spd = 1 + boost;
 
-        place();
-        const beat = Math.max(0, Math.min(1, parseFloat(orb.style.getPropertyValue("--beat")) || 0));
-        tAcc += dt * (1 + beat * 1.6);
-        mx += (tx - mx) * 0.05;
-        my += (ty - my) * 0.05;
-        world.position.x = mx * 22;
-        world.position.y = -my * 14;
-        rim.intensity = 2.2 + beat * 5;
-
-        for (let q = 0; q < rocks.length; q++) {
-          const o = rocks[q];
-          const ap = ease(Math.max(0, Math.min(1, (k - o.ap * 0.55) / 0.45)));
-          const a = o.ph + tAcc * o.sp * 6;
-          const spread = 1 + (1 - ap) * 0.9;
-          const ex = Math.cos(a) * o.rx * spread;
-          const ey = Math.sin(a) * o.rx * o.ratio * spread;
-          const ct = Math.cos(o.tilt), st = Math.sin(o.tilt);
-          dummy.position.set(cx + ex * ct - ey * st, cy + ex * st + ey * ct, Math.sin(a * 0.7 + o.zp) * o.za);
-          dummy.rotation.set(o.rot + tAcc * o.tx, o.rot * 0.7 + tAcc * o.ty, 0);
-          dummy.scale.setScalar(o.size * ap * (1 + beat * 0.35));
-          dummy.updateMatrix();
-          o.mesh.setMatrixAt(o.n, dummy.matrix);
-        }
-        meshes.forEach((m) => (m.instanceMatrix.needsUpdate = true));
-
-        for (let d = 0; d < DUST; d++) {
-          let y = dPos[d * 3 + 1] + dVel[d] * dt;
-          if (y > h / 2) { y = -h / 2; dPos[d * 3] = rnd(-w / 2, w / 2); }
-          dPos[d * 3 + 1] = y;
-        }
-        dust.geometry.attributes.position.needsUpdate = true;
-        dust.material.opacity = 0.75 * k * (0.8 + beat * 0.4);
+        group.rotation.y = t * 0.1 * spd + mx * 0.18;
+        group.rotation.x = my * 0.12;
+        points.rotation.y = t * 0.07 * spd;
+        points2.rotation.y = -t * 0.09 * spd;
+        pMat.opacity = 0.8 + boost * 0.2;
+        points2.material.opacity = 0.65 + boost * 0.3;
+        camera.position.x = mx * 0.22;
+        camera.position.y = -my * 0.16;
+        camera.lookAt(0, 0, 0);
         renderer.render(scene, camera);
       };
-      const wake = () => {
-        show = playing() ? 1 : 0;
-        if (show && !running) {
-          running = true;
-          canvas.style.display = "block";
-          last = performance.now();
-          requestAnimationFrame(frame);
-        }
-      };
-      new MutationObserver(wake).observe(orb, { attributes: true, attributeFilter: ["class", "aria-pressed"] });
-      new MutationObserver(() => { resize(); setTimeout(resize, 350); }).observe(document.documentElement, { attributes: true, attributeFilter: ["lang", "dir"] });
-      new IntersectionObserver((es) => { visible = !!(es[0] && es[0].isIntersecting); }, { threshold: 0 }).observe(hero);
-      canvas.style.display = "none";
-      wake();
+      requestAnimationFrame(tick);
     } catch (_) {
       /* WebGL or CDN unavailable → the CSS orbits simply stay as they are */
     }
