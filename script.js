@@ -493,9 +493,7 @@ if ("IntersectionObserver" in window) {
 }
 
 const aboutPhoto = document.querySelector(".about-photo"), aboutSec = document.getElementById("about");
-if (aboutPhoto && aboutSec && "IntersectionObserver" in window) {
-  new IntersectionObserver(es => es.forEach(e => aboutPhoto.classList.toggle("show", e.isIntersecting)), { threshold: 0.35 }).observe(aboutSec);
-}
+/* About photo + text are now driven by about-fx.js */
 
 /* ---------- Missing assets: logo fallback + friendly placeholders ---------- */
 document.querySelectorAll(".logo-img").forEach(img => {
@@ -929,9 +927,7 @@ if (canvas && ctx && !reduceMotion) {
   const aboutSection = document.getElementById("about");
   if (aboutSection) {
     // same trigger as the photo, so text (from the left) and photo (from the right) meet together
-    if ("IntersectionObserver" in window) {
-      new IntersectionObserver(es => es.forEach(e => aboutSection.classList.toggle("about-in", e.isIntersecting)), { threshold: 0.35 }).observe(aboutSection);
-    } else { aboutSection.classList.add("about-in"); }
+    aboutSection.classList.add("about-in");   /* About animation is handled by about-fx.js */
   }
   ["services", "work", "beforeafter"].forEach(id => {
     const sec = document.getElementById(id);
@@ -2242,7 +2238,7 @@ updateScrollOrbit(true);
         showWelcomeToast();
       };
       // ~ after logo land (visual done) — synced with toast.mp3, not enter track length
-      setTimeout(show, 950);
+      setTimeout(show, 950 + (window.__introHold || 0));
     };
 
     // Particles swirl to logo center
@@ -2271,7 +2267,7 @@ updateScrollOrbit(true);
         const h1 = document.querySelector(".hero h1");
         if (h1) h1.classList.remove("hero-pending");
         if (typeof window.__restaggerHero === "function") window.__restaggerHero();
-      }, 180);
+      }, 180 + (window.__introHold || 0));
       scheduleWelcomeToast();
     };
 
@@ -2339,7 +2335,7 @@ updateScrollOrbit(true);
         const h1 = document.querySelector(".hero h1");
         if (h1) h1.classList.remove("hero-pending");
         if (typeof window.__restaggerHero === "function") window.__restaggerHero();
-      }, 200);
+      }, 200 + (window.__introHold || 0));
       // Welcome toast waits until enter sound finishes (or scene fully settled)
       scheduleWelcomeToast();
     };

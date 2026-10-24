@@ -1141,7 +1141,7 @@
     };
     /* backup: the gate element disappears */
     if (gate()) {
-      const mo = new MutationObserver(() => { if (!gate()) { mo.disconnect(); setTimeout(() => { if (!armed || !hero.classList.contains("tm-hin")) startFirst(); }, 260); } });
+      const mo = new MutationObserver(() => { if (!gate()) { mo.disconnect(); setTimeout(() => { if (!armed || !hero.classList.contains("tm-hin")) startFirst(); }, 260 + (window.__introHold || 0)); } });
       mo.observe(document.body, { childList: true });
     }
 

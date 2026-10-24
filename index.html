@@ -8,6 +8,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <link rel="stylesheet" href="style.css">
+<link rel="preload" href="fonts/RubikDirt.woff" as="font" type="font/woff" crossorigin>
+<link rel="preload" href="images/intro-logo.webp" as="image" type="image/webp">
+<link rel="stylesheet" href="intro3d.css?v=1">
 <link rel="stylesheet" href="creation.css" media="print" onload="this.media='all'" data-deferred-creation>
 <noscript><link rel="stylesheet" href="creation.css"></noscript>
 <link rel="stylesheet" href="motion.css?v=8">
@@ -503,28 +506,19 @@
 </style>
 </head>
 <body>
-<div id="enterGate" class="enter-gate" role="dialog" aria-modal="true" aria-label="Enter portfolio">
-  <div class="enter-gate-bg" aria-hidden="true"></div>
-  <div class="enter-gate-noise" aria-hidden="true"></div>
-  <canvas id="enterCubes" class="enter-cubes" aria-hidden="true"></canvas>
-  <button type="button" class="enter-gate-btn" id="enterGateBtn">
-    <picture class="enter-gate-logo-wrap">
-      <source srcset="images/main-logo.webp" type="image/webp">
-      <img class="enter-gate-logo" src="images/main-logo.webp" alt="Tiamo Mohamad" width="280" height="140" decoding="async" fetchpriority="high">
-    </picture>
-    <span class="enter-gate-pulse" aria-hidden="true"></span>
-    <span class="enter-gate-cta">
-      <span class="enter-gate-label" data-en="Click to enter" data-ar="اضغط للدخول">Click to enter</span>
-      <span class="enter-gate-hint" data-en="Sound on" data-ar="مع الصوت">Sound on</span>
-    </span>
-    <span class="enter-click-cue" aria-hidden="true">
-      <span class="enter-click-ring"></span>
-      <span class="enter-click-dot"></span>
-    </span>
-    <span class="enter-touch-cue" aria-hidden="true">
-      <span class="enter-touch-hand">👆</span>
-      <span class="enter-touch-ripple"></span>
-    </span>
+<div id="tm3d" class="tm3d" aria-hidden="true">
+  <canvas class="tm3d-canvas"></canvas>
+  <div class="tm3d-vignette"></div>
+  <div class="tm3d-ui">
+    <div class="tm3d-name" aria-label="Tiamo Mohamad">TIAMO MOHAMAD</div>
+    <div class="tm3d-role" data-en="AI Artist · Photoshop Designer · Video Creator · VFX" data-ar="فنان ذكاء اصطناعي · مصمم فوتوشوب · صانع فيديو · VFX">AI Artist · Photoshop Designer · Video Creator · VFX</div>
+    <div class="tm3d-load"><div class="tm3d-pct"><b>0</b><i>%</i></div><div class="tm3d-line"><i></i></div></div>
+  </div>
+  <div class="tm3d-flash"></div>
+</div>
+<div id="enterGate" class="enter-gate tm3d-gate" role="dialog" aria-modal="true" aria-label="Enter portfolio">
+  <button type="button" class="enter-gate-btn tm3d-enter" id="enterGateBtn" disabled>
+    <span class="enter-gate-label" data-en="Enter with sound" data-ar="ادخل مع الصوت">Enter with sound</span>
   </button>
 </div>
 <div id="cursorDot" class="cursor-dot" aria-hidden="true"></div>
@@ -628,7 +622,7 @@
 </footer><button class="music-mini" id="tmMini" type="button" aria-label="Pause music" tabindex="-1"><span class="mm-phones" aria-hidden="true"><i class="mm-band"></i><i class="mm-cup mm-l"></i><i class="mm-cup mm-r"></i><i class="mm-led mm-led-l"></i><i class="mm-led mm-led-r"></i></span><span class="mm-eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span></button>
 <button class="scroll-orbit" id="scrollOrbit" type="button" aria-label="Scroll to bottom"><span class="scroll-orbit-core">⌄</span><span class="scroll-orbit-ring"></span><span class="scroll-orbit-label" data-en="DOWN" data-ar="لأسفل">DOWN</span></button>
 <div class="media-lightbox" id="mediaLightbox" role="dialog" aria-modal="true" aria-label="Image viewer" aria-hidden="true"><button class="lightbox-close" type="button" aria-label="Close">×</button><button class="lightbox-prev" type="button" aria-label="Previous">‹</button><button class="lightbox-next" type="button" aria-label="Next">›</button><div class="lightbox-stage"><img id="lightboxImage" alt="" loading="lazy"><div class="lightbox-count" id="lightboxCount" aria-live="polite"></div><div class="lightbox-caption" data-en="CLICK OUTSIDE TO CLOSE · ESC" data-ar="اضغط خارج الصورة للإغلاق · ESC">CLICK OUTSIDE TO CLOSE · ESC</div></div></div><div id="toastHost" class="toast-host" aria-live="polite" aria-relevant="additions"></div>
-<script src="script.js?v=8" defer></script><script src="creation.js" defer></script><script src="motion.js?v=9" defer></script><script src="enhance.js?v=7" defer></script><script src="about-fx.js?v=1" defer></script><script src="creation-fx.js?v=1" defer></script><script src="story.js?v=1" defer></script><script src="scenes.js?v=1" defer></script><script id="contact-snap">
+<script src="script.js?v=8" defer></script><script src="intro3d.js?v=1" defer></script><script src="creation.js" defer></script><script src="motion.js?v=9" defer></script><script src="enhance.js?v=7" defer></script><script src="about-fx.js?v=1" defer></script><script src="creation-fx.js?v=1" defer></script><script src="story.js?v=1" defer></script><script src="scenes.js?v=1" defer></script><script id="contact-snap">
 /* Contact link framing: the view lands with the header sitting right under the Before/After pager arrows,
    i.e. "Find Me" starts directly under the header and Contact + footer follow. Pure layout maths, nothing else is touched. */
 (function(){

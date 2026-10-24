@@ -134,7 +134,7 @@
 
     if (document.body.classList.contains("gate-locked")) {
       const mo = new MutationObserver(() => {
-        if (!document.body.classList.contains("gate-locked")) { mo.disconnect(); play(); loop(); }
+        if (!document.body.classList.contains("gate-locked")) { mo.disconnect(); setTimeout(() => { play(); loop(); }, window.__introHold || 0); }
       });
       mo.observe(document.body, { attributes: true, attributeFilter: ["class"] });
     } else { play(); loop(); }
