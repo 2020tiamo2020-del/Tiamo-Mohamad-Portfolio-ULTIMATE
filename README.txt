@@ -186,3 +186,31 @@ UPDATE 2026-10-22 (motion layer v7)
 UPDATE 2026-10-22 (v8)
 - Before & After: the first pair no longer stays on stand-in layers; it is measured as soon as its photos are loaded, so EDIT % appears on every pair.
 - Display visitor counter base +357 (script.js BASE = 3141).
+
+---
+UPDATE (About line-sweep) - one controller for the whole About block
+- New files: about-fx.js + about-fx.css (linked last in index.html). They replace 6 older About animations that were fighting each other:
+  .reveal fade on #about, the "about-in" slide-from-left (script.js), tm-hd word blur-rise + tm-st kicker rise + kicker counter (motion.js),
+  scroll-lit words on the About paragraph (enhance.js initWords) and the crystal-glass blocks on the headline (enhance.js initAboutGlass).
+- Behaviour: About is EMPTY while you are on Home / outside About. When About comes into view (About button, wheel down from Home, wheel up from below,
+  drag, touch) a bar sweeps every line (kicker, headline, paragraph) and uncovers the letters behind its edge. Leaving About re-arms it, so it replays on every visit.
+  It waits for the scroll to slow down before starting. Clicking About while already there replays it. Arabic sweeps from the right.
+- Tuning (top of about-fx.js): PLAN (start / duration / gap per block), SHOW_AT (how much of the heading must be visible, 0.55), SPEED_GATE (1400 px/s),
+  bar colours in about-fx.css (.ab-bar).
+- To undo: remove the about-fx.css / about-fx.js tags, restore class="reveal" on <section id="about">, and revert the small edits in motion.js, script.js and enhance.js
+  (search for "about-fx.js" in those files).
+
+---
+UPDATE 2026-10-24 (Story layer - inspired by the Imogen scroll-story site)
+- New files: story.css + story.js (+ a Google Font link for Instrument Serif). 3 tags added to index.html. Nothing else was edited.
+  To undo: delete the 2 files and the 3 tags (2 <link>, 1 <script>).
+- 1) Gate loader: % counter + bar + line-drawn TM monogram behind the logo. "Click to enter" appears when it reaches 100 (min ~1.7 s, max ~4 s).
+- 2) Text scramble: hero role words (AI Artist / Photoshop Designer / Video Creator / VFX) decode on entry, re-scramble one by one every ~4 s and on hover.
+     Section kickers (02 / SERVICES ...) scramble when they enter the screen (English only).
+- 3) Side rail (screens >= 1280px): dots + vertical progress line + active capsule; labels show on hover, always on screens >= 1560px. Click = smooth scroll (uses Lenis).
+- 4) Section aura: the background glow changes colour per section (home, about, services, work, creation, before/after, contact).
+- 5) Work scenes: each gallery card scales/dims with its distance from the screen centre and a big ghost letter (A-D) drifts behind it.
+     (No hard "pin": the 4 cards sit in a 2x2 grid with carousels; a sticky stack would need a new layout.)
+- 6) Headings: the <em> word in English headings is now serif italic (Instrument Serif, fallback Georgia). Arabic keeps its current style.
+- Reduced-motion: the scramble and scrub are skipped for visitors who enabled it in their OS.
+- Tuning: GL (scramble letters) and MIN/MAX (loader time) at the top of story.js; colours of each aura in story.css (.st-aura i[data-s=...]).
