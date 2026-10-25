@@ -413,9 +413,11 @@
      ========================================================= */
   function initAboutParallax() {
     if (reduced() || mobile()) return;
-    const photo = document.querySelector("#about .about-photo");
+    const card = document.querySelector("#about .about-photo");
     const sec = document.getElementById("about");
-    if (!photo || !sec) return;
+    if (!card || !sec) return;
+    /* tilt the picture only: the glass caption (backdrop-filter) must never sit inside a 3D-rotated ancestor, or Chrome drops it */
+    const photo = card.querySelector("picture") || card;
     sec.addEventListener(
       "pointermove",
       (e) => {
@@ -1141,7 +1143,7 @@
     };
     /* backup: the gate element disappears */
     if (gate()) {
-      const mo = new MutationObserver(() => { if (!gate()) { mo.disconnect(); setTimeout(() => { if (!armed || !hero.classList.contains("tm-hin")) startFirst(); }, 260 + (window.__introHold || 0)); } });
+      const mo = new MutationObserver(() => { if (!gate()) { mo.disconnect(); setTimeout(() => { if (!armed || !hero.classList.contains("tm-hin")) startFirst(); }, 260); } });
       mo.observe(document.body, { childList: true });
     }
 
