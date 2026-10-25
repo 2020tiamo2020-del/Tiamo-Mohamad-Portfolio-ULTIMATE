@@ -151,9 +151,13 @@
   const pt = (m, x, y) => [m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]];
   const path = (c, pts) => { c.beginPath(); pts.forEach(([x, y], i) => i ? c.lineTo(x, y) : c.moveTo(x, y)); c.closePath(); };
 
+  /* motion.js drifts the original <img> a few px with the cursor (its own `translate`); the canvas copies it, so the swap never jumps */
+  const follow = () => { cv.style.translate = orig.style.translate || ""; };
+
   /* ---- frame ---- */
   const frame = (now) => {
     raf = 0;
+    follow();
     const raw = now - (last || now); last = now;
     const k = Math.min(4, raw / 16.67);
 
@@ -191,7 +195,7 @@
 
     compose();
 
-    if (!active && !busy) { compose(); setOn(false); last = 0; return; }       /* everything folded away: give the <img> back */
+    if (!active && !busy) { follow(); compose(); setOn(false); last = 0; return; }       /* everything folded away: give the <img> back */
     raf = requestAnimationFrame(frame);
   };
 
@@ -286,7 +290,7 @@
     if (!inside) { if (active) { active = false; kick(); } return; }
     size();
     P.x = (e.clientX - b.left) * (W / b.width); P.y = (e.clientY - b.top) * (H / b.height); P.has = true;
-    if (!active) { if (!on) { compose(); setOn(true); } }                  /* first frame equals the original: no visible pop */
+    if (!active) { if (!on) { follow(); compose(); setOn(true); } }                  /* first frame equals the original: no visible pop */
     active = true; kick();
   }, { passive: true });
 
