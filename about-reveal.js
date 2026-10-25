@@ -28,6 +28,7 @@
   const HOLD = 1900;          /* ms a panel stays assembled after the cursor last touched its area */
   const NEAR = 0.10;          /* cursor "touches" a panel when closer than this share of the card width */
   const FLY  = 0.34;          /* flight distance, share of card width */
+  const EXIT_MS = 1150;       /* how long a panel takes to fold away (soft start, soft landing) */
   const STAGGER = 2.4;        /* ms of delay per px of distance from the cursor: nearest panel first */
 
   /* ---- the 8 panels: polygons in the portrait's own 0..1 box. They tile the figure with no gaps.
@@ -41,7 +42,7 @@
     { n: "chest",   poly: [[.38,.50],[.62,.50],[.66,.74],[.34,.74]],                                   dir: [-.2,1],  rot: 4,  depth: 1.4, rx: 34, ry: 20 },
     { n: "forearmL",poly: [[0,.70],[.34,.74],[.40,1],[0,1]],                                           dir: [-1,.7],  rot: -6, depth: 0.8, rx: 22, ry: -38 },
     { n: "forearmR",poly: [[.34,.74],[.66,.74],[1,.70],[1,1],[.40,1]],                                 dir: [1,.7],   rot: 6,  depth: 1.2, rx: 22, ry: 38 }
-  ].map(p => Object.assign(p, { p: 0, armed: false, start: 0, hold: 0, flash: 0, landed: false, c: [0, 0], px: [] }));
+  ].map(p => Object.assign(p, { p: 0, tgt: 0, t0: 0, from: 0, out: false, armed: false, start: 0, hold: 0, flash: 0, landed: false, c: [0, 0], px: [] }));
 
   /* ---- canvases ---- */
   const mk = () => document.createElement("canvas");
@@ -171,9 +172,17 @@
       }
       if (pn.armed && now >= pn.hold) pn.armed = false;
       const target = pn.armed && now >= pn.start ? 1 : 0;
-      const tau = target ? 150 : 300;                                /* ms: quicker in, gentler out */
-      pn.p += (target - pn.p) * (1 - Math.exp(-raw / tau));
-      if (Math.abs(target - pn.p) < 0.002) pn.p = target;
+      if (target !== pn.tgt) { pn.tgt = target; pn.t0 = now; pn.from = pn.p; }
+      if (target) {
+        pn.p += (1 - pn.p) * (1 - Math.exp(-raw / 150));              /* in: quick, then settles */
+        if (1 - pn.p < 0.002) pn.p = 1;
+      } else if (pn.p > 0) {
+        /* out: time-based ease-in-out, so it lifts off gently and glides away; neighbours leave one after another */
+        const u = Math.max(0, Math.min(1, (now - pn.t0 - PANELS.indexOf(pn) * 38) / EXIT_MS));
+        pn.p = pn.from * (1 - (u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2));
+        if (pn.p < 0.002) pn.p = 0;
+      }
+      pn.out = !target && pn.p > 0;
       if (pn.p > 0.9 && !pn.landed) { pn.landed = true; pn.flash = 1; }          /* lock-in flash */
       if (pn.p < 0.3) pn.landed = false;
       pn.flash = Math.max(0, pn.flash - raw / 520);
@@ -191,7 +200,7 @@
     t1.globalCompositeOperation = "source-over"; t1.globalAlpha = 1; t1.clearRect(0, 0, W, H); drawContain(t1, orig);
     t1.globalCompositeOperation = "destination-out"; t1.fillStyle = t1.strokeStyle = "#000"; t1.lineWidth = 2; t1.lineJoin = "round";
     PANELS.forEach(pn => {
-      const a = smooth(0.62, 0.95, pn.p); if (a <= 0) return;
+      const a = pn.out ? smooth(0.2, 0.75, pn.p) : smooth(0.62, 0.95, pn.p); if (a <= 0) return;
       t1.globalAlpha = a; path(t1, pn.px); t1.fill(); t1.stroke();
     });
     t1.globalAlpha = 1; t1.globalCompositeOperation = "source-over";
@@ -200,8 +209,9 @@
     t2.globalCompositeOperation = "source-over"; t2.globalAlpha = 1; t2.clearRect(0, 0, W, H);
     PANELS.forEach(pn => {
       if (pn.p <= 0.002 && pn.flash <= 0) return;
-      const e = Math.min(back(Math.min(1, pn.p)), 1.06), m = matrix(pn, e);
-      const al = Math.min(1, pn.p * 2.4);
+      const pp = Math.min(1, pn.p);
+      const e = pn.out ? pp : Math.min(back(pp), 1.06), m = matrix(pn, e);   /* leaving: p is already eased in time */
+      const al = pn.out ? smooth(0, 0.55, pn.p) : Math.min(1, pn.p * 2.4);
       const thick = 9 * Math.pow(Math.max(0, 1 - pn.p), 0.7);              /* glass thickness: collapses as the panel locks in */
       const layers = Math.min(9, Math.ceil(thick));
       const bb = pn.px.reduce((a, v) => [Math.min(a[0], v[0]), Math.min(a[1], v[1]), Math.max(a[2], v[0]), Math.max(a[3], v[1])], [1e9, 1e9, -1e9, -1e9]);
