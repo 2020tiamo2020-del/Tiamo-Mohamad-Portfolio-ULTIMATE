@@ -84,10 +84,10 @@
   if ("ResizeObserver" in window) new ResizeObserver(size).observe(pic); else addEventListener("resize", size, { passive: true });
 
   /* ---- painting the trail ---- */
-  const stamp = (ctx, x, y, rad, a) => {
+  const stamp = (ctx, x, y, rad, a, hard) => {
     const g = ctx.createRadialGradient(x, y, 0, x, y, rad);
     g.addColorStop(0, `rgba(255,255,255,${a})`);
-    g.addColorStop(0.62, `rgba(255,255,255,${a})`);
+    g.addColorStop(hard, `rgba(255,255,255,${a})`);
     g.addColorStop(1, "rgba(255,255,255,0)");
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, rad, 0, 6.2832); ctx.fill();
   };
@@ -104,7 +104,7 @@
 
     /* trail fades */
     m.globalCompositeOperation = "destination-out"; m.fillStyle = `rgba(0,0,0,${Math.min(1, 0.045 * k)})`; m.fillRect(0, 0, W, H);
-    m2.globalCompositeOperation = "destination-out"; m2.fillStyle = `rgba(0,0,0,${Math.min(1, 0.075 * k)})`; m2.fillRect(0, 0, W, H);
+    m2.globalCompositeOperation = "destination-out"; m2.fillStyle = `rgba(0,0,0,${Math.min(1, 0.045 * k)})`; m2.fillRect(0, 0, W, H);
     m.globalCompositeOperation = m2.globalCompositeOperation = "source-over";
 
     if (active && P.has) {
@@ -115,8 +115,8 @@
       for (let i = 1; i <= n; i++) {
         const t = i / n, x = P.lx + dx * t, y = P.ly + dy * t;
         const wob = 1 + Math.sin(now * 0.004 + i * 1.7) * 0.1;      /* liquid edge */
-        stamp(m, x, y, base * boost * wob, dist > 0.5 ? 1 : 0.4);
-        stamp(m2, x, y, base * boost * wob * 1.3, dist > 0.5 ? 0.95 : 0.35);
+        stamp(m, x, y, base * boost * wob, dist > 0.5 ? 1 : 0.5, 0.93);
+        stamp(m2, x, y, base * boost * wob * 1.075, dist > 0.5 ? 1 : 0.5, 0.93);
       }
       P.lx = P.x; P.ly = P.y; P.speed *= 0.86; idle = 0;
     } else idle += raw;
@@ -141,14 +141,14 @@
     r.globalCompositeOperation = "source-over"; r.clearRect(0, 0, W, H); r.drawImage(M2, 0, 0, W, H);
     r.globalCompositeOperation = "destination-out"; r.drawImage(M, 0, 0, W, H); r.drawImage(M, 0, 0, W, H);
     r.globalCompositeOperation = "source-in";
-    const g = r.createLinearGradient(0, 0, W, H);
-    g.addColorStop(0, "#16d8ff"); g.addColorStop(0.5, "#9d66ff"); g.addColorStop(1, "#ff3dc8");
+    const g = r.createLinearGradient(0, 0, W, H);                  /* glass bevel: bright top-left, soft middle, medium bottom-right */
+    g.addColorStop(0, "rgba(255,255,255,.95)"); g.addColorStop(0.5, "rgba(235,228,255,.42)"); g.addColorStop(1, "rgba(255,255,255,.7)");
     r.fillStyle = g; r.fillRect(0, 0, W, H);
     r.globalCompositeOperation = "destination-in"; r.drawImage(S, 0, 0, W, H);
     /* final */
     cx.globalCompositeOperation = "source-over"; cx.clearRect(0, 0, W, H);
     cx.drawImage(T1, 0, 0, W, H); cx.drawImage(T2, 0, 0, W, H);
-    cx.globalCompositeOperation = "lighter"; cx.globalAlpha = 0.85; cx.drawImage(R, 0, 0, W, H); cx.globalAlpha = 1;
+    cx.globalCompositeOperation = "source-over"; cx.globalAlpha = 0.6; cx.drawImage(R, 0, 0, W, H); cx.globalAlpha = 1;
     cx.globalCompositeOperation = "source-over";
   };
 
