@@ -72,15 +72,16 @@
     "    float sp=pow(max(dot(n,normalize(ld+vec3(0.0,0.0,1.0))),0.0),30.0);",
     "    float rim=smoothstep(0.08,0.5,length(n.xy));",
     "    vec3 lc=uCol*1.1;",
-    "    col+=alb*(0.62+0.6*dif)*1.0*m*L.w*(uCol*0.9+0.25)+lc*sp*m*L.w*0.45+uCol*rim*m*L.w*0.28;",
+    "    col+=alb*(0.6+0.55*dif)*0.8*m*L.w*(uCol*0.9+0.25)+lc*sp*m*L.w*0.3+uCol*rim*m*L.w*0.2;",
     "   }",
     "  }",
     "  float fog=fbm(q*0.0045+vec2(uTime*0.035,-uTime*0.02));",
     "  col+=vec3(0.04,0.09,0.2)*fog*0.9*uAmb*3.0;",
-    "  float vk=mix(2.05,1.55,uAlphaMode);",
+    "  float vk=mix(2.05,1.85,uAlphaMode);",
     "  float v=smoothstep(1.0,0.28,length((uv-0.5)*vec2(1.0,1.15)*vk));",
+    "  v*=smoothstep(0.0,0.26,uv.x)*smoothstep(0.0,0.26,1.0-uv.x)*smoothstep(0.0,0.3,uv.y)*smoothstep(0.0,0.3,1.0-uv.y);",
     "  col*=v*uInt;",
-    "  col=1.0-exp(-col*0.95);",
+    "  col=1.0-exp(-col*0.8);",
     "  lum=dot(col,vec3(0.299,0.587,0.114));",
     " }",
     " vec2 bp=(p/uRes-vec2(0.5,0.46))*vec2(1.0,1.25);",
@@ -201,7 +202,7 @@
   gate.addEventListener("pointermove", (e) => {
     if (entering || mode !== "intro") return;
     px = e.clientX; py = e.clientY; lastMove = performance.now(); moved = true;
-    move(px, py, 0.62, torchR(), 34);
+    move(px, py, 0.42, torchR(), 34);
   }, { passive: true });
   addEventListener("pointermove", (e) => {
     if (mode !== "home" || !host) return;
@@ -233,7 +234,7 @@
     /* slot 13: live pointer light */
     if (moved && px >= 0 && !entering) {
       const f = clamp(1 - (now - lastMove) / 1300, 0, 1);
-      lights[52] = px; lights[53] = py; lights[54] = torchR() * 0.8; lights[55] = f * (mode === "intro" ? 0.34 : 0.16);
+      lights[52] = px; lights[53] = py; lights[54] = torchR() * 0.8; lights[55] = f * (mode === "intro" ? 0.22 : 0.16);
     }
     /* slot 14: the camera's own light drifting over the relief (always alive, so 3D is visible without a mouse) */
     {
@@ -241,12 +242,12 @@
       const gx = cx + Math.cos(t * 0.55) * R * 0.85 + Math.sin(t * 1.3) * R * 0.18;
       const gy = cy + Math.sin(t * 0.72) * R * 0.62;
       lights[56] = gx; lights[57] = gy; lights[58] = R * (mode === "intro" ? 1.15 : 1.1);
-      lights[59] = mode === "intro" ? (moved && now - lastMove < 2400 ? 0.07 : 0.2) : 0.13;
+      lights[59] = mode === "intro" ? (moved && now - lastMove < 2400 ? 0.05 : 0.14) : 0.13;
     }
     /* slot 15: ignition when entering */
     if (entering && mode === "intro") {
       const o = easeOut((now - enterT) / 950);
-      lights[60] = cx; lights[61] = cy; lights[62] = R * (0.5 + 2.2 * o); lights[63] = 0.75 * o;
+      lights[60] = cx; lights[61] = cy; lights[62] = R * (0.5 + 2.2 * o); lights[63] = 0.5 * o;
     }
   };
 
@@ -580,6 +581,6 @@
   if (enterBtn) {
     enterBtn.addEventListener("pointerenter", () => { if (wordEl) burst(wordEl, 18); scratch("hover"); });
     enterBtn.addEventListener("focus", () => { if (wordEl) burst(wordEl, 18); });
-    enterBtn.addEventListener("click", () => { if (wordEl) burst(wordEl, 26); if (nameEl) burst(nameEl, 22); scratch("click"); }, true);
+    enterBtn.addEventListener("click", () => { if (wordEl) burst(wordEl, 26); if (nameEl) burst(nameEl, 22); }, true);   /* no sound on press */
   }
 })();
