@@ -290,8 +290,12 @@ void main(){
   /* ---- vignette, picture edges ---- */
   float vig=smoothstep(1.25,.15,length(gc*vec2(.9,1.1)));
   col*=mix(1.,vig,.9);
-  vec2 q=smoothstep(vec2(0.),vec2(.1),uv)*smoothstep(vec2(0.),vec2(.1),1.-uv);
-  col*=q.x*q.y;
+  vec2 q=smoothstep(vec2(0.),vec2(.2),uv)*smoothstep(vec2(0.),vec2(.2),1.-uv);
+  col*=q.x*q.y*q.x*q.y;
+  /* the whole frame dissolves into the background on all four sides (no visible rectangle, in the intro and behind Home) */
+  vec2 ef=smoothstep(vec2(0.),vec2(.24,.30),sUv)*smoothstep(vec2(0.),vec2(.24,.30),1.-sUv);
+  float edgeFade=ef.x*ef.y;
+  col*=edgeFade*edgeFade*(3.-2.*edgeFade);
 
   /* ---- flash flood while diving in ---- */
   float fl=clamp(uFlash,0.,1.);
