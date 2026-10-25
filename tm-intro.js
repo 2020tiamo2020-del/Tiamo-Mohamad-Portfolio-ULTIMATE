@@ -39,6 +39,7 @@
     "uniform vec2 uRes,uZc,uTilt;",
     "uniform vec4 uRect;",
     "uniform float uZoom,uAmb,uInt,uTime,uAlphaMode,uOpacity;",
+    "uniform vec3 uCol;",
     "uniform vec4 uL[16];",
     "float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}",
     "float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);",
@@ -58,7 +59,7 @@
     "  float h=texture2D(uHei,uv).r;",
     "  vec3 alb=texture2D(uAlb,uv).rgb;",
     "  vec3 n=normalize(texture2D(uNor,uv).rgb*2.0-1.0);",
-    "  vec3 base=vec3(0.50,0.72,1.0);",
+    "  vec3 base=uCol;",
     "  col=alb*uAmb*base*1.2;",
     "  for(int i=0;i<16;i++){",
     "   vec4 L=uL[i];",
@@ -70,19 +71,22 @@
     "    float dif=max(dot(n,ld),0.0);",
     "    float sp=pow(max(dot(n,normalize(ld+vec3(0.0,0.0,1.0))),0.0),30.0);",
     "    float rim=smoothstep(0.08,0.5,length(n.xy));",
-    "    vec3 lc=vec3(0.55,0.80,1.15);",
-    "    col+=alb*(0.66+0.7*dif)*1.5*m*L.w*vec3(0.85,0.97,1.1)+lc*sp*m*L.w*0.85+vec3(0.2,0.5,1.0)*rim*m*L.w*0.5;",
+    "    vec3 lc=uCol*1.1;",
+    "    col+=alb*(0.62+0.6*dif)*1.0*m*L.w*(uCol*0.9+0.25)+lc*sp*m*L.w*0.45+uCol*rim*m*L.w*0.28;",
     "   }",
     "  }",
     "  float fog=fbm(q*0.0045+vec2(uTime*0.035,-uTime*0.02));",
     "  col+=vec3(0.04,0.09,0.2)*fog*0.9*uAmb*3.0;",
-    "  float v=smoothstep(1.0,0.32,length((uv-0.5)*vec2(1.0,1.15)*1.55));",
+    "  float vk=mix(2.05,1.55,uAlphaMode);",
+    "  float v=smoothstep(1.0,0.28,length((uv-0.5)*vec2(1.0,1.15)*vk));",
     "  col*=v*uInt;",
-    "  col=1.0-exp(-col*1.35);",
+    "  col=1.0-exp(-col*0.95);",
     "  lum=dot(col,vec3(0.299,0.587,0.114));",
     " }",
     " vec2 bp=(p/uRes-vec2(0.5,0.46))*vec2(1.0,1.25);",
     " vec3 bg=mix(vec3(0.043,0.071,0.149),vec3(0.016,0.02,0.047),smoothstep(0.0,1.0,length(bp)*1.25));",
+    " float ef=mix(smoothstep(0.0,0.2,vP.x)*smoothstep(0.0,0.2,1.0-vP.x)*smoothstep(0.0,0.16,vP.y)*smoothstep(0.0,0.24,1.0-vP.y),1.0,uAlphaMode);",
+    " lum*=ef;col*=ef;",
     " float a=mix(clamp(lum*2.8,0.0,1.0),1.0,uAlphaMode)*uOpacity;",
     " vec3 rgb=mix(min(col,vec3(a)),(col+bg)*uOpacity,uAlphaMode);",
     " gl_FragColor=vec4(rgb,a);",
@@ -135,7 +139,7 @@
   };
   const initGL = () => {
     prog = link(VS, FS); pprog = link(PVS, PFS);
-    ["uAlb","uNor","uHei","uRes","uZc","uTilt","uRect","uZoom","uAmb","uInt","uTime","uAlphaMode","uOpacity","uL"].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
+    ["uAlb","uNor","uHei","uRes","uZc","uTilt","uRect","uZoom","uAmb","uInt","uTime","uAlphaMode","uOpacity","uL","uCol"].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
     ["uRes","uZc","uTilt","uZoom","uTime","uDpr","uAlphaMode"].forEach((n) => { PU[n] = gl.getUniformLocation(pprog, n); });
     quad = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, quad);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
@@ -161,9 +165,9 @@
     if (mode === "intro") {
       W = innerWidth; H = innerHeight;
       dpr = Math.min(window.devicePixelRatio || 1, 1.5) * renderScale;
-      const target = Math.min(W * 0.8, H * 0.52);
+      const target = Math.min(W * 0.8, H * 0.46);
       const S = target / RING_D; R = target / 2;
-      cx = W / 2; cy = H * 0.46;
+      cx = W / 2; cy = H * 0.42;
       rect = [cx - IMG_W * S / 2, cy - IMG_H * S / 2, IMG_W * S, IMG_H * S];
       gate.style.setProperty("--tm-r", R.toFixed(1) + "px");
     } else {
@@ -171,7 +175,7 @@
       W = Math.max(2, Math.round(r.width)); H = Math.max(2, Math.round(r.height));
       dpr = Math.min(window.devicePixelRatio || 1, W < 700 ? 1 : 1.25) * renderScale;
       const wide = innerWidth > 900;
-      const target = clamp(Math.min(H * 0.55, W * (wide ? 0.5 : 0.78)), 200, 620);
+      const target = clamp(Math.min(H * 0.5, W * (wide ? 0.44 : 0.74)), 200, 560);
       const S = target / RING_D; R = target / 2;
       cx = wide ? W * 0.68 : W * 0.5; cy = wide ? H * 0.5 : H * 0.42;
       rect = [cx - IMG_W * S / 2, cy - IMG_H * S / 2, IMG_W * S, IMG_H * S];
@@ -197,7 +201,7 @@
   gate.addEventListener("pointermove", (e) => {
     if (entering || mode !== "intro") return;
     px = e.clientX; py = e.clientY; lastMove = performance.now(); moved = true;
-    move(px, py, 1, torchR(), 34);
+    move(px, py, 0.62, torchR(), 34);
   }, { passive: true });
   addEventListener("pointermove", (e) => {
     if (mode !== "home" || !host) return;
@@ -206,13 +210,13 @@
     ptrInside = x >= 0 && y >= 0 && x <= r.width && y <= r.height;
     if (!ptrInside) return;
     px = x; py = y; lastMove = performance.now(); moved = true;
-    move(x, y, 0.62, torchR(), 46);
+    move(x, y, 0.3, torchR(), 46);
   }, { passive: true });
 
   /* ------------------------------------------------------------ frame loop */
   let ready = false, entering = false, enterT = 0, handT = 0, raf = 0, alive = true, shown = 0, t0 = performance.now();
   let tilt = [0, 0], homeVisible = true, lastNow = 0, slow = 0, fast = 0, renderScale = 1;
-  let amb = 0.17, inten = 1, zoomV = 0, opac = 1, alphaMode = 1;
+  let amb = 0.1, inten = 1, zoomV = 0, opac = 1, alphaMode = 1;
   const ZOOM_MAX = 2.4, PUSH = 1500;
 
   const fillLights = (now) => {
@@ -229,7 +233,7 @@
     /* slot 13: live pointer light */
     if (moved && px >= 0 && !entering) {
       const f = clamp(1 - (now - lastMove) / 1300, 0, 1);
-      lights[52] = px; lights[53] = py; lights[54] = torchR() * 0.8; lights[55] = f * (mode === "intro" ? 0.6 : 0.34);
+      lights[52] = px; lights[53] = py; lights[54] = torchR() * 0.8; lights[55] = f * (mode === "intro" ? 0.34 : 0.16);
     }
     /* slot 14: the camera's own light drifting over the relief (always alive, so 3D is visible without a mouse) */
     {
@@ -237,12 +241,12 @@
       const gx = cx + Math.cos(t * 0.55) * R * 0.85 + Math.sin(t * 1.3) * R * 0.18;
       const gy = cy + Math.sin(t * 0.72) * R * 0.62;
       lights[56] = gx; lights[57] = gy; lights[58] = R * (mode === "intro" ? 1.15 : 1.1);
-      lights[59] = mode === "intro" ? (moved && now - lastMove < 2400 ? 0.12 : 0.34) : 0.3;
+      lights[59] = mode === "intro" ? (moved && now - lastMove < 2400 ? 0.07 : 0.2) : 0.13;
     }
     /* slot 15: ignition when entering */
     if (entering && mode === "intro") {
       const o = easeOut((now - enterT) / 950);
-      lights[60] = cx; lights[61] = cy; lights[62] = R * (0.5 + 2.6 * o); lights[63] = 2.0 * o;
+      lights[60] = cx; lights[61] = cy; lights[62] = R * (0.5 + 2.2 * o); lights[63] = 0.75 * o;
     }
   };
 
@@ -268,6 +272,7 @@
     gl.uniform1f(U.uZoom, zoomV); gl.uniform1f(U.uAmb, amb); gl.uniform1f(U.uInt, inten);
     gl.uniform1f(U.uTime, sec); gl.uniform1f(U.uAlphaMode, alphaMode); gl.uniform1f(U.uOpacity, opac);
     gl.uniform4fv(U.uL, lights);
+    if (mode === "intro") gl.uniform3f(U.uCol, 0.40, 0.62, 1.0); else gl.uniform3f(U.uCol, 0.58, 0.46, 1.0);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
     /* depth dust */
@@ -308,15 +313,15 @@
     if (entering && mode === "intro") {
       const t = (now - enterT) / PUSH;
       zoomV = ZOOM_MAX * easeInOut(t);
-      inten = 1 + 0.35 * easeOut((now - enterT) / 900);
-      amb = 0.17 + 0.2 * easeOut((now - enterT) / 900);
+      inten = 1 + 0.08 * easeOut((now - enterT) / 900);
+      amb = 0.1 + 0.07 * easeOut((now - enterT) / 900);
     }
     /* the settle behind Home */
     if (mode === "home" && handT) {
       const t = now - handT;
       zoomV = ZOOM_MAX * (1 - easeOut5(t / 3800));
-      opac = 0.72 * easeOut(t / 1700);
-      amb = lerp(0.3, 0.2, easeOut(t / 2600));
+      opac = 0.62 * easeOut(t / 1700);
+      amb = lerp(0.3, 0.24, easeOut(t / 2600));
       if (t > 4000) handT = 0;
     }
     if (mode === "home" && !homeVisible) return;
@@ -448,4 +453,133 @@
   /* if the gate is removed some other way, clean up */
   const mo = new MutationObserver(() => { if (!gate.isConnected && !window.__tmGoing && !document.getElementById("tmIntroStage")) { alive = false; cancelAnimationFrame(raf); mo.disconnect(); } });
   mo.observe(document.body, { childList: true });
+})();
+
+
+/* ==========================================================================
+   UI SOUNDS + SCRATCH/GLITCH TEXT
+   - tick-click.wav  : side menu buttons (press)
+   - tick-hover.wav  : every button inside "Start a project" (hover; tap on touch)
+   - intro: name + Enter button glitch (synthesised scratch sound, no file needed)
+   Browsers only allow sound after the first click/tap/key, so hover sounds start then.
+   ========================================================================== */
+(() => {
+  "use strict";
+  if (window.__tmUiFx) return;
+  window.__tmUiFx = true;
+
+  /* ---------- audio ---------- */
+  const AC = window.AudioContext || window.webkitAudioContext;
+  let ac = null;
+  const bufs = {};
+  const SRC = { click: "audio/tick-click.wav", hover: "audio/tick-hover.wav" };
+  const getAC = () => {
+    if (!AC) return null;
+    if (!ac) { try { ac = new AC(); } catch (_) { return null; } }
+    if (ac.state === "suspended") ac.resume().catch(() => {});
+    return ac;
+  };
+  const load = (k) => {
+    if (bufs[k] || !ac) return;
+    bufs[k] = "loading";
+    fetch(SRC[k]).then((r) => r.arrayBuffer()).then((ab) => new Promise((res, rej) => ac.decodeAudioData(ab, res, rej)))
+      .then((b) => { bufs[k] = b; }).catch(() => { bufs[k] = null; });
+  };
+  const unlock = () => { if (getAC()) { load("click"); load("hover"); } };
+  ["pointerdown", "keydown", "touchstart"].forEach((e) => addEventListener(e, unlock, { once: true, passive: true, capture: true }));
+  let lastTick = 0;
+  const tick = (k, vol) => {
+    const a = getAC(); if (!a || a.state !== "running") return;
+    const now = performance.now(); if (now - lastTick < 35) return; lastTick = now;
+    const b = bufs[k]; if (!b || b === "loading") { load(k); return; }
+    const src = a.createBufferSource(), g = a.createGain();
+    src.buffer = b; g.gain.value = vol; src.connect(g); g.connect(a.destination); src.start();
+  };
+
+  /* side menu: press */
+  document.addEventListener("click", (e) => { if (e.target.closest && e.target.closest(".st-rail a")) tick("click", 0.9); }, true);
+  /* "Start a project": every button */
+  const BRIEF_BTN = "button, .sc-chip, .sc-btn, .sc-skip, a, [role=button], [role=radio], [role=checkbox]";
+  document.addEventListener("pointerover", (e) => {
+    if (e.pointerType === "touch") return;
+    const t = e.target.closest && e.target.closest("#brief"); if (!t) return;
+    const b = e.target.closest(BRIEF_BTN); if (!b || !t.contains(b)) return;
+    if (e.relatedTarget && b.contains(e.relatedTarget)) return;
+    tick("hover", 0.8);
+  }, true);
+  document.addEventListener("pointerdown", (e) => {
+    if (e.pointerType !== "touch") return;
+    const t = e.target.closest && e.target.closest("#brief"); if (!t) return;
+    if (e.target.closest(BRIEF_BTN)) tick("hover", 0.8);
+  }, true);
+
+  /* ---------- scratch / glitch text ---------- */
+  const gate = document.getElementById("enterGate");
+  if (!gate || !gate.classList.contains("tm-intro")) return;
+  const svgNS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(svgNS, "svg");
+  svg.setAttribute("width", "0"); svg.setAttribute("height", "0"); svg.setAttribute("aria-hidden", "true"); svg.style.cssText = "position:absolute;width:0;height:0";
+  svg.innerHTML = '<filter id="tmGlitchF" x="-8%" y="-20%" width="116%" height="140%" color-interpolation-filters="sRGB"><feTurbulence id="tmGlitchT" type="fractalNoise" baseFrequency="0.012 0.7" numOctaves="1" seed="3" result="n"/><feDisplacementMap id="tmGlitchD" in="SourceGraphic" in2="n" scale="0" xChannelSelector="R" yChannelSelector="G"/></filter>';
+  document.body.appendChild(svg);
+  const turb = svg.querySelector("#tmGlitchT"), disp = svg.querySelector("#tmGlitchD");
+
+  const gls = Array.from(gate.querySelectorAll(".tm-gl"));
+  const sync = () => gls.forEach((el) => { el.setAttribute("data-text", el.textContent); });
+  sync();
+  gls.forEach((el) => new MutationObserver(sync).observe(el, { childList: true, characterData: true, subtree: true }));
+
+  let busy = 0;
+  const burst = (el, strength) => {
+    if (!el.isConnected || busy > 1) return;
+    busy++;
+    el.classList.add("tm-burst");
+    let n = 0;
+    const iv = setInterval(() => {
+      n++;
+      turb.setAttribute("seed", String((Math.random() * 90) | 0));
+      turb.setAttribute("baseFrequency", (0.004 + Math.random() * 0.02).toFixed(3) + " " + (0.35 + Math.random() * 0.6).toFixed(2));
+      disp.setAttribute("scale", String(n >= 5 ? 0 : (strength * (0.5 + Math.random())).toFixed(1)));
+      if (n >= 5) { clearInterval(iv); el.classList.remove("tm-burst"); busy--; }
+    }, 42);
+  };
+  const loop = (el, min, max, str) => {
+    const go = () => { if (!el.isConnected) return; burst(el, str); setTimeout(go, min + Math.random() * (max - min)); };
+    setTimeout(go, 900 + Math.random() * 900);
+  };
+  const nameEl = gate.querySelector(".tm-intro-name"), wordEl = gate.querySelector(".tm-enter-word");
+  if (nameEl) loop(nameEl, 2200, 4800, 16);
+  if (wordEl) loop(wordEl, 3000, 6000, 9);
+
+  /* synthesised scratch / crackle */
+  const scratch = (kind) => {
+    const a = getAC(); if (!a) return;
+    if (a.state !== "running") { if (kind === "click") a.resume().then(() => { if (a.state === "running") scratch(kind); }).catch(() => {}); return; }
+    const dur = kind === "click" ? 0.34 : 0.13, n = Math.floor(a.sampleRate * dur);
+    const buf = a.createBuffer(1, n, a.sampleRate), d = buf.getChannelData(0);
+    const step = kind === "click" ? 22 : 12; let hv = 0;
+    for (let i = 0; i < n; i++) {
+      const t = i / n, env = Math.pow(1 - t, kind === "click" ? 1.8 : 2.6);
+      if (i % step === 0) hv = Math.random() * 2 - 1;
+      const f = kind === "click" ? 150 + t * 520 : 1100 + t * 600;
+      const sq = (Math.floor(i / (a.sampleRate / f)) % 2 ? 1 : -1) * 0.45;
+      const crackle = Math.random() < 0.015 ? (Math.random() * 2 - 1) * 1.6 : 0;
+      d[i] = (hv * 0.6 + sq * 0.35 + crackle) * env;
+    }
+    const src = a.createBufferSource(), bp = a.createBiquadFilter(), g = a.createGain();
+    src.buffer = buf; bp.type = "bandpass"; bp.frequency.value = kind === "click" ? 1400 : 2600; bp.Q.value = 0.8;
+    g.gain.value = kind === "click" ? 0.34 : 0.16;
+    src.connect(bp); bp.connect(g); g.connect(a.destination); src.start();
+    if (kind === "click") {              /* low hit under the scratch */
+      const o = a.createOscillator(), og = a.createGain();
+      o.type = "sine"; o.frequency.setValueAtTime(110, a.currentTime); o.frequency.exponentialRampToValueAtTime(42, a.currentTime + 0.3);
+      og.gain.setValueAtTime(0.32, a.currentTime); og.gain.exponentialRampToValueAtTime(0.001, a.currentTime + 0.32);
+      o.connect(og); og.connect(a.destination); o.start(); o.stop(a.currentTime + 0.35);
+    }
+  };
+  const enterBtn = document.getElementById("enterGateBtn");
+  if (enterBtn) {
+    enterBtn.addEventListener("pointerenter", () => { if (wordEl) burst(wordEl, 18); scratch("hover"); });
+    enterBtn.addEventListener("focus", () => { if (wordEl) burst(wordEl, 18); });
+    enterBtn.addEventListener("click", () => { if (wordEl) burst(wordEl, 26); if (nameEl) burst(nameEl, 22); scratch("click"); }, true);
+  }
 })();
