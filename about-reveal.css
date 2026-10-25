@@ -1,15 +1,13 @@
-/* ==========================================================================
-   ABOUT · "alternate suit" reveal  (pairs with about-reveal.js)
-   Additive: one canvas laid exactly over the portrait. Remove the 2 tags in
-   index.html to undo.
-   ========================================================================== */
-#about .about-photo picture canvas.ab-alt{
-  position:absolute;inset:0;width:100%;height:100%;display:block;
-  pointer-events:none;z-index:2;
-  /* same soft shadow/glow the portrait itself carries, so the two read as one photo */
+/* About portrait · cyber reveal (see about-reveal.js). The canvas sits exactly on top of the portrait <img> and carries the
+   same look (drop shadows, rounded bottom corners). It is invisible at rest; while a reveal runs, the <img> steps aside. */
+.about-photo picture .ab3d{
+  position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none;
+  opacity:0;visibility:hidden;border-radius:0 0 12px 12px;
   filter:
     drop-shadow(0 20px 34px rgba(0,0,0,.38))
     drop-shadow(0 0 14px rgba(139,53,255,.16))
     drop-shadow(0 0 30px rgba(22,216,255,.09));
 }
-@media(prefers-reduced-motion:reduce){#about .about-photo picture canvas.ab-alt{display:none}}
+.about-photo.ab3d-on picture .ab3d{opacity:1;visibility:visible}
+.about-photo.ab3d-on picture img{visibility:hidden}
+@media(max-width:900px){.about-photo picture .ab3d{border-radius:0 0 11px 11px}}

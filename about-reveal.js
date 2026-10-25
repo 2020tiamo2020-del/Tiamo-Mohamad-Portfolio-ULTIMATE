@@ -1,156 +1,180 @@
-/* ==========================================================================
-   ABOUT · "alternate suit" reveal  (v2 — soft, cinematic)
-   Move the pointer over the portrait: a smooth, feathered light-brush follows
-   it and melts the original portrait into the second (cyber-suit) portrait.
-   The trail lingers, then dissolves back. A soft violet-blue bloom hugs the
-   revealed suit; there are no outlines. Taps do the same on touch screens.
-   Adds one canvas inside the portrait's <picture>; it follows the portrait's
-   own tilt / parallax. Nothing else on the page is touched.
-   ========================================================================== */
+/* =====================================================================================================
+   About portrait · cyber reveal
+   Move the mouse over the portrait and the cyber version (images/tiamo2-about.webp) is "painted in" along the
+   cursor's path, then dissolves again. Soft liquid trail, glowing leading edge, depth parallax on the cyber
+   layer. The portrait's own tilt (enhance.js) carries the canvas too, because it lives inside <picture>.
+   Idle state is untouched: the canvas is only shown while a reveal is running, and the original <img> is
+   swapped back as soon as the trail has faded.
+   Desktop mouse only; off for touch and for reduced-motion.
+   To undo: remove the about-reveal.css + about-reveal.js tags from index.html.
+   ===================================================================================================== */
 (() => {
-"use strict";
-const ALT_SRC = "images/tiamo-about-alt.webp";
-/* if the two portraits ever sit slightly off from each other, nudge here
-   (x / y as a fraction of the portrait box, s = scale) */
-const ALIGN = { x: 0, y: 0, s: 1 };
-const BRUSH = 0.2;        /* brush radius, as a share of the portrait height */
-const HOLD = 520;         /* ms a stroke stays fully revealed */
-const FADE = 1700;        /* ms it then takes to melt back */
-const BLOOM = 0.5;        /* strength of the soft glow around the revealed suit */
+  "use strict";
+  if (!matchMedia("(hover:hover) and (pointer:fine)").matches) return;
+  if (matchMedia("(prefers-reduced-motion:reduce)").matches) return;
 
-const sec = document.getElementById("about");
-const pic = sec && sec.querySelector(".about-photo picture");
-const img = pic && pic.querySelector("img");
-if (!sec || !pic || !img) return;
-if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const card = document.querySelector("#about .about-photo");
+  const pic = card && card.querySelector("picture");
+  const orig = pic && pic.querySelector("img");
+  if (!card || !pic || !orig) return;
 
-const cv = document.createElement("canvas");
-cv.className = "ab-alt";
-cv.setAttribute("aria-hidden", "true");
-pic.appendChild(cv);
-const ctx = cv.getContext("2d");
-const mk = () => document.createElement("canvas");
-const altc = mk(), mc = mk(), gc = mk();            /* fitted portrait / brush mask / bloom (quarter size) */
-const mctx = mc.getContext("2d"), gctx = gc.getContext("2d");
+  const SRC = ["images/tiamo2-about.webp", "images/tiamo2-about.png"];   /* first that loads wins */
+  const DPR = Math.min(window.devicePixelRatio || 1, 1.5);
 
-const alt = new Image();
-let altOK = false;
-alt.onload = () => { altOK = true; fit(); };
-alt.src = ALT_SRC;
+  /* ---- canvases ---- */
+  const mk = () => document.createElement("canvas");
+  const cv = mk(); cv.className = "ab3d"; cv.setAttribute("aria-hidden", "true");
+  const T1 = mk(), T2 = mk(), M = mk(), M2 = mk(), R = mk(), S = mk();       /* original / cyber / mask / rim-mask / rim / silhouette */
+  const cx = cv.getContext("2d"), t1 = T1.getContext("2d"), t2 = T2.getContext("2d"),
+        m = M.getContext("2d"), m2 = M2.getContext("2d"), r = R.getContext("2d"), s = S.getContext("2d");
+  const all = [cx, t1, t2, m, m2, r, s];
+  pic.appendChild(cv);
 
-/* a feathered round brush: smooth falloff, no hard edge anywhere */
-const brush = mk(); brush.width = brush.height = 256;
-{
-  const b = brush.getContext("2d"), g = b.createRadialGradient(128, 128, 0, 128, 128, 128);
-  [[0, 1], [0.3, 0.92], [0.5, 0.66], [0.7, 0.3], [0.86, 0.09], [1, 0]].forEach(([o, a]) => g.addColorStop(o, "rgba(255,255,255," + a + ")"));
-  b.fillStyle = g; b.fillRect(0, 0, 256, 256);
-}
+  let W = 0, H = 0, cyber = null, ready = false, loading = false;
+  let on = false, active = false, idle = 0, raf = 0, last = 0;
+  const P = { x: 0, y: 0, lx: 0, ly: 0, has: false, speed: 0 };
+  const par = { x: 0, y: 0, tx: 0, ty: 0 };
+  let grow = 0;
 
-let W = 0, H = 0, dpr = 1;
-const fit = () => {
-  W = cv.offsetWidth; H = cv.offsetHeight;
-  if (!W || !H) return;
-  dpr = Math.min(window.devicePixelRatio || 1, 1.5);
-  [cv, altc, mc].forEach(c => { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); });
-  gc.width = Math.max(2, Math.round(W / 5)); gc.height = Math.max(2, Math.round(H / 5));
-  if (!altOK) return;
-  const a = altc.getContext("2d");
-  a.setTransform(dpr, 0, 0, dpr, 0, 0);
-  a.clearRect(0, 0, W, H);
-  const s = Math.min(W / alt.naturalWidth, H / alt.naturalHeight) * ALIGN.s;     /* same as object-fit:contain, centred */
-  const dw = alt.naturalWidth * s, dh = alt.naturalHeight * s;
-  a.drawImage(alt, (W - dw) / 2 + ALIGN.x * W, (H - dh) / 2 + ALIGN.y * H, dw, dh);
-};
-if ("ResizeObserver" in window) new ResizeObserver(fit).observe(cv); else addEventListener("resize", fit);
+  /* contain-fit, same as the <img> (object-fit:contain) */
+  const fit = (img, ox = 0, oy = 0, sc = 1) => {
+    const iw = img.naturalWidth, ih = img.naturalHeight; if (!iw || !ih) return null;
+    const k = Math.min(W / iw, H / ih) * sc, w = iw * k, h = ih * k;
+    return [(W - w) / 2 + ox, (H - h) / 2 + oy, w, h];
+  };
+  const draw = (c, img, ox, oy, sc) => { const f = fit(img, ox, oy, sc); if (f) c.drawImage(img, f[0], f[1], f[2], f[3]); };
 
-/* ---------- the stroke ---------- */
-let blobs = [], target = null, cur = null, lastEmit = null, raf = 0, lastT = 0;
-const addBlob = (x, y, k, grow) => { blobs.push({ x, y, k, grow: !!grow, t: performance.now() }); if (blobs.length > 160) blobs.splice(0, blobs.length - 160); };
-const stroke = (x, y) => {
-  const r = H * BRUSH, step = Math.max(8, r * 0.16);
-  if (!lastEmit) { lastEmit = { x, y }; addBlob(x, y, 1); return; }
-  const dx = x - lastEmit.x, dy = y - lastEmit.y, d = Math.hypot(dx, dy);
-  if (d < step) return;
-  const n = Math.min(14, Math.floor(d / step));
-  for (let i = 1; i <= n; i++) addBlob(lastEmit.x + dx * i / n, lastEmit.y + dy * i / n, 1);
-  lastEmit = { x: x, y: y };
-};
+  const size = () => {
+    const b = pic.getBoundingClientRect();
+    /* layout size (ignores the tilt transform) */
+    const w = Math.round(pic.offsetWidth || b.width), h = Math.round(pic.offsetHeight || b.height);
+    if (!w || !h || (w === W && h === H)) return;
+    W = w; H = h;
+    [cv, T1, T2, M, M2, R, S].forEach(c => { c.width = Math.round(W * DPR); c.height = Math.round(H * DPR); });
+    cv.style.width = W + "px"; cv.style.height = H + "px";
+    all.forEach(c => c.setTransform(DPR, 0, 0, DPR, 0, 0));
+    silhouette();
+  };
 
-/* ---------- pointer ---------- */
-const local = e => {
-  const r = cv.getBoundingClientRect();
-  if (!r.width || !r.height) return null;
-  if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return null;
-  return { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H };
-};
-sec.addEventListener("pointermove", e => {
-  if (e.pointerType === "touch" || !altOK) return;
-  const p = local(e);
-  if (!p) { target = null; lastEmit = null; return; }
-  target = p; if (!cur) cur = { x: p.x, y: p.y };
-  wake();
-}, { passive: true });
-sec.addEventListener("pointerleave", () => { target = null; lastEmit = null; }, { passive: true });
-sec.addEventListener("pointerdown", e => {            /* touch: a tap opens a soft bloom of the second portrait */
-  if (e.pointerType !== "touch" || !altOK) return;
-  const p = local(e); if (!p) return;
-  addBlob(p.x, p.y, 1, true); addBlob(p.x, p.y - H * 0.04, 0.8, true); wake();
-}, { passive: true });
+  /* union of both figures: the glowing edge is only ever drawn on the figure, never in empty space */
+  const silhouette = () => {
+    if (!cyber || !orig.naturalWidth) return;
+    s.clearRect(0, 0, W, H); draw(s, orig, 0, 0, 1); draw(s, cyber, 0, 0, 1);
+  };
 
-/* ---------- draw ---------- */
-const smooth = t => t * t * (3 - 2 * t);
-const frame = now => {
-  raf = 0;
-  const dt = Math.min(64, lastT ? now - lastT : 16); lastT = now;
-  cv.style.translate = img.style.translate || "";      /* follow the portrait's own parallax */
+  const load = () => {
+    if (loading || ready) return; loading = true;
+    let i = 0;
+    const next = () => {
+      if (i >= SRC.length) return;                       /* nothing loaded: feature stays off, nothing breaks */
+      const im = new Image(); im.decoding = "async";
+      im.onload = () => { cyber = im; ready = true; size(); silhouette(); };
+      im.onerror = next;
+      im.src = SRC[i++];
+    };
+    next();
+  };
 
-  /* the brush glides after the pointer (silky, never jumpy) */
-  if (target && cur) {
-    const k = 1 - Math.exp(-dt / 70);
-    cur.x += (target.x - cur.x) * k; cur.y += (target.y - cur.y) * k;
-    stroke(cur.x, cur.y);
-  }
+  /* load it only when the About block is near the screen */
+  if ("IntersectionObserver" in window) {
+    const io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) { load(); io.disconnect(); } }, { rootMargin: "700px 0px" });
+    io.observe(card);
+  } else load();
 
-  const R = H * BRUSH;
-  mctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  mctx.clearRect(0, 0, W, H);
-  let live = 0;
-  for (let i = blobs.length - 1; i >= 0; i--) {
-    const b = blobs[i], age = now - b.t;
-    if (age >= HOLD + FADE) { blobs.splice(i, 1); continue; }
-    live++;
-    const f = age < HOLD ? 1 : 1 - smooth((age - HOLD) / FADE);
-    const grow = b.grow ? 0.45 + 0.75 * (1 - Math.pow(1 - Math.min(1, age / 520), 3)) : 1;
-    const rr = R * (0.9 + 0.1 * f) * grow;
-    mctx.globalAlpha = Math.min(1, f * b.k * 0.9);
-    mctx.drawImage(brush, b.x - rr, b.y - rr, rr * 2, rr * 2);
-  }
-  mctx.globalAlpha = 1;
+  if ("ResizeObserver" in window) new ResizeObserver(size).observe(pic); else addEventListener("resize", size, { passive: true });
 
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.clearRect(0, 0, cv.width, cv.height);
-  if (live) {
-    /* the second portrait, kept only inside the soft brush */
-    ctx.globalCompositeOperation = "source-over";
-    ctx.drawImage(altc, 0, 0);
-    ctx.globalCompositeOperation = "destination-in";
-    ctx.drawImage(mc, 0, 0);
-    /* soft violet-blue bloom around what is revealed (down-/up-scaling = cheap blur) */
-    gctx.setTransform(1, 0, 0, 1, 0, 0);
-    gctx.globalCompositeOperation = "source-over";
-    gctx.clearRect(0, 0, gc.width, gc.height);
-    gctx.imageSmoothingEnabled = true;
-    gctx.drawImage(cv, 0, 0, gc.width, gc.height);
-    gctx.globalCompositeOperation = "source-atop";
-    gctx.fillStyle = "rgba(125,95,255,.65)"; gctx.fillRect(0, 0, gc.width, gc.height);
-    gctx.globalCompositeOperation = "source-over";
-    ctx.globalCompositeOperation = "lighter";
-    ctx.globalAlpha = BLOOM;
-    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high";
-    ctx.drawImage(gc, 0, 0, cv.width, cv.height);
-    ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
-  }
-  if (live || (target && cur)) raf = requestAnimationFrame(frame); else lastT = 0;
-};
-const wake = () => { if (!raf && !document.hidden) { lastT = 0; raf = requestAnimationFrame(frame); } };
+  /* ---- painting the trail ---- */
+  const stamp = (ctx, x, y, rad, a) => {
+    const g = ctx.createRadialGradient(x, y, 0, x, y, rad);
+    g.addColorStop(0, `rgba(255,255,255,${a})`);
+    g.addColorStop(0.62, `rgba(255,255,255,${a})`);
+    g.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, rad, 0, 6.2832); ctx.fill();
+  };
+
+  const frame = (now) => {
+    raf = 0;
+    const raw = now - (last || now); last = now;          /* real milliseconds */
+    const k = Math.min(4, raw / 16.67);                     /* animation step, capped so a slow frame never jumps */
+
+    /* depth parallax of the cyber layer + grow-in / grow-out of the lens */
+    par.tx = P.has ? -((P.x / W) - 0.5) * 18 : 0; par.ty = P.has ? -((P.y / H) - 0.5) * 14 : 0;
+    par.x += (par.tx - par.x) * Math.min(1, 0.12 * k); par.y += (par.ty - par.y) * Math.min(1, 0.12 * k);
+    grow += ((active ? 1 : 0) - grow) * Math.min(1, (active ? 0.14 : 0.06) * k);
+
+    /* trail fades */
+    m.globalCompositeOperation = "destination-out"; m.fillStyle = `rgba(0,0,0,${Math.min(1, 0.045 * k)})`; m.fillRect(0, 0, W, H);
+    m2.globalCompositeOperation = "destination-out"; m2.fillStyle = `rgba(0,0,0,${Math.min(1, 0.075 * k)})`; m2.fillRect(0, 0, W, H);
+    m.globalCompositeOperation = m2.globalCompositeOperation = "source-over";
+
+    if (active && P.has) {
+      const base = W * 0.27 * grow;                                  /* lens radius follows card width */
+      const boost = 1 + Math.min(P.speed / 60, 0.45);               /* faster hand = fatter brush */
+      const dx = P.x - P.lx, dy = P.y - P.ly, dist = Math.hypot(dx, dy);
+      const n = Math.max(1, Math.ceil(dist / Math.max(6, base * 0.28)));
+      for (let i = 1; i <= n; i++) {
+        const t = i / n, x = P.lx + dx * t, y = P.ly + dy * t;
+        const wob = 1 + Math.sin(now * 0.004 + i * 1.7) * 0.1;      /* liquid edge */
+        stamp(m, x, y, base * boost * wob, dist > 0.5 ? 1 : 0.4);
+        stamp(m2, x, y, base * boost * wob * 1.3, dist > 0.5 ? 0.95 : 0.35);
+      }
+      P.lx = P.x; P.ly = P.y; P.speed *= 0.86; idle = 0;
+    } else idle += raw;
+
+    compose();
+
+    if (!active && idle > 1500 && grow < 0.03) {                       /* fully dissolved: give the <img> back */
+      m.clearRect(0, 0, W, H); m2.clearRect(0, 0, W, H);
+      compose(); setOn(false); last = 0; return;
+    }
+    raf = requestAnimationFrame(frame);
+  };
+
+  const compose = () => {
+    /* A: original with the revealed part cut out */
+    t1.globalCompositeOperation = "source-over"; t1.clearRect(0, 0, W, H); draw(t1, orig, 0, 0, 1);
+    t1.globalCompositeOperation = "destination-out"; t1.drawImage(M, 0, 0, W, H);
+    /* B: cyber, slightly nearer (scale + parallax), only where revealed */
+    t2.globalCompositeOperation = "source-over"; t2.clearRect(0, 0, W, H); draw(t2, cyber, par.x, par.y, 1.018);
+    t2.globalCompositeOperation = "destination-in"; t2.drawImage(M, 0, 0, W, H);
+    /* leading edge: big soft mask minus the revealed mask, tinted, clipped to the figure */
+    r.globalCompositeOperation = "source-over"; r.clearRect(0, 0, W, H); r.drawImage(M2, 0, 0, W, H);
+    r.globalCompositeOperation = "destination-out"; r.drawImage(M, 0, 0, W, H); r.drawImage(M, 0, 0, W, H);
+    r.globalCompositeOperation = "source-in";
+    const g = r.createLinearGradient(0, 0, W, H);
+    g.addColorStop(0, "#16d8ff"); g.addColorStop(0.5, "#9d66ff"); g.addColorStop(1, "#ff3dc8");
+    r.fillStyle = g; r.fillRect(0, 0, W, H);
+    r.globalCompositeOperation = "destination-in"; r.drawImage(S, 0, 0, W, H);
+    /* final */
+    cx.globalCompositeOperation = "source-over"; cx.clearRect(0, 0, W, H);
+    cx.drawImage(T1, 0, 0, W, H); cx.drawImage(T2, 0, 0, W, H);
+    cx.globalCompositeOperation = "lighter"; cx.globalAlpha = 0.85; cx.drawImage(R, 0, 0, W, H); cx.globalAlpha = 1;
+    cx.globalCompositeOperation = "source-over";
+  };
+
+  const setOn = (v) => { if (on === v) return; on = v; card.classList.toggle("ab3d-on", v); };
+
+  const kick = () => { if (!raf) { last = 0; raf = requestAnimationFrame(frame); } };
+
+  /* ---- pointer: the card itself has pointer-events:none, so we read the mouse on the document ---- */
+  document.addEventListener("pointermove", (e) => {
+    if (e.pointerType !== "mouse" || !ready || !orig.naturalWidth) return;
+    if (!card.classList.contains("show")) { active = false; return; }
+    const b = pic.getBoundingClientRect();
+    const inside = e.clientX >= b.left && e.clientX <= b.right && e.clientY >= b.top && e.clientY <= b.bottom;
+    if (!inside) { if (active) { active = false; kick(); } return; }
+    size();
+    const x = (e.clientX - b.left) * (W / b.width), y = (e.clientY - b.top) * (H / b.height);
+    if (!active) {
+      P.lx = x; P.ly = y; idle = 0;
+      if (!on) { compose(); setOn(true); }                           /* first frame equals the original: no visible pop */
+    }
+    P.speed = Math.max(P.speed, Math.hypot(x - P.x, y - P.y));
+    P.x = x; P.y = y; P.has = true; active = true;
+    kick();
+  }, { passive: true });
+
+  document.documentElement.addEventListener("pointerleave", () => { active = false; kick(); }, { passive: true });
+  addEventListener("blur", () => { active = false; kick(); });
+  document.addEventListener("visibilitychange", () => { if (document.hidden) { active = false; kick(); } });
 })();
