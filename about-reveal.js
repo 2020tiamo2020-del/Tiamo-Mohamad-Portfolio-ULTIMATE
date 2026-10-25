@@ -34,14 +34,14 @@
   /* ---- the 8 panels: polygons in the portrait's own 0..1 box. They tile the figure with no gaps.
          dir = side it flies in from, rot = start tilt (deg), depth = parallax weight ---- */
   const PANELS = [
-    { n: "crown",   poly: [[0,0],[1,0],[1,.17],[.70,.195],[.30,.195],[0,.17]],                         dir: [0,-1],   rot: -5, depth: 1.3, rx: -40, ry: 8 },
-    { n: "visor",   poly: [[0,.17],[.30,.195],[.70,.195],[1,.17],[1,.30],[.74,.31],[.26,.31],[0,.30]], dir: [1,-.25], rot: 6,  depth: 0.8, rx: 10, ry: 46 },
-    { n: "jaw",     poly: [[.26,.31],[.74,.31],[.70,.42],[.62,.50],[.38,.50],[.30,.42]],               dir: [0,1],    rot: -4, depth: 1.1, rx: 38, ry: -10 },
-    { n: "shoulderL", poly: [[0,.30],[.26,.31],[.30,.42],[.38,.50],[.34,.74],[0,.70]],                 dir: [-1,.1],  rot: -7, depth: 0.9, rx: 12, ry: -48 },
-    { n: "shoulderR", poly: [[.74,.31],[1,.30],[1,.70],[.66,.74],[.62,.50],[.70,.42]],                 dir: [1,.1],   rot: 7,  depth: 1.0, rx: -12, ry: 48 },
-    { n: "chest",   poly: [[.38,.50],[.62,.50],[.66,.74],[.34,.74]],                                   dir: [-.2,1],  rot: 4,  depth: 1.4, rx: 34, ry: 20 },
-    { n: "forearmL",poly: [[0,.70],[.34,.74],[.40,1],[0,1]],                                           dir: [-1,.7],  rot: -6, depth: 0.8, rx: 22, ry: -38 },
-    { n: "forearmR",poly: [[.34,.74],[.66,.74],[1,.70],[1,1],[.40,1]],                                 dir: [1,.7],   rot: 6,  depth: 1.2, rx: 22, ry: 38 }
+    { n: "crown",   poly: [[0,0],[1,0],[1,.17],[.70,.195],[.30,.195],[0,.17]],                         dir: [0,-1],   rot: -3, depth: 0.3, rx: -7,  ry: 3 },
+    { n: "visor",   poly: [[0,.17],[.30,.195],[.70,.195],[1,.17],[1,.30],[.74,.31],[.26,.31],[0,.30]], dir: [1,-.25], rot: 3,  depth: 0.3, rx: 3,   ry: 9 },
+    { n: "jaw",     poly: [[.26,.31],[.74,.31],[.70,.42],[.62,.50],[.38,.50],[.30,.42]],               dir: [0,1],    rot: -3, depth: 0.3, rx: 7,   ry: -3 },
+    { n: "shoulderL", poly: [[0,.30],[.26,.31],[.30,.42],[.38,.50],[.34,.74],[0,.70]],                 dir: [-1,.1],  rot: -5, depth: 0.6, rx: 7,   ry: -24 },
+    { n: "shoulderR", poly: [[.74,.31],[1,.30],[1,.70],[.66,.74],[.62,.50],[.70,.42]],                 dir: [1,.1],   rot: 5,  depth: 0.6, rx: -7,  ry: 24 },
+    { n: "chest",   poly: [[.38,.50],[.62,.50],[.66,.74],[.34,.74]],                                   dir: [-.2,1],  rot: 3,  depth: 0.7, rx: 16,  ry: 11 },
+    { n: "forearmL",poly: [[0,.70],[.34,.74],[.40,1],[0,1]],                                           dir: [-1,.7],  rot: -4, depth: 0.6, rx: 11,  ry: -22 },
+    { n: "forearmR",poly: [[.34,.74],[.66,.74],[1,.70],[1,1],[.40,1]],                                 dir: [1,.7],   rot: 4,  depth: 0.7, rx: 11,  ry: 22 }
   ].map(p => Object.assign(p, { p: 0, tgt: 0, t0: 0, from: 0, out: false, armed: false, start: 0, hold: 0, flash: 0, landed: false, c: [0, 0], px: [] }));
 
   /* ---- canvases ---- */
@@ -140,7 +140,7 @@
   const mul = (m, n) => [m[0]*n[0]+m[2]*n[1], m[1]*n[0]+m[3]*n[1], m[0]*n[2]+m[2]*n[3], m[1]*n[2]+m[3]*n[3], m[0]*n[4]+m[2]*n[5]+m[4], m[1]*n[4]+m[3]*n[5]+m[5]];
   const matrix = (pn, e) => {
     const D = W * FLY * (1 - e), n = Math.hypot(pn.dir[0], pn.dir[1]) || 1, R = Math.PI / 180;
-    const rot = pn.rot * (1 - e) * R, ax = pn.rx * (1 - e) * R, ay = pn.ry * (1 - e) * R, sc = 1 + 0.12 * (1 - e);
+    const rot = pn.rot * (1 - e) * R, ax = pn.rx * (1 - e) * R, ay = pn.ry * (1 - e) * R, sc = 1;                                                    /* size never changes */
     const cs = Math.cos(rot), sn = Math.sin(rot);
     let m = [1, 0, 0, 1, pn.c[0] + pn.dir[0] / n * D, pn.c[1] + pn.dir[1] / n * D];     /* travel */
     m = mul(m, [cs, sn, -sn, cs, 0, 0]);                                                /* roll  */
@@ -161,8 +161,8 @@
     const raw = now - (last || now); last = now;
     const k = Math.min(4, raw / 16.67);
 
-    par.x += ((P.has ? -((P.x / W) - 0.5) * 18 : 0) - par.x) * Math.min(1, 0.12 * k);
-    par.y += ((P.has ? -((P.y / H) - 0.5) * 14 : 0) - par.y) * Math.min(1, 0.12 * k);
+    par.x += ((P.has ? -((P.x / W) - 0.5) * 8 : 0) - par.x) * Math.min(1, 0.12 * k);
+    par.y += ((P.has ? -((P.y / H) - 0.5) * 6 : 0) - par.y) * Math.min(1, 0.12 * k);
 
     let busy = false;
     PANELS.forEach(pn => {
@@ -234,14 +234,14 @@
         q.transform(m[0], m[1], m[2], m[3], m[4], m[5]);
         q.translate(0.95 * thick * i / layers, 1.15 * thick * i / layers);
         path(q, pn.px); q.clip();
-        drawContain(q, cyberD, par.x * pn.depth, par.y * pn.depth, 1.018);
+        drawContain(q, cyberD, par.x * pn.depth, par.y * pn.depth, 1);
         q.restore();
       }
 
       /* front face */
       q.save(); q.beginPath(); q.rect(x0, y0, bw, bh); q.clip();
       q.transform(m[0], m[1], m[2], m[3], m[4], m[5]); path(q, pn.px); q.clip();
-      drawContain(q, cyber, par.x * pn.depth, par.y * pn.depth, 1.018);
+      drawContain(q, cyber, par.x * pn.depth, par.y * pn.depth, 1);
       q.globalCompositeOperation = "source-atop";
       /* shading follows the tilt: panels turned away from the light are darker, then brighten as they lock in */
       q.fillStyle = `rgba(8,6,30,${0.42 * Math.max(0, 1 - e)})`; q.fillRect(bb[0] - 4, bb[1] - 4, bb[2] - bb[0] + 8, bb[3] - bb[1] + 8);
