@@ -2,7 +2,9 @@
    About portrait · cyber reveal, glass-panel assembly
    Move the mouse over the portrait: the cyber version (images/tiamo2-about.webp) is built from 8 separate glass
    panels (crown, visor, jaw, shoulders, chest, forearms). Each panel flies in from its own direction, tilts, drops
-   a soft shadow, and locks into place with a glass bevel and a short flash. Panels near the cursor assemble first;
+   a soft shadow, and locks into place with a glass bevel and a short flash.
+   The panels are volumetric while they travel: 3D tilt with foreshortening, a dark glass thickness that collapses as
+   they land, shading that follows the tilt, and a specular glint that sweeps across the face. Panels near the cursor assemble first;
    a moment after the cursor leaves they slide back out again.
    Idle state is untouched: the canvas is only shown while panels are out, then the original <img> is swapped back.
    The portrait's own tilt (enhance.js) carries the canvas too, because it lives inside <picture>.
@@ -31,14 +33,14 @@
   /* ---- the 8 panels: polygons in the portrait's own 0..1 box. They tile the figure with no gaps.
          dir = side it flies in from, rot = start tilt (deg), depth = parallax weight ---- */
   const PANELS = [
-    { n: "crown",   poly: [[0,0],[1,0],[1,.17],[.70,.195],[.30,.195],[0,.17]],                         dir: [0,-1],   rot: -5, depth: 1.3 },
-    { n: "visor",   poly: [[0,.17],[.30,.195],[.70,.195],[1,.17],[1,.30],[.74,.31],[.26,.31],[0,.30]], dir: [1,-.25], rot: 6,  depth: 0.8 },
-    { n: "jaw",     poly: [[.26,.31],[.74,.31],[.70,.42],[.62,.50],[.38,.50],[.30,.42]],               dir: [0,1],    rot: -4, depth: 1.1 },
-    { n: "shoulderL", poly: [[0,.30],[.26,.31],[.30,.42],[.38,.50],[.34,.74],[0,.70]],                 dir: [-1,.1],  rot: -7, depth: 0.9 },
-    { n: "shoulderR", poly: [[.74,.31],[1,.30],[1,.70],[.66,.74],[.62,.50],[.70,.42]],                 dir: [1,.1],   rot: 7,  depth: 1.0 },
-    { n: "chest",   poly: [[.38,.50],[.62,.50],[.66,.74],[.34,.74]],                                   dir: [-.2,1],  rot: 4,  depth: 1.4 },
-    { n: "forearmL",poly: [[0,.70],[.34,.74],[.40,1],[0,1]],                                           dir: [-1,.7],  rot: -6, depth: 0.8 },
-    { n: "forearmR",poly: [[.34,.74],[.66,.74],[1,.70],[1,1],[.40,1]],                                 dir: [1,.7],   rot: 6,  depth: 1.2 }
+    { n: "crown",   poly: [[0,0],[1,0],[1,.17],[.70,.195],[.30,.195],[0,.17]],                         dir: [0,-1],   rot: -5, depth: 1.3, rx: -40, ry: 8 },
+    { n: "visor",   poly: [[0,.17],[.30,.195],[.70,.195],[1,.17],[1,.30],[.74,.31],[.26,.31],[0,.30]], dir: [1,-.25], rot: 6,  depth: 0.8, rx: 10, ry: 46 },
+    { n: "jaw",     poly: [[.26,.31],[.74,.31],[.70,.42],[.62,.50],[.38,.50],[.30,.42]],               dir: [0,1],    rot: -4, depth: 1.1, rx: 38, ry: -10 },
+    { n: "shoulderL", poly: [[0,.30],[.26,.31],[.30,.42],[.38,.50],[.34,.74],[0,.70]],                 dir: [-1,.1],  rot: -7, depth: 0.9, rx: 12, ry: -48 },
+    { n: "shoulderR", poly: [[.74,.31],[1,.30],[1,.70],[.66,.74],[.62,.50],[.70,.42]],                 dir: [1,.1],   rot: 7,  depth: 1.0, rx: -12, ry: 48 },
+    { n: "chest",   poly: [[.38,.50],[.62,.50],[.66,.74],[.34,.74]],                                   dir: [-.2,1],  rot: 4,  depth: 1.4, rx: 34, ry: 20 },
+    { n: "forearmL",poly: [[0,.70],[.34,.74],[.40,1],[0,1]],                                           dir: [-1,.7],  rot: -6, depth: 0.8, rx: 22, ry: -38 },
+    { n: "forearmR",poly: [[.34,.74],[.66,.74],[1,.70],[1,1],[.40,1]],                                 dir: [1,.7],   rot: 6,  depth: 1.2, rx: 22, ry: 38 }
   ].map(p => Object.assign(p, { p: 0, armed: false, start: 0, hold: 0, flash: 0, landed: false, c: [0, 0], px: [] }));
 
   /* ---- canvases ---- */
@@ -49,13 +51,13 @@
   const all = [cx, t1, t2, q];
   pic.appendChild(cv);
 
-  let W = 0, H = 0, cyber = null, ready = false, loading = false, box = [0, 0, 0, 0];
+  let W = 0, H = 0, cyber = null, cyberD = null, ready = false, loading = false, box = [0, 0, 0, 0];
   let on = false, active = false, raf = 0, last = 0;
   const P = { x: 0, y: 0, has: false };
   const par = { x: 0, y: 0 };
 
   const containBox = (img) => {
-    const iw = img.naturalWidth, ih = img.naturalHeight; if (!iw || !ih) return null;
+    const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height; if (!iw || !ih) return null;
     const k = Math.min(W / iw, H / ih), w = iw * k, h = ih * k;
     return [(W - w) / 2, (H - h) / 2, w, h];
   };
@@ -91,7 +93,17 @@
     const next = () => {
       if (i >= SRC.length) return;                       /* nothing loaded: feature stays off, nothing breaks */
       const im = new Image(); im.decoding = "async";
-      im.onload = () => { cyber = im; ready = true; W = H = 0; size(); };
+      im.onload = () => {
+        cyber = im;
+        /* same figure, tinted deep indigo: used for the panel's side walls */
+        const d = mk(); d.width = im.naturalWidth; d.height = im.naturalHeight;
+        const dc = d.getContext("2d"); dc.drawImage(im, 0, 0);
+        dc.globalCompositeOperation = "source-atop";
+        const g = dc.createLinearGradient(0, 0, d.width, d.height);
+        g.addColorStop(0, "rgba(120,100,210,.72)"); g.addColorStop(1, "rgba(14,10,40,.88)");
+        dc.fillStyle = g; dc.fillRect(0, 0, d.width, d.height);
+        cyberD = d; ready = true; W = H = 0; size();
+      };
       im.onerror = next;
       im.src = SRC[i++];
     };
@@ -122,14 +134,20 @@
   const back = t => { const c1 = 1.25, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); };   /* settles with a tiny overshoot */
   const smooth = (a, b, v) => { const t = Math.max(0, Math.min(1, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
 
-  /* transform of one panel for progress p */
-  const xf = (pn, e) => {
-    const D = W * FLY * (1 - e), n = Math.hypot(pn.dir[0], pn.dir[1]) || 1;
-    return { dx: pn.dir[0] / n * D, dy: pn.dir[1] / n * D, rot: pn.rot * (1 - e) * Math.PI / 180, sc: 1 - 0.1 * (1 - e) };
+  /* one panel's transform for progress e: travel + roll + a 3D tilt (foreshortening + shear) + coming toward the viewer.
+     Returned as an affine matrix [a b c d e f] so drawing and bounding box use exactly the same maths. */
+  const mul = (m, n) => [m[0]*n[0]+m[2]*n[1], m[1]*n[0]+m[3]*n[1], m[0]*n[2]+m[2]*n[3], m[1]*n[2]+m[3]*n[3], m[0]*n[4]+m[2]*n[5]+m[4], m[1]*n[4]+m[3]*n[5]+m[5]];
+  const matrix = (pn, e) => {
+    const D = W * FLY * (1 - e), n = Math.hypot(pn.dir[0], pn.dir[1]) || 1, R = Math.PI / 180;
+    const rot = pn.rot * (1 - e) * R, ax = pn.rx * (1 - e) * R, ay = pn.ry * (1 - e) * R, sc = 1 + 0.12 * (1 - e);
+    const cs = Math.cos(rot), sn = Math.sin(rot);
+    let m = [1, 0, 0, 1, pn.c[0] + pn.dir[0] / n * D, pn.c[1] + pn.dir[1] / n * D];     /* travel */
+    m = mul(m, [cs, sn, -sn, cs, 0, 0]);                                                /* roll  */
+    m = mul(m, [Math.cos(ay), Math.sin(ay) * 0.2, -Math.sin(ax) * 0.2, Math.cos(ax), 0, 0]);   /* tilt  */
+    m = mul(m, [sc, 0, 0, sc, 0, 0]);
+    return mul(m, [1, 0, 0, 1, -pn.c[0], -pn.c[1]]);
   };
-  const apply = (c, pn, f) => {
-    c.translate(pn.c[0] + f.dx, pn.c[1] + f.dy); c.rotate(f.rot); c.scale(f.sc, f.sc); c.translate(-pn.c[0], -pn.c[1]);
-  };
+  const pt = (m, x, y) => [m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]];
   const path = (c, pts) => { c.beginPath(); pts.forEach(([x, y], i) => i ? c.lineTo(x, y) : c.moveTo(x, y)); c.closePath(); };
 
   /* ---- frame ---- */
@@ -182,43 +200,61 @@
     t2.globalCompositeOperation = "source-over"; t2.globalAlpha = 1; t2.clearRect(0, 0, W, H);
     PANELS.forEach(pn => {
       if (pn.p <= 0.002 && pn.flash <= 0) return;
-      const e = back(Math.min(1, pn.p)), f = xf(pn, Math.min(e, 1.06));
+      const e = Math.min(back(Math.min(1, pn.p)), 1.06), m = matrix(pn, e);
       const al = Math.min(1, pn.p * 2.4);
-      /* bounding box of the moved polygon, in card px */
-      const cs = Math.cos(f.rot), sn = Math.sin(f.rot);
+      const thick = 9 * Math.pow(Math.max(0, 1 - pn.p), 0.7);              /* glass thickness: collapses as the panel locks in */
+      const layers = Math.min(9, Math.ceil(thick));
+      const bb = pn.px.reduce((a, v) => [Math.min(a[0], v[0]), Math.min(a[1], v[1]), Math.max(a[2], v[0]), Math.max(a[3], v[1])], [1e9, 1e9, -1e9, -1e9]);
+      /* bounding box of the moved polygon (+ thickness), in card px */
       let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
-      pn.px.forEach(([x, y]) => {
-        const ux = (x - pn.c[0]) * f.sc, uy = (y - pn.c[1]) * f.sc;
-        const X = pn.c[0] + f.dx + ux * cs - uy * sn, Y = pn.c[1] + f.dy + ux * sn + uy * cs;
-        x0 = Math.min(x0, X); y0 = Math.min(y0, Y); x1 = Math.max(x1, X); y1 = Math.max(y1, Y);
-      });
-      x0 = Math.max(0, Math.floor(x0 - 10)); y0 = Math.max(0, Math.floor(y0 - 10));
-      x1 = Math.min(W, Math.ceil(x1 + 10)); y1 = Math.min(H, Math.ceil(y1 + 10));
+      pn.px.forEach(([x, y]) => { const [X, Y] = pt(m, x, y); x0 = Math.min(x0, X); y0 = Math.min(y0, Y); x1 = Math.max(x1, X); y1 = Math.max(y1, Y); });
+      x0 = Math.max(0, Math.floor(x0 - 14)); y0 = Math.max(0, Math.floor(y0 - 14));
+      x1 = Math.min(W, Math.ceil(x1 + 14 + thick * 1.4)); y1 = Math.min(H, Math.ceil(y1 + 14 + thick * 1.4));
       const bw = x1 - x0, bh = y1 - y0; if (bw < 2 || bh < 2) return;
 
-      /* scratch: the panel's own cyber content */
       q.globalCompositeOperation = "source-over"; q.globalAlpha = 1; q.clearRect(x0, y0, bw, bh);
+
+      /* side walls: the dark twin stacked a few px toward the shadow side */
+      for (let i = layers; i >= 1; i--) {
+        q.save(); q.beginPath(); q.rect(x0, y0, bw, bh); q.clip();
+        q.transform(m[0], m[1], m[2], m[3], m[4], m[5]);
+        q.translate(0.95 * thick * i / layers, 1.15 * thick * i / layers);
+        path(q, pn.px); q.clip();
+        drawContain(q, cyberD, par.x * pn.depth, par.y * pn.depth, 1.018);
+        q.restore();
+      }
+
+      /* front face */
       q.save(); q.beginPath(); q.rect(x0, y0, bw, bh); q.clip();
-      apply(q, pn, f); path(q, pn.px); q.clip();
+      q.transform(m[0], m[1], m[2], m[3], m[4], m[5]); path(q, pn.px); q.clip();
       drawContain(q, cyber, par.x * pn.depth, par.y * pn.depth, 1.018);
-      /* glass sheen + bevel, only where the panel actually has content */
       q.globalCompositeOperation = "source-atop";
-      const bb = pn.px.reduce((a, v) => [Math.min(a[0], v[0]), Math.min(a[1], v[1]), Math.max(a[2], v[0]), Math.max(a[3], v[1])], [1e9, 1e9, -1e9, -1e9]);
+      /* shading follows the tilt: panels turned away from the light are darker, then brighten as they lock in */
+      q.fillStyle = `rgba(8,6,30,${0.42 * Math.max(0, 1 - e)})`; q.fillRect(bb[0] - 4, bb[1] - 4, bb[2] - bb[0] + 8, bb[3] - bb[1] + 8);
+      /* glass sheen */
       const sh = q.createLinearGradient(bb[0], bb[1], bb[2], bb[3]);
       sh.addColorStop(0, `rgba(255,255,255,${0.2 + pn.flash * 0.3})`); sh.addColorStop(0.5, "rgba(255,255,255,0)"); sh.addColorStop(1, `rgba(255,255,255,${0.07 + pn.flash * 0.12})`);
       q.fillStyle = sh; q.fillRect(bb[0] - 4, bb[1] - 4, bb[2] - bb[0] + 8, bb[3] - bb[1] + 8);
+      /* specular glint sweeping across the face while it settles */
+      if (pn.p < 0.98) {
+        const pos = -0.15 + 1.3 * pn.p, g = q.createLinearGradient(bb[0], bb[1], bb[2], bb[3]);
+        const c = (v) => Math.max(0, Math.min(1, v));
+        g.addColorStop(c(pos - 0.14), "rgba(255,255,255,0)"); g.addColorStop(c(pos), `rgba(255,255,255,${0.42 * (1 - pn.p * 0.5)})`); g.addColorStop(c(pos + 0.14), "rgba(255,255,255,0)");
+        q.fillStyle = g; q.fillRect(bb[0] - 4, bb[1] - 4, bb[2] - bb[0] + 8, bb[3] - bb[1] + 8);
+      }
+      /* bevel */
       path(q, pn.px); q.lineJoin = "round";
-      q.strokeStyle = "rgba(255,255,255,.11)"; q.lineWidth = 8; q.stroke();             /* soft inner glass depth */
+      q.strokeStyle = "rgba(255,255,255,.11)"; q.lineWidth = 8; q.stroke();
       const eg = q.createLinearGradient(bb[0], bb[1], bb[2], bb[3]);
       eg.addColorStop(0, "rgba(255,255,255,.95)"); eg.addColorStop(0.45, "rgba(235,228,255,.38)"); eg.addColorStop(1, "rgba(255,255,255,.7)");
-      q.strokeStyle = eg; q.lineWidth = 2; q.stroke();                                   /* crisp bevel line */
+      q.strokeStyle = eg; q.lineWidth = 2; q.stroke();
       q.restore();
 
       /* into the panel layer, with a lift shadow that shrinks as it lands */
       t2.save();
       t2.globalAlpha = al;
       const lift = Math.max(0, 1 - pn.p);
-      t2.shadowColor = `rgba(0,0,0,${0.5 * lift})`; t2.shadowBlur = 22 * lift; t2.shadowOffsetY = 12 * lift;
+      t2.shadowColor = `rgba(0,0,0,${0.55 * lift})`; t2.shadowBlur = 26 * lift; t2.shadowOffsetY = 14 * lift;
       t2.drawImage(Q, x0 * DPR, y0 * DPR, bw * DPR, bh * DPR, x0, y0, bw, bh);
       t2.restore();
     });
