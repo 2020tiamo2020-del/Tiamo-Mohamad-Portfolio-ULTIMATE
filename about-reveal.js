@@ -244,10 +244,10 @@
       }
       /* bevel */
       path(q, pn.px); q.lineJoin = "round";
-      q.strokeStyle = "rgba(255,255,255,.11)"; q.lineWidth = 8; q.stroke();
+      q.strokeStyle = "rgba(255,255,255,.05)"; q.lineWidth = 6; q.stroke();
       const eg = q.createLinearGradient(bb[0], bb[1], bb[2], bb[3]);
-      eg.addColorStop(0, "rgba(255,255,255,.95)"); eg.addColorStop(0.45, "rgba(235,228,255,.38)"); eg.addColorStop(1, "rgba(255,255,255,.7)");
-      q.strokeStyle = eg; q.lineWidth = 2; q.stroke();
+      eg.addColorStop(0, "rgba(255,255,255,.5)"); eg.addColorStop(0.45, "rgba(235,228,255,.16)"); eg.addColorStop(1, "rgba(255,255,255,.34)");
+      q.strokeStyle = eg; q.lineWidth = 1.2; q.stroke();
       q.restore();
 
       /* into the panel layer, with a lift shadow that shrinks as it lands */
