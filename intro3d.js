@@ -1,12 +1,15 @@
 /* ==========================================================================
-   INTRO 3D
-   ─ A dark carved TM logo. A cloudy blue light follows the mouse (and wanders on its own),
-     leaving a fading trail. The picture has fake depth (parallax + relief lighting built
-     from its own brightness), so the stone surface reacts to the light.
-   ─ Loading: the light draws the logo ring while the real assets load (0 → 100 %).
-   ─ ENTER: the camera dives into the logo, light floods the screen, the Home page appears,
-     and the SAME canvas stays behind the Home section as a faint, interactive background.
-   Tunables are in CONFIG just below.
+   INTRO 3D  (relief renderer)
+   ─ The logo picture is the surface colour (its identity is never repainted). A depth map built
+     from the picture itself (images/intro-depth.webp) gives the T, the M and the ring their real height.
+   ─ Every pixel ray-marches that height field from a perspective camera (true occlusion parallax),
+     marches again toward the light (real self-shadows), and gets light shafts that pass between the
+     columns, ground mist and floating dust at three depths.
+   ─ The camera drifts on its own and orbits with the mouse. The light follows the mouse and leaves a fading trail.
+   ─ Loading: the light draws the ring while the real assets load (0 → 100 %).
+   ─ ENTER: the camera dives through the logo, light blooms, and the SAME canvas stays behind the
+     Home section as a faint 3D watermark graded in the site's purple / cyan.
+   Tunables: CONFIG below.   Test a lower quality:  add  ?q=0  or  ?q=1  to the address.
    ========================================================================== */
 (() => {
 "use strict";
@@ -20,10 +23,11 @@ const CONFIG = {
   holdMs: 2350,             // length of the dive-in = the sound's boom → riser → drop (drop lands at 2.34 s)
   sound: "audio/intro-enter.mp3",
   soundGain: 0.9,
-  zoomEnd: 8.5,             // how deep the camera goes
-  homeZoom: 1.55,           // logo size behind Home
+  depthMap: "images/intro-depth.webp",
+  depth: 0.10,              // how tall the columns stand (in screen heights)
+  lightH: 0.30,             // height of the light above the stone (lower = longer shadows)
   trailSeconds: 1.35,       // how long the light trail lingers
-  bump: 15,                 // relief strength
+  bump: 14,                 // surface relief strength
 };
 
 const gate = document.getElementById("enterGate");
@@ -52,10 +56,9 @@ const S = {
   t0: performance.now(),
   mx: 0.5, my: 0.5,       // pointer, 0..1 of the canvas box
   hasPointer: false, lastMove: -1e9,
-  par: [0, 0], parT: [0, 0],
   light: [RING.cu, RING.cd], lightT: [RING.cu, RING.cd],
   spirit: { a: Math.random() * 6.28, u: RING.cu, d: RING.cd, init: false },
-  zoom: 1, gain: 1, blur: 0, flash: 0, home: 0, cd: 0.553,
+  zoom: 1, cd: 0.5, cu: 0.5, gain: 1, flash: 0, home: 0, dolly: 0, fade: 0, cam: [0, 0], camT: [0, 0], q: 2, ema: 16, qT: 0,
   enterT0: 0, visible: true,
 };
 
@@ -142,7 +145,11 @@ const revealTitle = () => {
   }, 1900);
 };
 
-/* ------------------------------------------------------------------ WebGL */
+/* ------------------------------------------------------------------ WebGL
+   Relief renderer: the logo picture is the surface colour, a depth map (images/intro-depth.webp, built from the
+   picture itself) gives every column its real height. Per pixel we ray-march that height field from a
+   perspective camera (true occlusion parallax), march again toward the light (real self-shadows), and add
+   light shafts that pass between the columns, ground mist and floating dust. */
 const VERT = "attribute vec2 p;varying vec2 vUv;void main(){vUv=p*.5+.5;gl_Position=vec4(p,0.,1.);}";
 const FRAG = `
 #ifdef GL_FRAGMENT_PRECISION_HIGH
@@ -151,72 +158,156 @@ precision highp float;
 precision mediump float;
 #endif
 varying vec2 vUv;
-uniform sampler2D uImg,uH,uM;
-uniform vec2 uRes,uImgSize,uPar,uLight,uCenter;
-uniform float uTime,uZoom,uGain,uFlash,uBlur,uHome,uBump;
+uniform sampler2D uImg,uD,uM;
+uniform vec2 uRes,uImgSize,uCenter,uCam,uLight,uSun;
+uniform float uTime,uZoom,uDolly,uGain,uFlash,uHome,uBump,uDepth,uSteps,uShSteps,uRays,uAmb,uLightH,uFade;
+uniform vec3 uKey,uRim,uAcc;
+const int NS=30;
+const int SS=14;
+const int RS=22;
+
 float hash(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}
-float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
+float vnoise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
   return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+vec2(1.,1.)),f.x),f.y);}
-float fbm(vec2 p){float a=.5,s=0.;for(int i=0;i<4;i++){s+=a*noise(p);p=p*2.03+vec2(17.,9.);a*=.5;}return s;}
+float fbm(vec2 p){float a=.5,s=0.;for(int i=0;i<3;i++){s+=a*vnoise(p);p=p*2.03+vec2(17.,9.);a*=.5;}return s;}
+float H(vec2 uv){return texture2D(uD,uv).r;}
+
 void main(){
   vec2 sUv=vec2(vUv.x,1.-vUv.y);
   float sa=uRes.x/uRes.y,ia=uImgSize.x/uImgSize.y;
   vec2 sc=sa>ia?vec2(1.,ia/sa):vec2(sa/ia,1.);
-  vec2 iuv=(sUv-.5)*sc/uZoom+uCenter;
-  /* depth: brighter (raised) stone moves more than the dark base */
-  float h0=texture2D(uH,iuv).r;
-  iuv+=uPar*(h0-.28)*.05*(1.+.6*uHome)+uPar*.012;
-  vec3 base;
-  if(uBlur>.001){
-    base=vec3(0.);
-    for(int i=0;i<7;i++){float k=float(i)/6.;base+=texture2D(uImg,uCenter+(iuv-uCenter)*(1.-uBlur*.12*k)).rgb;}
-    base/=7.;
-  }else base=texture2D(uImg,iuv).rgb;
-  base=pow(base,vec3(.78));
-  /* relief from the heightmap */
-  vec2 e=vec2(1./640.,1./360.)*1.5;
-  float hl=texture2D(uH,iuv-vec2(e.x,0.)).r,hr=texture2D(uH,iuv+vec2(e.x,0.)).r;
-  float hu=texture2D(uH,iuv-vec2(0.,e.y)).r,hd=texture2D(uH,iuv+vec2(0.,e.y)).r;
-  vec3 N=normalize(vec3((hl-hr)*uBump,(hu-hd)*uBump,1.));
-  vec2 d2=(uLight-iuv)*vec2(ia,1.);
-  float dist=length(d2);
-  vec3 L=normalize(vec3(d2,.2));
+  vec2 K=sc/uZoom/vec2(sa,1.);                 /* screen-height units -> image uv */
+  vec2 gc=(sUv-.5)*vec2(sa,1.);                /* pixel position, screen-height units */
+  vec2 g=uCenter+gc*K;                         /* where the pixel's ray meets the ground plane */
+
+  /* ---- camera + occlusion parallax ---- */
+  vec3 E=vec3(uCam*.55,mix(1.55,.62,uDolly));
+  vec3 V=normalize(E-vec3(gc,0.));
+  vec2 dir=(V.xy/V.z)*uDepth*K;
+  float h=1.,hP=1.;
+  vec2 u=g+dir,uP=u;
+  float Hs=H(u),HP=Hs;
+  for(int i=0;i<NS;i++){
+    if(float(i)>=uSteps||Hs>=h)break;
+    hP=h;uP=u;HP=Hs;
+    h-=1./uSteps;
+    u=g+dir*h;
+    Hs=H(u);
+  }
+  float f0=HP-hP,f1=Hs-h;
+  float t=clamp(f0/(f0-f1-1e-5),0.,1.);
+  vec2 uv=mix(uP,u,t);
+  float hh=mix(hP,h,t);
+
+  /* ---- surface ---- */
+  vec3 baseRaw=texture2D(uImg,uv).rgb;
+  if(uDolly>.05){
+    vec2 sv=dir*(.02+.05*uDolly);
+    baseRaw=(baseRaw*2.+texture2D(uImg,uv-sv).rgb+texture2D(uImg,uv+sv).rgb+texture2D(uImg,uv-sv*2.).rgb*.5+texture2D(uImg,uv+sv*2.).rgb*.5)/5.;
+  }
+  vec3 base=pow(baseRaw,vec3(.74))*1.1;
+  vec2 e=vec2(1./1024.,1./576.)*1.6;
+  vec3 dl=texture2D(uD,uv-vec2(e.x,0.)).rgb,dr=texture2D(uD,uv+vec2(e.x,0.)).rgb;
+  vec3 du=texture2D(uD,uv-vec2(0.,e.y)).rgb,dd=texture2D(uD,uv+vec2(0.,e.y)).rgb;
+  vec3 dc=texture2D(uD,uv).rgb;
+  vec2 gMacro=vec2(dl.r-dr.r,du.r-dd.r);
+  vec2 gMicro=vec2(dl.g-dr.g,du.g-dd.g);
+  vec3 N=normalize(vec3(gMacro*uBump*.5+gMicro*uBump*.05,1.));
+
+  /* ---- key light (follows the pointer) + memory of where it has been ---- */
+  vec2 Ld=(uLight-uv)/K;
+  vec3 L=normalize(vec3(Ld,uLightH-hh*uDepth));
+  float dist=length(Ld);
+  float att=1./(1.+pow(dist/.27,2.4));
+  float trail=texture2D(uM,uv).r;
   float diff=max(dot(N,L),0.);
-  float spec=pow(max(dot(reflect(-L,N),vec3(0.,0.,1.)),0.),16.);
-  /* the light trail, with torn cloudy edges */
-  float m=texture2D(uM,iuv).r;
-  float n=fbm(iuv*vec2(ia,1.)*7.+vec2(uTime*.035,-uTime*.022));
-  float mw=clamp(m*3.,0.,1.);
-  float mm=m+(n-.5)*.7*(1.-(1.-mw)*(1.-mw));
-  float c=smoothstep(.13,.66,mm);
-  vec3 lc=vec3(.30,.56,1.);
-  float lum=dot(base,vec3(.299,.587,.114));
-  vec3 tint=mix(base,lum*lc*1.8+base*.35,.78);
-  float lit=c*(.32+1.3*diff);
-  vec3 col=base*.5;
-  col+=tint*lit*uGain*2.4;
-  col+=lc*pow(c,1.5)*(.05+.11*n)*uGain;
-  col+=lc*spec*c*.6*uGain;
-  /* faint carved outline so the logo is just readable before the light finds it */
-  float edge=clamp(length(vec2(hr-hl,hd-hu))*7.,0.,1.);
-  col+=lc*edge*.05*(1.-uHome*.5);
-  float pool=exp(-dist*dist*70.);
-  col+=tint*pool*diff*uGain*.6+lc*pool*.045;
-  /* vignette + out-of-picture fade */
-  float vig=smoothstep(1.45,.25,length((sUv-.5)*vec2(sa,1.)*.95));
-  col*=mix(1.,vig,.75);
-  vec2 q=smoothstep(vec2(0.),vec2(.1),iuv)*smoothstep(vec2(0.),vec2(.1),1.-iuv);
+  float lit=clamp(att+trail*.55,0.,1.2);
+
+  /* self shadow: march from the surface toward the light through the height field */
+  float sh=1.;
+  vec2 ldir=(L.xy/max(L.z,.12))*uDepth*K;
+  for(int k=1;k<=SS;k++){
+    if(float(k)>uShSteps)break;
+    float fk=float(k)/uShSteps;
+    float hk=hh+(1.-hh)*fk;
+    vec2 us=uv+ldir*(hk-hh);
+    float blk=H(us)-hk;
+    sh=min(sh,1.-smoothstep(-.01,.05,blk)*.92);
+  }
+  float ao=.55+.45*smoothstep(.0,.35,hh+dc.r*.4);
+
+  vec3 col=base*uAmb*ao;
+  col+=base*uKey*lit*(.2+.95*diff)*sh*uGain*1.15;
+  col+=uKey*pow(max(dot(reflect(-L,N),vec3(0.,0.,1.)),0.),26.)*lit*sh*.16*uGain*(.3+dc.b);
+  /* rim light: from behind the logo, grazing the tops of the columns */
+  vec3 Lr=normalize(vec3(-.35,-.55,.5));
+  float rim=pow(max(dot(N,Lr),0.),2.)*smoothstep(.1,.6,hh)*(.35+dc.b);
+  col+=uRim*rim*.22*(.5+.5*uGain);
+
+  /* ---- light shafts between the columns (the height field is the occluder) ---- */
+  float rays=0.;
+  if(uRays>.5){
+    vec2 sun=uSun;
+    float acc=0.,dec=1.;
+    for(int r=0;r<RS;r++){
+      if(float(r)>=uRays)break;
+      float fr=(float(r)+hash(sUv*91.+uTime))/uRays;
+      vec2 sp=mix(uv,sun,fr);
+      float occ=smoothstep(.22,.55,H(sp));
+      acc+=(1.-occ)*dec; dec*=.93;
+    }
+    float toSun=length((uv-sun)/K);
+    rays=acc/uRays*exp(-toSun*1.5)*smoothstep(.0,.25,toSun);
+  }
+  col+=mix(uRim,uAcc,.35)*rays*(.28+.6*uHome)*uGain;
+
+  /* ---- ground mist, brighter where the light touches it ---- */
+  float mist=fbm(uv*vec2(ia,1.)*3.2+vec2(uTime*.018,-uTime*.011));
+  float mistAmt=smoothstep(.35,.8,mist)*(1.-hh)*(.5+.5*smoothstep(.0,.5,1.-dc.b));
+  col+=(uKey*.12+uAcc*.04)*mistAmt*(.08+lit*.7)*uGain;
+
+  /* ---- dust motes in 3 depth layers: they parallax with the camera ---- */
+  float dust=0.;
+  for(int dl2=0;dl2<3;dl2++){
+    float fl=float(dl2);
+    float sz=7.+fl*6.;
+    vec2 p=sUv*vec2(sa,1.)*sz+uCam*(.35+fl*.5)*(1.+fl)+vec2(uTime*(.03+.015*fl),-uTime*(.05+.02*fl))+fl*13.7;
+    vec2 id=floor(p),fp=fract(p);
+    float r=hash(id+fl*3.1);
+    vec2 o=vec2(hash(id+1.7),hash(id+9.2))*.7+.15;
+    float d=length(fp-o);
+    float tw=.55+.45*sin(uTime*(1.2+r*3.)+r*40.);
+    dust+=smoothstep(.07-fl*.012,.0,d)*step(.74,r)*tw*(.45-fl*.1);
+  }
+  col+=mix(uRim,vec3(1.),.35)*dust*(.12+lit*1.1)*(.4+.6*uGain);
+
+  /* ---- grade: the logo keeps its shading; in Home its colours follow the site palette ---- */
+  float lum=dot(col,vec3(.299,.587,.114));
+  /* purple in the bases and shadows, cyan on the lit edges of the columns: the site's own two colours */
+  vec3 hg=mix(uKey,uRim,smoothstep(.18,.85,hh*.7+lum*1.1));
+  col=mix(col,vec3(lum)*hg*1.55+col*.10,uHome*.9);
+
+  /* ---- vignette, picture edges ---- */
+  float vig=smoothstep(1.25,.15,length(gc*vec2(.9,1.1)));
+  col*=mix(1.,vig,.9);
+  vec2 q=smoothstep(vec2(0.),vec2(.1),uv)*smoothstep(vec2(0.),vec2(.1),1.-uv);
   col*=q.x*q.y;
-  /* flash flood */
-  col=mix(col,lc*1.5+vec3(.35),clamp(uFlash,0.,1.)*.88*(1.-.45*length(sUv-.5)));
-  col=1.-exp(-col*1.35);
-  col+=(hash(sUv*uRes+uTime)-.5)*.014;
-  gl_FragColor=vec4(col,1.);
+
+  /* ---- flash flood while diving in ---- */
+  float fl=clamp(uFlash,0.,1.);
+  vec3 fcol=mix(vec3(.62,.8,1.),mix(uKey,uRim,.5)*1.5+vec3(.25),uHome);
+  /* the flash is light blooming around the logo, not a flat wash: shapes stay readable until the very end */
+  float bloom=smoothstep(.0,.55,lum)*.9+.25;
+  col=col*(1.-fl*.5)+fcol*fl*bloom*(1.-.35*length(gc))*1.05;
+  /* filmic tone map: bright areas roll off instead of blowing out */
+  col=col*1.15;
+  col=(col*(2.51*col+.03))/(col*(2.43*col+.59)+.14);
+  col+=(hash(sUv*uRes+uTime)-.5)*.016;
+  gl_FragColor=vec4(clamp(col,0.,1.)*uFade,1.);
 }`;
 
 const MW = 512, MH = 288;
 const M = new Float32Array(MW * MH), U8 = new Uint8Array(MW * MH);
-const HW = 640, HH = 360;
 
 let fbEl = null, gl = null, prog = null, U = {}, tex = {}, imgEl = null, imgAR = 1672 / 941;
 
@@ -236,57 +327,31 @@ const initGL = () => {
   const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
   const loc = gl.getAttribLocation(prog, "p"); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-  ["uImg", "uH", "uM", "uRes", "uImgSize", "uPar", "uLight", "uCenter", "uTime", "uZoom", "uGain", "uFlash", "uBlur", "uHome", "uBump"]
+  ["uImg", "uD", "uM", "uRes", "uImgSize", "uCenter", "uCam", "uLight", "uSun", "uTime", "uZoom", "uDolly", "uGain", "uFlash", "uHome",
+   "uBump", "uDepth", "uSteps", "uShSteps", "uRays", "uAmb", "uLightH", "uFade", "uKey", "uRim", "uAcc"]
     .forEach(n => { U[n] = gl.getUniformLocation(prog, n); });
   const mk = unit => { const t = gl.createTexture(); gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, t);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); return t; };
-  tex.img = mk(0); tex.h = mk(1); tex.m = mk(2);
-  gl.uniform1i(U.uImg, 0); gl.uniform1i(U.uH, 1); gl.uniform1i(U.uM, 2);
+  tex.img = mk(0); tex.d = mk(1); tex.m = mk(2);
+  gl.uniform1i(U.uImg, 0); gl.uniform1i(U.uD, 1); gl.uniform1i(U.uM, 2);
   gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
   gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+  /* neutral depth until the real one arrives: flat ground, no relief */
+  gl.activeTexture(gl.TEXTURE1);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, 1, 1, 0, gl.RGB, gl.UNSIGNED_BYTE, new Uint8Array([0, 128, 0]));
   gl.activeTexture(gl.TEXTURE2);
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, MW, MH, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, U8);
   return true;
 };
 
-/* height map from the picture's own brightness: blurred, stretched, gamma-lifted */
-const buildHeight = img => {
-  const c = document.createElement("canvas"); c.width = HW; c.height = HH;
-  const x = c.getContext("2d", { willReadFrequently: true });
-  x.drawImage(img, 0, 0, HW, HH);
-  const d = x.getImageData(0, 0, HW, HH).data, n = HW * HH;
-  let a = new Float32Array(n), b = new Float32Array(n);
-  for (let i = 0; i < n; i++) a[i] = (d[i * 4] * 0.299 + d[i * 4 + 1] * 0.587 + d[i * 4 + 2] * 0.114) / 255;
-  const box = (src, dst, r, horiz) => {
-    const w = HW, h = HH, k = 1 / (2 * r + 1);
-    for (let y = 0; y < h; y++) for (let xx = 0; xx < w; xx++) {
-      let s = 0;
-      for (let o = -r; o <= r; o++) {
-        const px = horiz ? clamp(xx + o, 0, w - 1) : xx, py = horiz ? y : clamp(y + o, 0, h - 1);
-        s += src[py * w + px];
-      }
-      dst[y * w + xx] = s * k;
-    }
-  };
-  box(a, b, 2, true); box(b, a, 2, false); box(a, b, 2, true); box(b, a, 2, false);
-  const sorted = Float32Array.from(a).sort(), lo = sorted[(n * 0.02) | 0], hi = sorted[(n * 0.995) | 0];
-  const out = new Uint8Array(n * 4);
-  for (let i = 0; i < n; i++) {
-    const v = Math.pow(clamp((a[i] - lo) / Math.max(1e-4, hi - lo), 0, 1), 0.6);
-    out[i * 4] = out[i * 4 + 1] = out[i * 4 + 2] = v * 255; out[i * 4 + 3] = 255;
-  }
-  return out;
-};
-
-const uploadStatic = img => {
+const uploadStatic = (img, depth) => {
   gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex.img);
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img);
-  const h = buildHeight(img);
-  gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
-  gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, tex.h);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, HW, HH, 0, gl.RGBA, gl.UNSIGNED_BYTE, h);
-  gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+  if (depth) {
+    gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, tex.d);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, depth);
+  }
 };
 
 /* ------------------------------------------------------------------ light trail (CPU, soft-clouds) */
@@ -324,13 +389,18 @@ const coverScale = () => {
   const sa = cw / chh;
   return sa > imgAR ? [1, imgAR / sa] : [sa / imgAR, 1];
 };
-const baseZoom = () => {
-  const sa = cw / chh;
-  return Math.min(1.06, (0.82 * sa) / (0.352 * imgAR));
+/* the whole ring (0.352 x 0.532 of the picture) is always framed, never cropped */
+const fitZoom = (hFrac, wFrac) => {
+  const [sx, sy] = coverScale();
+  return Math.min(hFrac * sy / 0.532, wFrac * sx / 0.352);
 };
+const QT = [{ st: 12, sh: 4, ry: 8, dpr: 1 }, { st: 20, sh: 8, ry: 14, dpr: 1.25 }, { st: 30, sh: 14, ry: 22, dpr: 1.5 }];
+const lerp3 = (a, b, t) => [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)];
+const P_INTRO = { key: [0.50, 0.68, 0.96], rim: [0.66, 0.80, 0.98], acc: [0.44, 0.62, 0.95] };
+const P_HOME = { key: [0.52, 0.28, 1.0], rim: [0.10, 0.80, 1.0], acc: [0.92, 0.30, 0.90] };
 const screenToImg = (px, py) => {          // px,py 0..1 of the canvas box  →  image (u,d)
   const [sx, sy] = coverScale(), z = S.zoom;
-  return [0.5 + (px - 0.5) * sx / z, S.cd + (py - 0.5) * sy / z];
+  return [S.cu + (px - 0.5) * sx / z, S.cd + (py - 0.5) * sy / z];
 };
 const ringPoint = ang => [RING.cu + RING.ru * Math.sin(ang), RING.cd - RING.rd * Math.cos(ang)];
 
@@ -338,7 +408,7 @@ const resize = () => {
   const host = cv.parentElement; if (!host) return;
   const r = host.getBoundingClientRect();
   cw = Math.max(2, r.width); chh = Math.max(2, r.height);
-  dpr = Math.min(window.devicePixelRatio || 1, S.mode === "home" ? 1.15 : 1.5);
+  dpr = Math.min(window.devicePixelRatio || 1, QT[S.q].dpr, S.mode === "home" ? 1.15 : 1.5);
   const w = Math.round(cw * dpr), h = Math.round(chh * dpr);
   if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
   if (gl) gl.viewport(0, 0, w, h);
@@ -381,6 +451,12 @@ const setReady = () => {
 
 /* ------------------------------------------------------------------ frame loop */
 let last = performance.now(), raf = 0, glOK = false;
+const qParam = /[?&]q=([0-2])/.exec(location.search), forcedQ = !!qParam;
+const kDbgM = /[?&]tm3dk=([0-9.]+)/.exec(location.search);
+let dbgK = kDbgM ? +kDbgM[1] : null;                       // test hook: freeze the dive at a chosen point
+window.__tm3dK = v => { dbgK = v; };
+const enterK = now => (dbgK !== null ? dbgK : clamp((now - S.enterT0) / CONFIG.holdMs, 0, 1));
+S.q = qParam ? +qParam[1] : (!fine || (navigator.hardwareConcurrency || 8) <= 4 ? 1 : 2);
 const frame = now => {
   raf = requestAnimationFrame(frame);
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
@@ -406,7 +482,7 @@ const frame = now => {
     const ang = (S.shown / 100) * Math.PI * 2;
     lead = ringPoint(ang + 0.04 * Math.sin(now * 0.004)); a = 0.85; r = 27;
   } else if (S.mode === "enter") {
-    const k = clamp((now - S.enterT0) / CONFIG.holdMs, 0, 1);
+    const k = enterK(now);
     const ang = k * Math.PI * 6;
     lead = ringPoint(ang); a = 1; r = 40;
   } else {
@@ -432,46 +508,69 @@ const frame = now => {
   S.light[0] += (S.lightT[0] - S.light[0]) * Math.min(1, dt * 9);
   S.light[1] += (S.lightT[1] - S.light[1]) * Math.min(1, dt * 9);
 
-  /* parallax target: pointer, or a slow sway; scrolling Home adds depth */
+  /* camera: pointer orbit, or a slow cinematic drift; scrolling Home moves it */
+  const tt = now / 1000;
   const scrollK = S.mode === "home" ? clamp(scrollY / Math.max(1, innerHeight), 0, 1.5) : 0;
-  if (S.hasPointer && fine) { S.parT[0] = (S.mx - 0.5) * 2; S.parT[1] = (S.my - 0.5) * 2; }
-  else { S.parT[0] = Math.sin(now * 0.00031) * 0.7; S.parT[1] = Math.cos(now * 0.00023) * 0.5; }
-  S.par[0] += (S.parT[0] - S.par[0]) * Math.min(1, dt * 3);
-  S.par[1] += (S.parT[1] + scrollK * 0.9 - S.par[1]) * Math.min(1, dt * 3);
+  if (S.hasPointer && (now - S.lastMove) < 6000) { S.camT[0] = (S.mx - 0.5) * 2 * 0.95; S.camT[1] = (S.my - 0.5) * 2 * 0.6; }
+  else { S.camT[0] = Math.sin(tt * 0.23) * 0.5; S.camT[1] = Math.cos(tt * 0.17) * 0.25; }
 
-  /* dive-in */
+  /* framing + the dive-in */
+  const [, sy] = coverScale();
+  const zI = fitZoom(0.50, 0.66), cdI = RING.cd + (0.5 - 0.41) * sy / zI, zH = fitZoom(0.92, 0.74);
+  const rtl = document.documentElement.dir === "rtl" || document.documentElement.lang === "ar";
+  const [sxH] = coverScale(), cuH = RING.cu - ((rtl ? 0.47 : 0.53) - 0.5) * sxH / zH, cdH = RING.cd + (0.5 - 0.5) * sy / zH;
+  let dolly = 0, flashK = 0, homeMix = 0, gain = 1, amb = 0.42;
   if (S.mode === "enter") {
-    const k = clamp((now - S.enterT0) / CONFIG.holdMs, 0, 1);
-    const tSec = (now - S.enterT0) / 1000;
-    S.zoom = lerp(glOK ? baseZoom() : 1, glOK ? CONFIG.zoomEnd : 5, Math.pow(k, 2.5)) * (1 + 0.05 * Math.exp(-tSec * 9));   // small punch on the boom
-    S.cd = lerp(0.553, RING.cd, smooth(0, 0.8, k));
-    S.gain = lerp(1, 2.4, k);
-    S.blur = smooth(0.2, 1, k);
-    S.flash = smooth(0.7, 1, k);
-    if (flash) flash.style.opacity = (smooth(0.62, 0.98, k)).toFixed(3);
+    const k = enterK(now), tSec = (now - S.enterT0) / 1000;
+    S.zoom = lerp(zI, zI * 2.7, Math.pow(k, 2.3)) * (1 + 0.04 * Math.exp(-tSec * 9));      // small punch on the boom
+    S.cd = lerp(cdI, RING.cd, smooth(0, 0.85, k)); S.cu = 0.5;
+    dolly = Math.pow(k, 1.7); gain = lerp(1, 1.9, k); flashK = smooth(0.72, 1, k); homeMix = smooth(0.5, 1, k);
+    S.camT[0] = Math.sin(k * 2.4) * 0.55; S.camT[1] = -0.25 * k;
+    amb = lerp(0.42, 0.55, homeMix);
+    if (flash) flash.style.opacity = (smooth(0.66, 1, k) * 0.5).toFixed(3);
     if (k >= 1) toHome();
-  }
+  } else if (S.mode === "home") {
+    S.zoom = zH; S.cd = cdH; S.cu = cuH; homeMix = 1; amb = 0.3;
+    gain = lerp(1.5, 1.0, smooth(0, 1, (now - S.homeT0) / 3600));   // the light settles while the sound's tail fades
+    S.camT[1] += scrollK * 0.5;
+  } else { S.zoom = zI; S.cd = cdI; S.cu = 0.5; }
+  S.cam[0] += (S.camT[0] - S.cam[0]) * Math.min(1, dt * 2.6);
+  S.cam[1] += (S.camT[1] - S.cam[1]) * Math.min(1, dt * 2.6);
+  S.fade = S.mode === "loading" ? clamp((now - S.t0) / 1400, 0, 1) : 1;
 
-  /* Home: the light settles from bright to calm while the sound's tail fades out */
-  if (S.mode === "home") S.gain = lerp(1.7, 0.9, smooth(0, 1, (now - S.homeT0) / 3600));
+  /* adapt quality to the device: if frames are slow, drop the ray-march cost */
+  S.ema = S.ema * 0.94 + dt * 1000 * 0.06;
+  if (!forcedQ && S.ema > 27 && S.q > 0 && now - S.qT > 2500 && now - S.t0 > 2500) { S.q--; S.qT = now; S.ema = 18; resize(); }
 
   /* trail decay + upload */
-  const decay = Math.exp(-dt / CONFIG.trailSeconds);
+  const decay = Math.exp(-dt / (S.mode === "loading" ? 7 : CONFIG.trailSeconds));
   for (let i = 0; i < M.length; i++) { const v = M[i] * decay; M[i] = v; U8[i] = v * 255; }
 
-  if (!glOK) { if (fbEl) { fbEl.style.transformOrigin = "50% 46%"; fbEl.style.transform = "scale(" + S.zoom.toFixed(3) + ")"; } return; }
+  if (!glOK) { if (fbEl) { fbEl.style.transformOrigin = "50% 46%"; fbEl.style.transform = "scale(" + (S.mode === "enter" ? S.zoom / zI : 1).toFixed(3) + ")"; } return; }
+  const Q = QT[S.q], key = lerp3(P_INTRO.key, P_HOME.key, homeMix), rim = lerp3(P_INTRO.rim, P_HOME.rim, homeMix), acc = lerp3(P_INTRO.acc, P_HOME.acc, homeMix);
   gl.uniform2f(U.uRes, cv.width, cv.height);
   gl.uniform2f(U.uImgSize, 1672, 941);
-  gl.uniform2f(U.uPar, S.par[0], S.par[1]);
+  gl.uniform2f(U.uCenter, S.cu, S.cd);
+  gl.uniform2f(U.uCam, S.cam[0], S.cam[1]);
   gl.uniform2f(U.uLight, S.light[0], S.light[1]);
-  gl.uniform2f(U.uCenter, 0.5, S.cd);
-  gl.uniform1f(U.uTime, now / 1000);
+  gl.uniform2f(U.uSun, RING.cu + 0.02 * Math.sin(tt * 0.3), RING.cd - 0.17);
+  gl.uniform1f(U.uTime, tt);
   gl.uniform1f(U.uZoom, S.zoom);
-  gl.uniform1f(U.uGain, S.gain);
-  gl.uniform1f(U.uFlash, S.flash);
-  gl.uniform1f(U.uBlur, S.blur);
-  gl.uniform1f(U.uHome, S.home);
+  gl.uniform1f(U.uDolly, dolly);
+  gl.uniform1f(U.uGain, gain);
+  gl.uniform1f(U.uFlash, flashK);
+  gl.uniform1f(U.uHome, homeMix);
   gl.uniform1f(U.uBump, CONFIG.bump);
+  gl.uniform1f(U.uDepth, CONFIG.depth);
+  gl.uniform1f(U.uSteps, Math.min(30, Q.st + Math.round(dolly * 8)));
+  gl.uniform1f(U.uShSteps, Q.sh);
+  gl.uniform1f(U.uRays, S.mode === "home" ? Math.round(Q.ry * 0.7) : Q.ry);
+  gl.uniform1f(U.uAmb, amb);
+  gl.uniform1f(U.uLightH, CONFIG.lightH);
+  gl.uniform1f(U.uFade, smooth(0, 1, S.fade));
+  gl.uniform3f(U.uKey, key[0], key[1], key[2]);
+  gl.uniform3f(U.uRim, rim[0], rim[1], rim[2]);
+  gl.uniform3f(U.uAcc, acc[0], acc[1], acc[2]);
   gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, tex.m);
   gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, MW, MH, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, U8);
@@ -487,16 +586,16 @@ const startEnter = () => {
   root.classList.add("go");
   document.body.classList.add("tm3d-go");
   /* safety: even if the browser is slow to draw frames, the intro never blocks the site */
-  setTimeout(toHome, CONFIG.holdMs + 500);
+  if (dbgK === null) setTimeout(toHome, CONFIG.holdMs + 500);
   /* ignite the whole ring at once */
   for (let i = 0; i < 60; i++) { const p = ringPoint(i / 60 * Math.PI * 2); brush(p[0], p[1], .9, 34); }
-  if (reduce) { S.zoom = baseZoom(); setTimeout(toHome, 220); S.mode = "enter"; }
+  if (reduce) { setTimeout(toHome, 220); }
 };
 
 const toHome = () => {
   if (S.mode === "home") return;
-  S.mode = "home"; S.home = 1; S.flash = 0; S.blur = 0; S.gain = 1.7; S.homeT0 = performance.now();
-  S.zoom = CONFIG.homeZoom; S.cd = 0.5; M.fill(0);
+  S.mode = "home"; S.home = 1; S.homeT0 = performance.now();
+  M.fill(0);
   const hero = document.querySelector(".hero");
   if (hero && glOK) {
     cv.classList.add("tm3d-hero");
@@ -569,14 +668,15 @@ const boot = async () => {
     fb.onerror = () => { fb.src = CONFIG.img[1]; };
     root.insertBefore(fb, root.firstChild);
   }
-  S.zoom = glOK ? baseZoom() : 1;
+  S.zoom = glOK ? fitZoom(0.50, 0.66) : 1;
   raf = requestAnimationFrame(frame);
 
   const fontP = (document.fonts && document.fonts.load ? document.fonts.load('64px "Rubik Dirt"', "TIAMO0123456789%") : Promise.resolve())
     .catch(() => {}).then(() => { done("font"); revealTitle(); });
-  const imgP = loadImage().then(img => {
+  const loadDepth = () => new Promise(res => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = CONFIG.depthMap; });
+  const imgP = Promise.all([loadImage(), loadDepth()]).then(([img, dep]) => {
     imgEl = img; done("img");
-    if (img && glOK) { imgAR = img.naturalWidth / img.naturalHeight; try { uploadStatic(img); } catch (e) { console.warn("[intro3d]", e); } }
+    if (img && glOK) { imgAR = img.naturalWidth / img.naturalHeight; try { uploadStatic(img, dep); } catch (e) { console.warn("[intro3d]", e); } }
     done("prep");
   });
   const pageP = new Promise(res => {
