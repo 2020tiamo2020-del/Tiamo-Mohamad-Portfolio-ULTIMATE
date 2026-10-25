@@ -11,19 +11,29 @@
      smooth-scroll of the About button never starts the animation half way.
    ─ Clicking About while you are already there replays it.
    ─ Arabic / RTL works (bars sweep from the right).
+   ─ The two cards (portrait from the RIGHT, certificate from the LEFT) are driven together by
+     ONE trigger: both classes (.show / .cert-in) are switched in the same tick, so they enter
+     and retreat in sync, and they stay while any real part of the About block is on screen.
    To undo everything: remove about-fx.css + about-fx.js tags from index.html.
    ========================================================================== */
 (() => {
 "use strict";
 const sec = document.getElementById("about");
-if (!sec || !("animate" in Element.prototype)) return;
+const cert = document.getElementById("certBlock");
+/* if the effect cannot run, never leave the cards hidden */
+const unhide = () => {
+  cert && cert.classList.add("cert-in");
+  const ph = sec && sec.querySelector(".about-photo");
+  ph && ph.classList.add("show");
+};
+if (!sec || !("animate" in Element.prototype)) { unhide(); return; }
 
 const kicker = sec.querySelector(".section-kicker");
 const h2 = sec.querySelector(".section-title h2");
 const para = sec.querySelector(".section-title p");
 const photo = sec.querySelector(".about-photo");
 const header = document.querySelector(".site-header");
-if (!kicker || !h2 || !para) return;
+if (!kicker || !h2 || !para) { unhide(); return; }
 
 /* timeline (ms): when each block starts, how long one line sweep lasts, delay between lines */
 const PLAN = [
@@ -42,6 +52,18 @@ sec.classList.add("about-in");            /* keep the old slide-in system perman
 
 let state = "shown";                      /* armed | playing | shown */
 let anims = [], timers = [], splits = [];
+
+/* ---------- the two cards: portrait (from the right) + certificate (from the left) ---------- */
+const wide = () => matchMedia("(min-width:901px)").matches;
+const cardOn = { photo: false, cert: false };
+const setCard = (k, on) => {
+  if (cardOn[k] === on) return;
+  cardOn[k] = on;
+  const el = k === "photo" ? photo : cert;
+  el && el.classList.toggle(k === "photo" ? "show" : "cert-in", on);
+};
+const cardsIn  = () => { setCard("photo", true);  setCard("cert", true);  };   /* same tick = same frame = in sync */
+const cardsOut = () => { setCard("photo", false); setCard("cert", false); };
 
 const later = (fn, ms) => { const t = setTimeout(fn, ms); timers.push(t); return t; };
 const clearTimers = () => { timers.forEach(clearTimeout); timers = []; };
@@ -150,8 +172,8 @@ const play = () => {
     });
   });
 
-  /* portrait glides in together with the text */
-  later(() => photo && photo.classList.add("show"), 220);
+  /* portrait (right) and certificate (left) glide in together, right as the text starts */
+  if (wide()) later(cardsIn, 220);
 
   /* 2 · clean up: back to plain, selectable text */
   later(() => { finishPlain(); state = "shown"; }, end + 80);
@@ -174,7 +196,6 @@ const arm = () => {
   if (state === "playing") finishPlain();
   state = "armed";
   sec.classList.add("ab-armed");
-  photo && photo.classList.remove("show");
 };
 
 /* ---------- where is the heading block on screen? ---------- */
@@ -190,14 +211,43 @@ const visibility = () => {
 /* ---------- scroll speed + decision loop ---------- */
 let lastY = scrollY, lastT = performance.now(), speed = 0, raf = 0, pending = false;
 
+/* cards: how much of the About block (text + certificate + portrait) is on screen decides, not the heading alone */
+const CARD_IN = 0.40, CARD_OUT = 0.22;   /* share of the block; capped in px so tall/short blocks behave the same */
+const evalCards = () => {
+  const hb = header ? header.getBoundingClientRect().bottom : 80;
+  const vh = innerHeight || document.documentElement.clientHeight;
+  const bot = vh * 0.94;
+  const seen = (t, b) => Math.max(0, Math.min(b, bot) - Math.max(t, hb));
+  if (wide()) {
+    const rs = [kicker, cert, photo].filter(Boolean).map(e => e.getBoundingClientRect());
+    const t = Math.min(...rs.map(r => r.top)), b = Math.max(...rs.map(r => r.bottom));
+    const H = Math.max(1, b - t), v = seen(t, b);
+    if (!(cardOn.photo && cardOn.cert)) {
+      if (v >= Math.min(H * CARD_IN, 260)) { if (speed < SPEED_GATE) cardsIn(); else pending = true; }
+    } else if (v < Math.min(H * CARD_OUT, 150)) {
+      cardsOut();
+    }
+  } else {
+    /* phones: the cards are stacked, so each one follows its own position */
+    [["cert", cert, 0.3, 0.06], ["photo", photo, 0.25, 0.05]].forEach(([k, el, inAt, outAt]) => {
+      if (!el) return;
+      const r = el.getBoundingClientRect(), f = seen(r.top, r.bottom) / Math.max(1, r.height);
+      if (!cardOn[k]) { if (f >= inAt) { if (speed < SPEED_GATE) setCard(k, true); else pending = true; } }
+      else if (f < outAt) setCard(k, false);
+    });
+  }
+};
+
 const evaluate = () => {
   const vis = visibility();
   pending = false;
+  const textGoing = state === "armed" && vis >= SHOW_AT;   /* play() (or the speed gate) will bring the cards with the text */
   if (state === "armed") {
     if (vis >= SHOW_AT) { if (speed < SPEED_GATE) play(); else pending = true; }
   } else if (vis < HIDE_AT) {
     arm();
   }
+  if (!(wide() && textGoing)) evalCards();
 };
 const tick = () => {
   raf = 0;
@@ -210,13 +260,14 @@ const tick = () => {
 const kick = () => { if (!raf) raf = requestAnimationFrame(tick); };
 
 addEventListener("scroll", kick, { passive: true });
-addEventListener("resize", () => { if (state === "playing") { finishPlain(); clearTimers(); state = "shown"; photo && photo.classList.add("show"); } kick(); }, { passive: true });
+addEventListener("resize", () => { if (state === "playing") { finishPlain(); clearTimers(); state = "shown"; cardsIn(); } kick(); }, { passive: true });
 
 /* ---------- About button: replay when you are already there ---------- */
 document.querySelectorAll('a[href="#about"]').forEach(a => {
   a.addEventListener("click", () => {
     if (state !== "armed" && visibility() > 0.3) {
       arm();
+      if (wide()) cardsOut();     /* cards retreat and come back together with the replayed text */
       later(() => { speed = 0; kick(); }, 380);
     } else kick();
   }, true);
@@ -229,7 +280,7 @@ new MutationObserver(() => {
     clearTimers();
     finishPlain();
     state = "shown";
-    photo && photo.classList.add("show");
+    cardsIn();
   }
 }).observe(document.documentElement, { attributes: true, attributeFilter: ["lang", "dir"] });
 

@@ -46,9 +46,24 @@
 }
 #about .about-photo.show{translate:0 0;opacity:.95}
 #about .about-photo:not(.show){
-  transition:opacity .3s ease,translate .3s ease!important;
+  /* leaving: glides back to where it came from (same curve + length as the certificate below) */
+  transition:opacity .85s ease-in-out,translate 1.05s cubic-bezier(.65,0,.35,1)!important;
 }
 @media(max-width:900px){#about .about-photo{translate:0 40px}}
 
 /* 5 · the scroll-vitality script writes an inline opacity on titles every frame; keep About titles at full strength */
 #about:not(.ab-armed) :is(.section-kicker,.section-title h2){opacity:1!important}
+
+/* 6 · certificate: mirror of the portrait. Comes from the LEFT (both languages) while the portrait comes from the right,
+       same delay / length / curve, and goes back the same way. Uses `translate`, so the pointer lean (inline `transform`
+       from motion.js) is never overridden. `.cert-in` is switched by about-fx.js in the same tick as the portrait's `.show`. */
+.js #about #certBlock{
+  transform:none;
+  translate:-110px 0;opacity:0;filter:blur(5px);
+  transition:opacity .85s ease-in-out,translate 1.05s cubic-bezier(.65,0,.35,1),filter .85s ease-in-out;
+}
+.js #about #certBlock.cert-in{
+  translate:0 0;opacity:1;filter:blur(0);
+  transition:opacity 1.1s ease .15s,translate 1.3s cubic-bezier(.16,1,.3,1) .15s,filter 1.1s ease .15s;
+}
+@media(prefers-reduced-motion:reduce){.js #about #certBlock{translate:none;opacity:1;filter:none;transition:none}}
