@@ -17,7 +17,7 @@ body.gate-locked .tm-intro .tm-enter, body.gate-locked .tm-intro .tm-enter * { c
 .tm-intro-stage { position: absolute; inset: 0; z-index: 0; background: radial-gradient(ellipse 90% 80% at 50% 46%, #0b1226 0%, #070a16 55%, #04050c 100%); will-change: transform, opacity; }
 .tm-intro-stage.tm-flying { position: fixed; z-index: 10001; pointer-events: none; }
 .tm-intro-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-.tm-intro-stage.tm-nogl { background: radial-gradient(ellipse 90% 80% at 50% 46%, #0b1226 0%, #070a16 55%, #04050c 100%), url("images/intro-logo-bg.webp") center 46% / min(80vw, 120vh) no-repeat; background-blend-mode: normal; }
+.tm-intro-stage.tm-nogl { background: radial-gradient(ellipse 90% 80% at 50% 46%, #0b1226 0%, #070a16 55%, #04050c 100%), url("images/intro-logo-bg.webp?v=3") center 46% / min(80vw, 120vh) no-repeat; background-blend-mode: normal; }
 
 .tm-intro-ui { position: absolute; left: 0; right: 0; top: calc(42% + var(--tm-r, 160px) * 1.05 + 10px); z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 20px; pointer-events: none; text-align: center; transition: opacity .35s ease; }
 .tm-intro.tm-go .tm-intro-ui { opacity: 0; }
@@ -84,6 +84,14 @@ body.tm-zoom-lock { overflow: hidden; }
 }
 @media (max-width: 900px) { .tm-hero-cv { -webkit-mask-image: radial-gradient(ellipse 70% 52% at 50% 42%, #000 30%, transparent 100%); mask-image: radial-gradient(ellipse 70% 52% at 50% 42%, #000 30%, transparent 100%); } }
 .hero-logo-bg { position: absolute; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; transform-origin: 68% 50%; transform: scale(.86); -webkit-mask-image: linear-gradient(#000 0, #000 70%, transparent 100%); mask-image: linear-gradient(#000 0, #000 70%, transparent 100%); }
-.hero-logo-bg i { position: absolute; top: 0; bottom: 0; left: 18%; right: -18%; display: block; background: url("images/intro-logo-bg.webp") center / cover no-repeat; opacity: .6; }
+.hero-logo-bg i { position: absolute; top: 0; bottom: 0; left: 18%; right: -18%; display: block; background: url("images/intro-logo-bg.webp?v=3") center / cover no-repeat; opacity: .6; }
 @media (max-width: 900px) { .tm-intro-tag { letter-spacing: .32em; font-size: 9.5px; } .hero-logo-bg { transform-origin: 50% 50%; } .hero-logo-bg i { left: 0; right: 0; opacity: .5; } }
 @media (max-height: 600px) { .tm-intro-tag { display: none; } }
+
+/* ==========================================================================
+   v3 · ordered entrance: these parts stay hidden until the intro director (tm-intro.js) releases them,
+   one after the other, using the clock in index.html <head> (window.__tmTL).
+   A 14 s safety timer in tm-intro.js removes both classes whatever happens.
+   ========================================================================== */
+body.tm-pre-h .site-header { opacity: 0 !important; pointer-events: none !important; }
+body.tm-pre-r .st-rail, body.tm-pre-r .st-chap, body.tm-pre-r .float-wa, body.tm-pre-r .scroll-orbit { opacity: 0 !important; visibility: hidden !important; pointer-events: none !important; }

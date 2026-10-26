@@ -134,7 +134,11 @@
 
     if (document.body.classList.contains("gate-locked")) {
       const mo = new MutationObserver(() => {
-        if (!document.body.classList.contains("gate-locked")) { mo.disconnect(); setTimeout(() => { play(); loop(); }, window.__introHold || 0); }
+        if (!document.body.classList.contains("gate-locked")) {
+          mo.disconnect();
+          const go = () => { play(); loop(); };
+          if (window.__tmDirected && window.__tmAt) window.__tmAt("role", go); else go();   // wait until the role line itself slides in
+        }
       });
       mo.observe(document.body, { attributes: true, attributeFilter: ["class"] });
     } else { play(); loop(); }

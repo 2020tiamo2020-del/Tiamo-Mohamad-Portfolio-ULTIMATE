@@ -1,9 +1,22 @@
 /* ==========================================================================
-   TM INTRO — cinematic 3D relief logo
+   TM INTRO — cinematic 3D relief logo  (v3)
    The artwork is never redrawn or altered: it is the albedo of a real-time
-   relief (normal + height maps derived from it), lit by your pointer.
+   relief (normal + height maps derived from it), lit in real time.
    Loading -> Enter with sound -> camera pushes through the emblem -> the same
    3D logo settles, transparent and still reactive, behind Home only.
+
+   LIGHTING (what you see on the rocks and around the emblem)
+     1  Ambient    : cold blue-cyan wash over the whole scene
+     2  Fog        : thick volumetric fog (two drifting layers) hiding the horizon
+     3  Under-light: light rising from beneath the rocks and the emblem
+     4  Rim light  : ridges and rock edges outlined with a pale blue shimmer
+     5  Markers    : small coloured point lights (turquoise / green / pink) that flash
+     6  Contrast   : deep blacks against tiny flashes (filmic curve + vignette)
+
+   ORDER AFTER "ENTER" (all times come from window.__tmTL in index.html <head>)
+     0 ms  sound + camera push  ->  logo settles  ->  header  ->  music orb
+     -> title + copy -> role scramble -> welcome toast (+ its sound) -> side rail / floating buttons
+
    Raw WebGL, no libraries. If WebGL is unavailable, a flat fallback is used.
    ========================================================================== */
 (() => {
@@ -16,6 +29,7 @@
   const stage = document.getElementById("tmIntroStage");
   const btn = document.getElementById("enterGateBtn");
   if (!gate || !cv || !stage || !btn || !gate.classList.contains("tm-intro")) return;
+  window.__tmDirected = true;      /* script.js / story.js: "the intro director owns the timing now" */
 
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const lerp = (a, b, t) => a + (b - a) * t;
@@ -23,8 +37,11 @@
   const easeOut5 = (t) => 1 - Math.pow(1 - clamp(t, 0, 1), 5);
   const easeInOut = (t) => { t = clamp(t, 0, 1); return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; };
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const IMG_W = 1600, IMG_H = 900, RING_D = 560;          /* source size / the emblem ring diameter inside it */
-  const SRC = { alb: "images/intro-albedo.jpg", nor: "images/intro-normal.jpg", hei: "images/intro-height.jpg" };
+
+  /* artwork geometry: 1600x900 source, emblem ring is 404 px wide and its centre sits at (810,390) */
+  const IMG_W = 1600, IMG_H = 900, RING_D = 404, EMB_X = 810, EMB_Y = 390;
+  const SRC = { alb: "images/intro-albedo.jpg?v=3", nor: "images/intro-normal.jpg?v=3", hei: "images/intro-height.jpg?v=3" };
+  const NMK = 12;
 
   gate.classList.add("tm-js");
   const numEl = document.getElementById("tmLoadNum"), barEl = document.getElementById("tmLoadBar");
@@ -36,37 +53,68 @@
     "#ifdef GL_FRAGMENT_PRECISION_HIGH", "precision highp float;", "#else", "precision mediump float;", "#endif",
     "varying vec2 vP;",
     "uniform sampler2D uAlb,uNor,uHei;",
-    "uniform vec2 uRes,uZc,uTilt;",
+    "uniform vec2 uRes,uZc,uTilt,uEmb;",
     "uniform vec4 uRect;",
-    "uniform float uZoom,uAmb,uInt,uTime,uAlphaMode,uOpacity;",
+    "uniform float uZoom,uAmb,uInt,uTime,uAlphaMode,uOpacity,uRing,uMk,uGlow;",
     "uniform vec3 uCol;",
     "uniform vec4 uL[16];",
+    "uniform vec4 uM[" + NMK + "];",
     "float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}",
     "float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);",
     " return mix(mix(hash(i),hash(i+vec2(1.0,0.0)),f.x),mix(hash(i+vec2(0.0,1.0)),hash(i+vec2(1.0,1.0)),f.x),f.y);}",
-    "float fbm(vec2 p){float a=0.5,s=0.0;for(int i=0;i<4;i++){s+=a*noise(p);p*=2.03;a*=0.5;}return s;}",
+    "float fbm(vec2 p){float a=0.5,s=0.0;for(int i=0;i<3;i++){s+=a*noise(p);p*=2.03;a*=0.5;}return s;}",
+    /* marker palette: turquoise / green / soft pink */
+    "vec3 mkCol(float i){float k=mod(i,3.0);return k<0.5?vec3(0.08,0.95,0.86):(k<1.5?vec3(0.38,1.0,0.48):vec3(1.0,0.46,0.78));}",
     "void main(){",
     " vec2 p=vec2(vP.x,1.0-vP.y)*uRes;",
-    /* pass 1: height at uniform zoom, used to make nearer (taller) stone magnify more = real dolly parallax */
+    /* pass 1: height at uniform zoom, so nearer (taller) stone magnifies more = real dolly parallax */
     " vec2 q0=uZc+(p-uZc)/(1.0+uZoom);",
     " float h0=texture2D(uHei,(q0-uRect.xy)/uRect.zw).r;",
     " float sc=1.0+uZoom*(0.62+0.95*h0);",
     " vec2 q=uZc+(p-uZc)/sc;",
-    " q-=uTilt*(h0-0.32)*uRect.z*0.022;",                   /* pointer tilt = parallax by depth */
+    " q-=uTilt*(h0-0.32)*uRect.z*0.022;",
     " vec2 uv=(q-uRect.xy)/uRect.zw;",
     " vec3 col=vec3(0.0);float lum=0.0;",
     " if(uv.x>0.0&&uv.x<1.0&&uv.y>0.0&&uv.y<1.0){",
+    "  float t=uTime;",
     "  float h=texture2D(uHei,uv).r;",
     "  vec3 alb=texture2D(uAlb,uv).rgb;",
     "  vec3 n=normalize(texture2D(uNor,uv).rgb*2.0-1.0);",
-    "  vec3 base=uCol;",
-    "  col=alb*uAmb*base*1.2;",
+    "  float lumA=dot(alb,vec3(0.299,0.587,0.114));",
+    "  float rr=length(q-uEmb)/uRing;",
+    /* volumetric fog fields */
+    "  float f1=fbm(q*0.0042+vec2(t*0.030,-t*0.018));",
+    "  float f2=fbm(q*0.0095+vec2(-t*0.022,t*0.012)+7.3);",
+    "  float fog=smoothstep(0.30,0.86,f1*0.62+f2*0.38);",
+    "  float low=smoothstep(0.10,0.95,uv.y);",
+    /* 1 - cold ambient */
+    "  vec3 ac=pow(alb,vec3(1.7));",
+    "  col=ac*vec3(0.20,0.52,0.88)*uAmb;",
+    /* 3 - light rising from beneath the rocks and the emblem */
+    "  vec3 lu=normalize(vec3(0.0,0.9,0.5));",
+    "  float du=max(dot(n,lu),0.0);",
+    "  float lowLit=0.20+1.0*smoothstep(0.0,1.0,(q.y-uEmb.y)/(uRing*2.2)+0.30);",
+    "  col+=ac*vec3(0.22,0.66,1.0)*(0.06+du*1.7)*lowLit*uGlow*0.55;",
+    /* 4 - rim light on ridges and edges */
+    "  float edge=smoothstep(0.22,0.72,length(n.xy));",
+    "  float shim=0.62+0.38*sin(t*1.25+h*18.0+f2*6.0);",
+    "  col+=vec3(0.40,0.74,1.0)*edge*edge*(0.15+0.95*h)*shim*uGlow*0.46;",
+    /* emblem lines glow softly */
+    "  float em=1.0-smoothstep(0.92,1.06,rr);",
+    "  col+=vec3(0.55,0.85,1.0)*pow(lumA,2.4)*em*uGlow*0.50;",
+    /* 2 - fog, lit from below */
+    "  vec2 gq=(q-uEmb-vec2(0.0,uRing*0.85))/vec2(uRing*2.6,uRing*1.35);",
+    "  float under=exp(-dot(gq,gq)*1.4);",
+    "  vec3 fogC=vec3(0.014,0.050,0.100)+vec3(0.04,0.24,0.46)*under*uGlow*1.05;",
+    "  float fk=clamp(fog*(0.30+0.55*low),0.0,1.0)*0.85;",
+    "  col=col*(1.0-fk*0.62)+fogC*fk;",
+    /* pointer torch: raised stone catches the light first = ragged rocky edge */
     "  for(int i=0;i<16;i++){",
     "   vec4 L=uL[i];",
     "   if(L.w>0.001){",
     "    vec2 dv=L.xy-p;float d=length(dv);",
     "    float a=1.0-clamp(d/L.z,0.0,1.0);a=a*a*(3.0-2.0*a);",
-    "    float m=smoothstep(0.02,0.42,a*1.55+(h-0.38)*0.55);",   /* raised stone catches the light first -> rocky, ragged edge */
+    "    float m=smoothstep(0.02,0.42,a*1.55+(h-0.38)*0.55);",
     "    vec3 ld=normalize(vec3(dv/L.z,0.55));",
     "    float dif=max(dot(n,ld),0.0);",
     "    float sp=pow(max(dot(n,normalize(ld+vec3(0.0,0.0,1.0))),0.0),30.0);",
@@ -75,17 +123,36 @@
     "    col+=alb*(0.6+0.55*dif)*0.8*m*L.w*(uCol*0.9+0.25)+lc*sp*m*L.w*0.3+uCol*rim*m*L.w*0.2;",
     "   }",
     "  }",
-    "  float fog=fbm(q*0.0045+vec2(uTime*0.035,-uTime*0.02));",
-    "  col+=vec3(0.04,0.09,0.2)*fog*0.9*uAmb*3.0;",
+    /* 5 - coloured point lights (project markers) */
+    "  for(int i=0;i<" + NMK + ";i++){",
+    "   vec4 m=uM[i];",
+    "   if(m.z>0.0){",
+    "    vec2 mp=uRect.xy+m.xy*uRect.zw;",
+    "    float r=m.z*uRing;",
+    "    vec2 dv=mp-q;float d=length(dv);",
+    "    float fl=pow(max(0.0,sin(t*(0.55+0.5*fract(m.w*3.7))+m.w*40.0)),6.0);",
+    "    float k=(0.20+0.80*fl)*uMk;",
+    "    vec3 mc=mkCol(float(i));",
+    "    float a=1.0-clamp(d/(r*3.4),0.0,1.0);a*=a;",
+    "    vec3 ld=normalize(vec3(dv/(r*2.2),0.7));",
+    "    float dif=max(dot(n,ld),0.0);",
+    "    col+=mc*ac*(0.9+2.6*dif)*a*k*2.0;",
+    "    col+=mc*exp(-d*d/(r*r*0.05))*k*1.6;",
+    "    col+=mc*exp(-d/(r*1.5))*0.22*k*(0.5+fog);",
+    "   }",
+    "  }",
+    /* 6 - contrast: vignette, filmic curve, crushed blacks */
     "  float vk=mix(2.05,1.85,uAlphaMode);",
     "  float v=smoothstep(1.0,0.28,length((uv-0.5)*vec2(1.0,1.15)*vk));",
     "  v*=smoothstep(0.0,0.26,uv.x)*smoothstep(0.0,0.26,1.0-uv.x)*smoothstep(0.0,0.3,uv.y)*smoothstep(0.0,0.3,1.0-uv.y);",
     "  col*=v*uInt;",
-    "  col=1.0-exp(-col*0.8);",
+    "  col=1.0-exp(-col*1.15);",
+    "  col=max(col-0.006,0.0);",
+    "  col=pow(col,vec3(1.38));",
     "  lum=dot(col,vec3(0.299,0.587,0.114));",
     " }",
     " vec2 bp=(p/uRes-vec2(0.5,0.46))*vec2(1.0,1.25);",
-    " vec3 bg=mix(vec3(0.043,0.071,0.149),vec3(0.016,0.02,0.047),smoothstep(0.0,1.0,length(bp)*1.25));",
+    " vec3 bg=mix(vec3(0.030,0.058,0.120),vec3(0.012,0.016,0.040),smoothstep(0.0,1.0,length(bp)*1.25));",
     " float ef=mix(smoothstep(0.0,0.2,vP.x)*smoothstep(0.0,0.2,1.0-vP.x)*smoothstep(0.0,0.16,vP.y)*smoothstep(0.0,0.24,1.0-vP.y),1.0,uAlphaMode);",
     " lum*=ef;col*=ef;",
     " float a=mix(clamp(lum*2.8,0.0,1.0),1.0,uAlphaMode)*uOpacity;",
@@ -118,29 +185,39 @@
 
   let gl = null;
   try {
-    const opt = { alpha: true, premultipliedAlpha: true, antialias: false, depth: false, stencil: false, powerPreference: "high-performance" };
+    const opt = { alpha: true, premultipliedAlpha: true, antialias: false, depth: false, stencil: false, powerPreference: "default" };
     gl = cv.getContext("webgl", opt) || cv.getContext("experimental-webgl", opt);
   } catch (_) { gl = null; }
 
   let prog = null, pprog = null, U = {}, PU = {}, quad = null, pbuf = null, PN = 0;
   const tex = {};
-  const imgs = { alb: new Image(), nor: new Image(), hei: new Image() };
-  const state = { alb: false, nor: false, hei: false, font: false };
+  const imgs = {};
+  const state = { alb: 0, nor: 0, hei: 0 };       /* 0 = pending, 1 = loaded, -1 = gave up */
+  const markers = new Float32Array(NMK * 4);
 
-  const compile = (type, src) => {
-    const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
-    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
-    return s;
-  };
+  /* shaders compile in the background when the browser supports KHR_parallel_shader_compile, so the counter keeps moving */
+  let pse = null;
+  const compile = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s; };
   const link = (vs, fs) => {
-    const p = gl.createProgram(); gl.attachShader(p, compile(gl.VERTEX_SHADER, vs)); gl.attachShader(p, compile(gl.FRAGMENT_SHADER, fs));
-    gl.linkProgram(p);
-    if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+    const a = compile(gl.VERTEX_SHADER, vs), b = compile(gl.FRAGMENT_SHADER, fs), p = gl.createProgram();
+    gl.attachShader(p, a); gl.attachShader(p, b); gl.linkProgram(p);
+    p.__sh = [a, b];
     return p;
   };
-  const initGL = () => {
+  const done = (p) => !pse || gl.getProgramParameter(p, pse.COMPLETION_STATUS_KHR);
+  const verify = (p) => {
+    if (!gl.getProgramParameter(p, gl.LINK_STATUS)) {
+      const info = (p.__sh || []).map((x) => gl.getShaderInfoLog(x)).join(" ") + " " + gl.getProgramInfoLog(p);
+      throw new Error(info);
+    }
+  };
+  const startGL = () => {
+    pse = gl.getExtension("KHR_parallel_shader_compile");
     prog = link(VS, FS); pprog = link(PVS, PFS);
-    ["uAlb","uNor","uHei","uRes","uZc","uTilt","uRect","uZoom","uAmb","uInt","uTime","uAlphaMode","uOpacity","uL","uCol"].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
+  };
+  const initGL = () => {
+    verify(prog); verify(pprog);
+    ["uAlb","uNor","uHei","uRes","uZc","uTilt","uEmb","uRect","uZoom","uAmb","uInt","uTime","uAlphaMode","uOpacity","uRing","uMk","uGlow","uL","uM","uCol"].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
     ["uRes","uZc","uTilt","uZoom","uTime","uDpr","uAlphaMode"].forEach((n) => { PU[n] = gl.getUniformLocation(pprog, n); });
     quad = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, quad);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
@@ -157,6 +234,36 @@
     tex[key] = t;
   };
 
+  /* ------------------------------------------------------------ markers
+     Small coloured point lights sit on the raised stone around the emblem (picked from the height map). */
+  const pickMarkers = () => {
+    let rnd = 20261026;
+    const rand = () => { rnd = (rnd * 1664525 + 1013904223) >>> 0; return rnd / 4294967296; };
+    let hd = null, hw = 160, hh = 90;
+    try {
+      const c = document.createElement("canvas"); c.width = hw; c.height = hh;
+      const x = c.getContext("2d", { willReadFrequently: true });
+      x.drawImage(imgs.hei, 0, 0, hw, hh);
+      hd = x.getImageData(0, 0, hw, hh).data;
+    } catch (_) { hd = null; }
+    const R0 = RING_D / 2, list = [];
+    for (let tries = 0; tries < 900 && list.length < NMK; tries++) {
+      const ang = rand() * Math.PI * 2, rho = 1.18 + Math.pow(rand(), 0.8) * 2.5;
+      const px = EMB_X + Math.cos(ang) * rho * R0 * 1.12, py = EMB_Y + Math.sin(ang) * rho * R0 * 0.92;
+      if (px < IMG_W * 0.07 || px > IMG_W * 0.93 || py < IMG_H * 0.08 || py > IMG_H * 0.93) continue;
+      const hv = hd ? hd[((Math.floor(py / IMG_H * hh)) * hw + Math.floor(px / IMG_W * hw)) * 4] / 255 : 0.5;
+      if (hv < 0.40) continue;
+      if (list.some((m) => Math.hypot(m.x - px, m.y - py) < R0 * 0.62)) continue;
+      list.push({ x: px, y: py });
+    }
+    for (let i = 0; i < NMK; i++) {
+      const m = list[i];
+      markers[i*4] = m ? m.x / IMG_W : 0.5; markers[i*4+1] = m ? m.y / IMG_H : 0.5;
+      markers[i*4+2] = m ? 0.055 + rand() * 0.07 : 0;       /* radius in ring units (0 = off) */
+      markers[i*4+3] = rand();                              /* flash phase */
+    }
+  };
+
   /* ------------------------------------------------------------ geometry */
   let W = 0, H = 0, dpr = 1, mode = "intro";                       /* mode: intro | home */
   let rect = [0, 0, 1, 1], zc = [0, 0], R = 160, cx = 0, cy = 0;
@@ -169,7 +276,7 @@
       const target = Math.min(W * 0.8, H * 0.46);
       const S = target / RING_D; R = target / 2;
       cx = W / 2; cy = H * 0.42;
-      rect = [cx - IMG_W * S / 2, cy - IMG_H * S / 2, IMG_W * S, IMG_H * S];
+      rect = [cx - EMB_X * S, cy - EMB_Y * S, IMG_W * S, IMG_H * S];
       gate.style.setProperty("--tm-r", R.toFixed(1) + "px");
     } else {
       const r = host.getBoundingClientRect();
@@ -179,7 +286,7 @@
       const target = clamp(Math.min(H * 0.5, W * (wide ? 0.44 : 0.74)), 200, 560);
       const S = target / RING_D; R = target / 2;
       cx = wide ? W * 0.68 : W * 0.5; cy = wide ? H * 0.5 : H * 0.42;
-      rect = [cx - IMG_W * S / 2, cy - IMG_H * S / 2, IMG_W * S, IMG_H * S];
+      rect = [cx - EMB_X * S, cy - EMB_Y * S, IMG_W * S, IMG_H * S];
     }
     zc = [cx, cy];
     cv.width = Math.max(2, Math.round(W * dpr)); cv.height = Math.max(2, Math.round(H * dpr));
@@ -215,9 +322,9 @@
   }, { passive: true });
 
   /* ------------------------------------------------------------ frame loop */
-  let ready = false, entering = false, enterT = 0, handT = 0, raf = 0, alive = true, shown = 0, t0 = performance.now();
+  let ready = false, entering = false, enterT = 0, handT = 0, raf = 0, alive = true, shown = 0, t0 = performance.now(), litT = 0;
   let tilt = [0, 0], homeVisible = true, lastNow = 0, slow = 0, fast = 0, renderScale = 1;
-  let amb = 0.1, inten = 1, zoomV = 0, opac = 1, alphaMode = 1;
+  let amb = 0.76, inten = 1.15, zoomV = 0, opac = 1, alphaMode = 1, glow = 0, mk = 0;
   const ZOOM_MAX = 2.4, PUSH = 1500;
 
   const fillLights = (now) => {
@@ -236,13 +343,13 @@
       const f = clamp(1 - (now - lastMove) / 1300, 0, 1);
       lights[52] = px; lights[53] = py; lights[54] = torchR() * 0.8; lights[55] = f * (mode === "intro" ? 0.22 : 0.16);
     }
-    /* slot 14: the camera's own light drifting over the relief (always alive, so 3D is visible without a mouse) */
+    /* slot 14: a slow light drifting over the relief (keeps the 3D alive without a mouse) */
     {
       const t = (now - t0) / 1000;
       const gx = cx + Math.cos(t * 0.55) * R * 0.85 + Math.sin(t * 1.3) * R * 0.18;
       const gy = cy + Math.sin(t * 0.72) * R * 0.62;
       lights[56] = gx; lights[57] = gy; lights[58] = R * (mode === "intro" ? 1.15 : 1.1);
-      lights[59] = mode === "intro" ? (moved && now - lastMove < 2400 ? 0.05 : 0.14) : 0.13;
+      lights[59] = mode === "intro" ? (moved && now - lastMove < 2400 ? 0.05 : 0.10) : 0.10;
     }
     /* slot 15: ignition when entering */
     if (entering && mode === "intro") {
@@ -268,12 +375,13 @@
     gl.bindBuffer(gl.ARRAY_BUFFER, quad);
     const loc = gl.getAttribLocation(prog, "aPos"); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
     gl.uniform1i(U.uAlb, 0); gl.uniform1i(U.uNor, 1); gl.uniform1i(U.uHei, 2);
-    gl.uniform2f(U.uRes, W, H); gl.uniform2f(U.uZc, zc[0], zc[1]); gl.uniform2f(U.uTilt, tilt[0], tilt[1]);
+    gl.uniform2f(U.uRes, W, H); gl.uniform2f(U.uZc, zc[0], zc[1]); gl.uniform2f(U.uTilt, tilt[0], tilt[1]); gl.uniform2f(U.uEmb, cx, cy);
     gl.uniform4f(U.uRect, rect[0], rect[1], rect[2], rect[3]);
     gl.uniform1f(U.uZoom, zoomV); gl.uniform1f(U.uAmb, amb); gl.uniform1f(U.uInt, inten);
     gl.uniform1f(U.uTime, sec); gl.uniform1f(U.uAlphaMode, alphaMode); gl.uniform1f(U.uOpacity, opac);
-    gl.uniform4fv(U.uL, lights);
-    if (mode === "intro") gl.uniform3f(U.uCol, 0.40, 0.62, 1.0); else gl.uniform3f(U.uCol, 0.58, 0.46, 1.0);
+    gl.uniform1f(U.uRing, R); gl.uniform1f(U.uMk, mk); gl.uniform1f(U.uGlow, glow);
+    gl.uniform4fv(U.uL, lights); gl.uniform4fv(U.uM, markers);
+    if (mode === "intro") gl.uniform3f(U.uCol, 0.40, 0.68, 1.0); else gl.uniform3f(U.uCol, 0.50, 0.62, 1.0);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
     /* depth dust */
@@ -288,6 +396,7 @@
     gl.drawArrays(gl.POINTS, 0, mode === "home" ? 70 : PN);
   };
 
+  const MIN_LOAD = reduce ? 200 : 900;     /* the counter always has time to breathe, but never longer than this */
   const frame = (now) => {
     if (!alive) return;
     raf = requestAnimationFrame(frame);
@@ -300,37 +409,52 @@
       if (slow > 14 && renderScale > 0.5) { renderScale = Math.max(0.5, renderScale - 0.15); slow = 0; layout(); }
     }
 
-    /* loading counter (min ~2s so the scene can breathe) */
+    /* loading counter: REAL progress (three maps + GL set-up); the logo is guaranteed to be there when it hits 100 */
     if (!ready) {
-      const real = (state.alb ? 30 : 0) + (state.nor ? 30 : 0) + (state.hei ? 30 : 0) + (state.font ? 10 : 0);
-      const cap = clamp(((now - t0) / 2000) * 100, 0, 100);
+      const real = (state.alb ? 25 : 0) + (state.nor ? 25 : 0) + (state.hei ? 25 : 0) + (texDone || flat ? 25 : 0);
+      const cap = clamp(((now - t0) / MIN_LOAD) * 100, 0, 100);
       const target = Math.min(real, cap);
-      shown += (target - shown) * (1 - Math.exp(-dt / 110));
+      shown += (target - shown) * (1 - Math.exp(-dt / 90));
       if (real >= 100 && cap >= 100 && shown > 99.4) setReady();
       else { numEl.textContent = Math.floor(shown) + "%"; barEl.style.width = shown.toFixed(1) + "%"; }
     }
 
+    /* lights fade up once the scene is ready, so the first thing you see is the emblem emerging from black */
+    if (mode === "intro") {
+      if (texDone && !litT) litT = now;
+      const lt = litT ? now - litT : 0;
+      glow = easeOut(lt / 1900);
+      mk = easeOut((lt - 500) / 1800);
+      if (!entering) { amb = 0.76; inten = 1.15; }
+    }
     /* the camera push */
     if (entering && mode === "intro") {
       const t = (now - enterT) / PUSH;
       zoomV = ZOOM_MAX * easeInOut(t);
       inten = 1 + 0.08 * easeOut((now - enterT) / 900);
-      amb = 0.1 + 0.07 * easeOut((now - enterT) / 900);
+      amb = 0.76 + 0.10 * easeOut((now - enterT) / 900);
+      glow = 1; mk = 1 + 0.4 * easeOut((now - enterT) / 900);
     }
     /* the settle behind Home */
     if (mode === "home" && handT) {
       const t = now - handT;
       zoomV = ZOOM_MAX * (1 - easeOut5(t / 3800));
-      opac = 0.62 * easeOut(t / 1700);
-      amb = lerp(0.3, 0.24, easeOut(t / 2600));
+      opac = 0.66 * easeOut(t / 1700);
+      amb = lerp(0.78, 0.66, easeOut(t / 2600));
+      glow = lerp(1.0, 0.85, easeOut(t / 2600));
+      mk = lerp(1.2, 0.75, easeOut(t / 3200));
       if (t > 4000) handT = 0;
     }
     if (mode === "home" && !homeVisible) return;
-    if (!gl || !prog) return;
+    if (!gl || !prog || !texDone) return;
     draw(now);
   };
 
-  /* ------------------------------------------------------------- loading */
+  /* ------------------------------------------------------------- loading
+     The three maps start loading from <head> (window.__tmImgs). Each one retries on failure, and the Enter button
+     only unlocks when WebGL really holds the textures (or when we know for sure that the flat fallback will be used),
+     so the logo can never be missing after "Enter". */
+  let texDone = false, flat = false, failsafe = 0;
   const setReady = () => {
     ready = true;
     numEl.textContent = "100%"; barEl.style.width = "100%";
@@ -338,26 +462,39 @@
     btn.disabled = false;
     try { btn.focus({ preventScroll: true }); } catch (_) {}
   };
-  const one = (k) => () => { state[k] = true; };
-  imgs.alb.onload = one("alb"); imgs.alb.onerror = one("alb");
-  imgs.nor.onload = one("nor"); imgs.nor.onerror = one("nor");
-  imgs.hei.onload = one("hei"); imgs.hei.onerror = one("hei");
-  imgs.alb.src = SRC.alb; imgs.nor.src = SRC.nor; imgs.hei.src = SRC.hei;
-  if (document.fonts && document.fonts.load) {
-    Promise.race([document.fonts.load('30px "Rubik Dirt"', "0123456789%"), new Promise((r) => setTimeout(r, 2500))]).then(() => { state.font = true; }, () => { state.font = true; });
-  } else state.font = true;
-  const failsafe = setTimeout(() => { state.alb = state.nor = state.hei = state.font = true; }, 10000);
-
-  /* texture upload as soon as every map is in */
-  let texDone = false;
-  const tryUpload = () => {
-    if (texDone || !gl) return;
-    if (!(imgs.alb.naturalWidth && imgs.nor.naturalWidth && imgs.hei.naturalWidth)) return;
-    try { initGL(); upload("alb", 0); upload("nor", 1); upload("hei", 2); texDone = true; } catch (e) { console.warn("[tm-intro] GL init failed", e); gl = null; fallback(); }
+  const early = window.__tmImgs || {};
+  const grab = (k, tries) => {
+    const im = (tries === 0 && early[k]) ? early[k] : new Image();
+    imgs[k] = im;
+    const ok = () => { state[k] = 1; };
+    const bad = () => {
+      if (tries < 4) setTimeout(() => grab(k, tries + 1), 350 * (tries + 1));
+      else state[k] = -1;
+    };
+    im.onload = ok; im.onerror = bad;
+    if (tries > 0 || !im.src) im.src = SRC[k] + (tries ? "&r=" + tries + "_" + (Date.now() % 100000) : "");
+    if (im.complete) { if (im.naturalWidth) ok(); else if (tries > 0 || early[k]) bad(); }
   };
-  const upTimer = setInterval(() => { tryUpload(); if (texDone || !alive) clearInterval(upTimer); }, 80);
+  ["alb", "nor", "hei"].forEach((k) => grab(k, 0));
+  if (document.fonts && document.fonts.load) { try { document.fonts.load('30px "Rubik Dirt"', "0123456789%"); } catch (_) {} }
 
-  /* flat fallback (no WebGL / lost context) */
+  let started = false;
+  const tryUpload = () => {
+    if (texDone || flat || !gl) return;
+    /* step 1: shaders start compiling immediately, in parallel with the downloads */
+    if (!started) { started = true; try { startGL(); } catch (e) { console.warn("[tm-intro] GL start failed", e); gl = null; fallback(); return; } }
+    if (state.alb === -1 || state.nor === -1 || state.hei === -1) { fallback(); return; }
+    if (!(imgs.alb.naturalWidth && imgs.nor.naturalWidth && imgs.hei.naturalWidth)) return;
+    if (!done(prog) || !done(pprog)) return;
+    /* step 2: maps + shaders are both here */
+    try { initGL(); upload("alb", 0); upload("nor", 1); upload("hei", 2); pickMarkers(); texDone = true; layout(); }
+    catch (e) { console.warn("[tm-intro] GL init failed", e); gl = null; prog = null; fallback(); }
+  };
+  const upTimer = setInterval(() => { tryUpload(); if (texDone || flat || !alive) clearInterval(upTimer); }, 40);
+  /* after 12 s of nothing we stop waiting: the flat picture is shown instead of a dead gate */
+  failsafe = setTimeout(() => { if (!texDone) fallback(); }, 12000);
+
+  /* flat fallback (no WebGL / lost context / assets that never arrive) */
   let heroBgEl = null;
   function ensureFallbackBg() {
     const hero = document.querySelector(".hero");
@@ -367,9 +504,9 @@
     return el;
   }
   function fallback() {
+    flat = true;
     stage.classList.add("tm-nogl");
     cv.style.display = "none";
-    if (!ready) { state.alb = state.nor = state.hei = true; }
   }
   if (!gl) fallback();
 
@@ -384,57 +521,46 @@
   /* --------------------------------------------------------------- Enter */
   const heroEl = document.querySelector(".hero");
   const dropPh = () => { const ph = document.querySelector("[data-tm-ph]"); if (ph) ph.remove(); };
-
-  /* the first Home entrance (enhance.js) must wait for the camera push */
-  const prevRestagger = window.__restaggerHero;
-  window.__restaggerHero = function () {
-    const a = arguments, self = this;
-    if (!window.__tmGoing) { return typeof prevRestagger === "function" ? prevRestagger.apply(self, a) : undefined; }
-    const d = Math.max(0, (window.__tmIntroDelay || 0) - 180);
-    setTimeout(() => {
-      try { if (typeof prevRestagger === "function") prevRestagger.apply(self, a); } catch (_) {}
-      const h1 = document.querySelector(".hero h1"); if (h1) h1.classList.remove("hero-pending");
-      setTimeout(dropPh, 60);
-    }, d);
-  };
+  const at = (name, fn) => (window.__tmAt ? window.__tmAt(name, fn) : setTimeout(fn, (window.__tmTL && window.__tmTL[name]) || 0));
+  const FLOATERS = ".st-rail, .st-chap, .float-wa, .scroll-orbit";
+  const pop = (els, kf, opt) => els.forEach((el) => { try { el.animate(kf, Object.assign({ easing: "cubic-bezier(.16,1,.3,1)" }, opt)); } catch (_) {} });
 
   const enter = () => {
     if (entering || !ready) return;
     entering = true; enterT = performance.now();
     window.__tmGoing = true;
-    window.__tmIntroDelay = reduce ? 150 : 1150;
+    if (window.__tmMark) window.__tmMark();
     gate.classList.add("tm-go");
-    document.body.classList.add("tm-zoom-lock");
-    /* hold the title back + keep a gate stand-in (same id, hidden) so enhance.js does not start Home too early;
-       getElementById keeps returning the real gate while it exists */
-    setTimeout(() => {
-      const h1 = document.querySelector(".hero h1"); if (h1) h1.classList.add("hero-pending");
-      if (!document.querySelector("[data-tm-ph]")) { const ph = document.createElement("div"); ph.id = "enterGate"; ph.setAttribute("data-tm-ph", "1"); ph.hidden = true; ph.setAttribute("aria-hidden", "true"); document.body.appendChild(ph); }
-    }, 190);
+    document.body.classList.add("tm-zoom-lock", "tm-pre-h", "tm-pre-r");
+
+    /* the title is held back, and a hidden stand-in keeps "#enterGate" alive until Home starts */
+    const h1 = document.querySelector(".hero h1"); if (h1) h1.classList.add("hero-pending");
+    if (!document.querySelector("[data-tm-ph]")) { const ph = document.createElement("div"); ph.id = "enterGate"; ph.setAttribute("data-tm-ph", "1"); ph.hidden = true; ph.setAttribute("aria-hidden", "true"); document.body.appendChild(ph); }
 
     stage.style.transformOrigin = cx + "px " + cy + "px";
     stage.classList.add("tm-flying");
     document.body.appendChild(stage);
 
-    const useGL = !!(gl && prog);
+    const useGL = !!(gl && prog && texDone);
     const fadeDelay = reduce ? 0 : 1100, fadeDur = reduce ? 300 : 750;
-    let flat = null;
-    if (!useGL && !reduce) flat = stage.animate([{ transform: "scale(1)" }, { transform: "scale(3.4)" }], { duration: PUSH, easing: "cubic-bezier(.6,0,.18,1)", fill: "forwards" });
+    let flatAnim = null;
+    if (!useGL && !reduce) flatAnim = stage.animate([{ transform: "scale(1)" }, { transform: "scale(3.4)" }], { duration: PUSH, easing: "cubic-bezier(.6,0,.18,1)", fill: "forwards" });
     const fade = stage.animate([{ opacity: 1 }, { opacity: 0 }], { duration: fadeDur, delay: fadeDelay, easing: "ease-in-out", fill: "forwards" });
+    if (reduce) zoomV = ZOOM_MAX;
 
-    if (reduce) { /* no push for reduced motion: skip straight to the settle */ zoomV = ZOOM_MAX; }
-
+    /* ---- the director: one clock, one order ---- */
+    /* 1 · the stage hands the canvas to Home (invisible at this moment) and the logo settles in */
     setTimeout(() => {
-      /* hand the canvas to Home (it is invisible right now) */
       try { fade.cancel(); } catch (_) {}
-      try { if (flat) flat.cancel(); } catch (_) {}
+      try { if (flatAnim) flatAnim.cancel(); } catch (_) {}
       stage.remove();
       document.body.classList.remove("tm-zoom-lock");
+      if (window.__tmFire) window.__tmFire("handoff");
       if (useGL && heroEl) {
         host = heroEl; mode = "home";
         cv.className = "tm-hero-cv"; cv.style.display = "";
         heroEl.insertBefore(cv, heroEl.firstChild);
-        alphaMode = 0; opac = 0; zoomV = ZOOM_MAX; inten = 1; amb = 0.3;
+        alphaMode = 0; opac = 0; zoomV = ZOOM_MAX; inten = 1.15; amb = 0.78; glow = 1; mk = 1.2;
         pts = []; lastEmit = null; moved = false; entering = false;
         layout();
         handT = performance.now();
@@ -447,9 +573,31 @@
       }
       clearTimeout(failsafe);
     }, fadeDelay + fadeDur + 60);
+
+    /* 2 · the top bar glides down */
+    at("header", () => {
+      document.body.classList.remove("tm-pre-h");
+      const hd = document.querySelector(".site-header");
+      if (hd) pop([hd], [{ opacity: 0, translate: "0 -22px", filter: "blur(8px)" }, { opacity: 1, translate: "0 0", filter: "blur(0px)" }], { duration: 1100 });
+    });
+    /* 3 · the music orb flies in, then the title and copy (enhance.js plays them in its own order after this call) */
+    at("orb", () => {
+      const t = document.querySelector(".hero h1"); if (t) t.classList.remove("hero-pending");
+      try { if (typeof window.__restaggerHero === "function") window.__restaggerHero(); } catch (_) {}
+      setTimeout(dropPh, 60);
+    });
+    /* 4 · side rail + floating buttons arrive last (the toast and its sound are timed by script.js with the same clock) */
+    at("rail", () => {
+      document.body.classList.remove("tm-pre-r");
+      pop(Array.from(document.querySelectorAll(FLOATERS)), [{ opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)" }], { duration: 1000 });
+    });
+    /* safety net: nothing may stay hidden whatever happens */
+    setTimeout(() => { document.body.classList.remove("tm-pre-h", "tm-pre-r"); dropPh(); const t = document.querySelector(".hero h1"); if (t) t.classList.remove("hero-pending"); }, 14000);
   };
   btn.addEventListener("click", enter);
-  window.__tmIntroState = () => ({ mode, opac, zoomV, amb, homeVisible, W, H, dpr, rect, zc, handT, alphaMode, renderScale, glOK: !!(gl && prog) });
+  gate.addEventListener("click", (e) => { if (!e.target.closest || !e.target.closest("button")) btn.click(); });   /* a tap anywhere on the gate = the Enter button (so every part of the site gets the same click) */
+  gate.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") enter(); });
+  window.__tmIntroState = () => ({ mode, opac, zoomV, amb, glow, mk, homeVisible, W, H, dpr, rect, zc, handT, alphaMode, renderScale, texDone, flat, ready, glOK: !!(gl && prog) });
 
   /* if the gate is removed some other way, clean up */
   const mo = new MutationObserver(() => { if (!gate.isConnected && !window.__tmGoing && !document.getElementById("tmIntroStage")) { alive = false; cancelAnimationFrame(raf); mo.disconnect(); } });

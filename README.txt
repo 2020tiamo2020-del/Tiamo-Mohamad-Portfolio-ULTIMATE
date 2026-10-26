@@ -186,3 +186,102 @@ UPDATE 2026-10-22 (motion layer v7)
 UPDATE 2026-10-22 (v8)
 - Before & After: the first pair no longer stays on stand-in layers; it is measured as soon as its photos are loaded, so EDIT % appears on every pair.
 - Display visitor counter base +357 (script.js BASE = 3141).
+
+---
+UPDATE (About line-sweep) - one controller for the whole About block
+- New files: about-fx.js + about-fx.css (linked last in index.html). They replace 6 older About animations that were fighting each other:
+  .reveal fade on #about, the "about-in" slide-from-left (script.js), tm-hd word blur-rise + tm-st kicker rise + kicker counter (motion.js),
+  scroll-lit words on the About paragraph (enhance.js initWords) and the crystal-glass blocks on the headline (enhance.js initAboutGlass).
+- Behaviour: About is EMPTY while you are on Home / outside About. When About comes into view (About button, wheel down from Home, wheel up from below,
+  drag, touch) a bar sweeps every line (kicker, headline, paragraph) and uncovers the letters behind its edge. Leaving About re-arms it, so it replays on every visit.
+  It waits for the scroll to slow down before starting. Clicking About while already there replays it. Arabic sweeps from the right.
+- Tuning (top of about-fx.js): PLAN (start / duration / gap per block), SHOW_AT (how much of the heading must be visible, 0.55), SPEED_GATE (1400 px/s),
+  bar colours in about-fx.css (.ab-bar).
+- To undo: remove the about-fx.css / about-fx.js tags, restore class="reveal" on <section id="about">, and revert the small edits in motion.js, script.js and enhance.js
+  (search for "about-fx.js" in those files).
+
+---
+UPDATE 2026-10-24 (Story layer - inspired by the Imogen scroll-story site)
+- New files: story.css + story.js (+ a Google Font link for Instrument Serif). 3 tags added to index.html. Nothing else was edited.
+  To undo: delete the 2 files and the 3 tags (2 <link>, 1 <script>).
+- 1) Gate loader: % counter + bar + line-drawn TM monogram behind the logo. "Click to enter" appears when it reaches 100 (min ~1.7 s, max ~4 s).
+- 2) Text scramble: hero role words (AI Artist / Photoshop Designer / Video Creator / VFX) decode on entry, re-scramble one by one every ~4 s and on hover.
+     Section kickers (02 / SERVICES ...) scramble when they enter the screen (English only).
+- 3) Side rail (screens >= 1280px): dots + vertical progress line + active capsule; labels show on hover, always on screens >= 1560px. Click = smooth scroll (uses Lenis).
+- 4) Section aura: the background glow changes colour per section (home, about, services, work, creation, before/after, contact).
+- 5) Work PIN (desktop >= 1100px wide and >= 620px tall): the 2x2 grid becomes a sticky stack. Each category (A-D) pins in its own scene and the next
+     one slides up over it; the covered card shrinks slightly and fades out. A big ghost letter (A-D) sits beside the card and a chapter index (A B C D
+     with the current title) shows on the opposite side - click a letter to jump to that scene. Cards taller than the screen are scaled down to fit.
+     Below 1100px (tablet/phone) or with reduced motion, the normal grid stays (with a soft scale/fade scrub on screens >= 901px).
+     Tuning: dwell between scenes = margin-bottom 24vh in story.css (#work.st-pin .gallery-card); pin offset PIN_TOP (96) at the top of story.js scroll module.
+     To disable only the pin: in story.js change  const pin = ...  to  const pin = false;
+- 6) Headings: the <em> word in English headings is now serif italic (Instrument Serif, fallback Georgia). Arabic keeps its current style.
+- Reduced-motion: the scramble and scrub are skipped for visitors who enabled it in their OS.
+- Tuning: GL (scramble letters) and MIN/MAX (loader time) at the top of story.js; colours of each aura in story.css (.st-aura i[data-s=...]).
+
+---
+UPDATE 2026-10-24 (Process + Brief Builder)
+- New files: process-brief.css + process-brief.js. index.html: 2 new <section> blocks (#process before the "Find me" strip, #brief before #contact),
+  1 <link> + 1 <script> tag, and the kickers were renumbered: 06 PROCESS, 07 FIND ME, 08 START A PROJECT, 09 CONTACT.
+  story.js / story.css were also updated so the side rail (now 9 dots) and the section aura know the 2 new sections.
+- 06 / PROCESS: 6 steps (Brief, Direction, Creation, Color & Details, Review, Delivery). A line fills and a glowing dot travels down it while you scroll;
+  each step lights up when the dot reaches it. Mobile: single column with the line on the side. Edit the texts directly in index.html (data-en / data-ar).
+- 08 / START A PROJECT (Brief Builder): services (multi-select), usage, quantity slider, deadline slider, idea, name -> live summary card + "brief ready" meter.
+  "Send on WhatsApp" opens wa.me/201278536645 with the message written in the page language (English or Arabic); "Copy brief" copies the same text.
+  The send button is blocked until at least one service is chosen. Nothing is stored or sent to any server.
+  It is a <button> (not a link) on purpose: script.js rewrites every <a href*="wa.me/"> when the language changes.
+- To change the WhatsApp number: WA_NUMBER at the top of the Brief section in process-brief.js. To change the service chips: the #bbService block in index.html.
+- Undo: delete the 2 files, the 2 sections and the 2 tags; set the kickers back to 06 FIND ME / 07 CONTACT.
+
+---
+UPDATE 2026-10-24 (v2: cinematic scroll scenes - REPLACES process-brief.css / process-brief.js)
+- Delete process-brief.css and process-brief.js from your project. New files: scenes.css + scenes.js (index.html now links these two instead).
+- #process (06) and #brief (08) are now PINNED SCENES: the page stops, and the mouse wheel drives a horizontal film strip (content travels sideways, then the page continues down).
+  * 3D particle field (canvas, no libraries) that MORPHS while you scroll: Process = cloud > seed > moodboard planes > sphere > torus > loop > cube.
+  * Colour-bar wipe reveals on titles/text, outlined numerals that fill with gradient, giant outlined marquee words moving against the scroll,
+    velocity skew while scrolling fast, card-open / card-close edges, panels dwell on centre (soft snap), chapter dots + progress bar (click to jump).
+  * Brief = 6 scenes: intro, services (multi), usage, quantity + deadline sliders, idea + name, ready to send.
+    A live 3D ticket (tilts with the mouse, glare, holographic strip, progress ring) mirrors your answers; the particle ring reacts
+    (speed = urgency, size = quantity, colour = deadline) and chips are magnetic. "Skip to send" jumps to the last scene.
+  * Send on WhatsApp / Copy brief work exactly as before (message in the page language, button blocked until a service is chosen).
+- Works in Arabic (everything mirrors) and on phones (particles move above the text, ticket hidden, same scroll story).
+- Quality: smoothing is frame-rate independent; on slow devices the particle count is reduced automatically.
+- Tuning (scenes.js): particle count / palette / shape order inside the Process and Brief configs; panel scroll length = .sc-process / .sc-brief height in scenes.css.
+- Reduced-motion: no idle spin / skew; the scroll story itself still works because the visitor controls it.
+- Undo: delete scenes.css / scenes.js, the two <section class="sc ..."> blocks and the 2 tags in index.html.
+
+---
+UPDATE 2026-10-26 (TM intro v3 - new emblem picture, faster + reliable loading, ordered Home entrance)
+FILES CHANGED: index.html, tm-intro.js, tm-intro.css, script.js, story.js  |  NEW/REPLACED IMAGES in images/:
+  intro-albedo.jpg, intro-normal.jpg, intro-height.jpg (the three maps built from your new picture, ~320 KB in total) and
+  intro-logo-bg.webp (flat fallback for devices without WebGL). Upload all four to /images/ (same names as before, they overwrite the old ones).
+
+1) New intro picture + lighting (tm-intro.js, shader):
+   Ambient cold blue-cyan | volumetric fog (2 drifting layers, lit from below) | under-light rising from beneath the rocks and the emblem |
+   pale-blue rim light on ridges (shimmering) | 12 small coloured point lights on the raised stone (turquoise / green / pink, they flash) |
+   high contrast (deep blacks, filmic curve). The pointer torch still works on top of this.
+   Tuning (inside the shader / frame loop of tm-intro.js): amb (ambient level), uGlow (rim + under-light), uMk (marker brightness), NMK (number of markers),
+   marker colours = function mkCol(), fog strength = fk.
+   Emblem geometry of the new picture: RING_D = 404, EMB_X/EMB_Y = 810/390 (top of tm-intro.js). Change them only if you replace the picture again.
+   To replace the picture again: make 3 files from it - albedo (the picture), height (greyscale, bright = raised) and normal map - same names.
+
+2) Why the logo was slow / sometimes missing (and the fix):
+   - The three maps started downloading only AFTER every other script had run -> now they start from <head> and tm-intro.js is the first script.
+   - A failed/slow download used to be treated as "loaded", so Enter unlocked with no logo (-> you had to reload 4+ times). Now each map retries
+     (4 times), and Enter unlocks only when WebGL really holds the textures. If something is truly broken, after 12 s the flat picture is used.
+   - Shaders compile in the background (KHR_parallel_shader_compile) and the forced "high-performance GPU" request was removed (it can add seconds
+     on laptops with two graphics cards). The artificial 2 s minimum wait was cut to 0.9 s (real progress is shown).
+   - Clicks on Enter before it is ready are ignored; tapping anywhere on the gate or pressing Enter/Space now behaves exactly like the button.
+   - ?v=3 was added to the image URLs so browsers do not keep the old pictures.
+
+3) Ordered Home entrance - ONE clock (index.html <head>, window.__tmTL, milliseconds after the click):
+     0     welcome sound + camera push through the emblem
+     logo  (~1900)  the 3D logo settles behind Home
+     header (2300)  top bar glides down
+     orb   (2900)   music orb flies in, then title, role line, text and buttons follow (enhance.js order)
+     role  (4300)   role words decode (AI Artist / Photoshop Designer ...)
+     toast (6300)   welcome notification + toast sound
+     rail  (6900)   side rail, scroll button
+   Each step waits for the previous one to really happen (+ a gap, see DEP in the same script), so on a slow phone the sequence stretches
+   instead of everything appearing together. To speed up / slow down: edit the numbers in TL and DEP. Reduced-motion = about 8x faster.
+   Safety net: after 14 s nothing can stay hidden. Old behaviour returns automatically if tm-intro.js is missing (window.__tmDirected).

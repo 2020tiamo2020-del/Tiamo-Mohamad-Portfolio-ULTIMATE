@@ -2,6 +2,41 @@
 <html lang="en" dir="ltr">
 <head>
 <meta charset="utf-8"><style>html,body{background:#05040a}</style><meta name="viewport" content="width=device-width,initial-scale=1">
+<script>
+/* TM intro: (1) start the three 3D maps NOW (they used to start only after every other script had run),
+   (2) one shared clock for everything that happens after "Enter". Times are ms after the click. Tune them here. */
+(function(){
+  var im={};["alb","nor","hei"].forEach(function(k){var i=new Image();i.decoding="async";try{i.fetchPriority="high"}catch(e){}i.src={alb:"images/intro-albedo.jpg?v=3",nor:"images/intro-normal.jpg?v=3",hei:"images/intro-height.jpg?v=3"}[k];im[k]=i});
+  window.__tmImgs=im;
+  var red=false;try{red=matchMedia("(prefers-reduced-motion: reduce)").matches}catch(e){}
+  var k=red?0.12:1, T0=0;
+  var TL={ logo:1900,    /* the 3D logo settles behind Home              */
+           header:2300,  /* top bar glides down                          */
+           orb:2900,     /* music orb flies in, then title + copy follow */
+           role:4300,    /* role words (AI Artist / Photoshop ...) decode */
+           toast:6300,   /* welcome notification + its sound             */
+           rail:6900 };  /* side rail + floating buttons                 */
+  for(var n in TL)TL[n]=Math.round(TL[n]*k);
+  window.__tmTL=TL;
+  window.__tmMark=function(){if(!T0)T0=performance.now()};
+  /* every step waits for its own time AND for the step before it to have really happened (plus a gap),
+     so on a slow device the sequence stretches instead of collapsing into one pile-up */
+  var F={}, DEP={header:["handoff",450],orb:["header",650],role:["orb",1150],toast:["orb",3500],rail:["toast",500]};
+  window.__tmFire=function(n){F[n]=performance.now()};
+  window.__tmAt=function(name,fn){
+    (function go(){
+      var now=performance.now(), t=TL[name]||0, e=T0?now-T0:0, wait=Math.max(0,t-e), d=DEP[name];
+      if(d && e<t+9000){
+        if(!F[d[0]]){setTimeout(go,100);return}
+        wait=Math.max(wait,F[d[0]]+d[1]*k-now);
+      }
+      if(wait>4){setTimeout(go,wait);return}
+      F[name]=performance.now(); fn();
+    })();
+  };
+})();
+</script>
+
 <meta name="description" content="Tiamo Mohamad is an AI Artist, Photoshop Designer, Video Creator &amp; VFX artist creating cinematic visuals, photo manipulation, reels, web design, book covers and creative digital experiences.">
 <title>Tiamo Mohamad | AI Artist, Photoshop Designer &amp; Video Creator</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,9 +53,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="story.css?v=1">
 <link rel="stylesheet" href="scenes.css?v=1">
-<link rel="stylesheet" href="tm-intro.css?v=2">
+<link rel="stylesheet" href="tm-intro.css?v=3">
 <link rel="icon" href="images/favicon.png" type="image/png" sizes="32x32">
 <link rel="preconnect" href="https://gc.zgo.at"><link rel="prefetch" href="audio/welcome.mp3"><link rel="prefetch" href="audio/lang.mp3">
+<link rel="preload" as="image" href="images/intro-albedo.jpg?v=3" fetchpriority="high"><link rel="preload" as="image" href="images/intro-normal.jpg?v=3" fetchpriority="high"><link rel="preload" as="image" href="images/intro-height.jpg?v=3" fetchpriority="high">
 <link rel="preload" as="image" href="images/main-logo.webp" type="image/webp">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Tiamo Mohamad">
@@ -627,8 +663,8 @@
 </footer><button class="music-mini" id="tmMini" type="button" aria-label="Pause music" tabindex="-1"><span class="mm-phones" aria-hidden="true"><i class="mm-band"></i><i class="mm-cup mm-l"></i><i class="mm-cup mm-r"></i><i class="mm-led mm-led-l"></i><i class="mm-led mm-led-r"></i></span><span class="mm-eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span></button>
 <button class="scroll-orbit" id="scrollOrbit" type="button" aria-label="Scroll to bottom"><span class="scroll-orbit-core">⌄</span><span class="scroll-orbit-ring"></span><span class="scroll-orbit-label" data-en="DOWN" data-ar="لأسفل">DOWN</span></button>
 <div class="media-lightbox" id="mediaLightbox" role="dialog" aria-modal="true" aria-label="Image viewer" aria-hidden="true"><button class="lightbox-close" type="button" aria-label="Close">×</button><button class="lightbox-prev" type="button" aria-label="Previous">‹</button><button class="lightbox-next" type="button" aria-label="Next">›</button><div class="lightbox-stage"><img id="lightboxImage" alt="" loading="lazy"><div class="lightbox-count" id="lightboxCount" aria-live="polite"></div><div class="lightbox-caption" data-en="CLICK OUTSIDE TO CLOSE · ESC" data-ar="اضغط خارج الصورة للإغلاق · ESC">CLICK OUTSIDE TO CLOSE · ESC</div></div></div><div id="toastHost" class="toast-host" aria-live="polite" aria-relevant="additions"></div>
-<script src="script.js?v=8" defer></script><script src="creation.js" defer></script><script src="motion.js?v=9" defer></script><script src="enhance.js?v=8" defer></script><script src="about-fx.js?v=2" defer></script>
-<script src="about-reveal.js?v=1" defer></script><script src="creation-fx.js?v=1" defer></script><script src="story.js?v=1" defer></script><script src="scenes.js?v=1" defer></script><script src="tm-intro.js?v=3" defer></script><script id="contact-snap">
+<script src="tm-intro.js?v=3" defer></script><script src="script.js?v=9" defer></script><script src="creation.js" defer></script><script src="motion.js?v=9" defer></script><script src="enhance.js?v=8" defer></script><script src="about-fx.js?v=2" defer></script>
+<script src="about-reveal.js?v=1" defer></script><script src="creation-fx.js?v=1" defer></script><script src="story.js?v=2" defer></script><script src="scenes.js?v=1" defer></script><script id="contact-snap">
 /* Contact link framing: the view lands with the header sitting right under the Before/After pager arrows,
    i.e. "Find Me" starts directly under the header and Contact + footer follow. Pure layout maths, nothing else is touched. */
 (function(){

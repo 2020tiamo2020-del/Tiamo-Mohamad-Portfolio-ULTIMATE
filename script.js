@@ -1988,8 +1988,7 @@ updateScrollOrbit(true);
   let welcomed = false;
   let welcomeAudio = null;
   try {
-    welcomeAudio = document.getElementById("tm3d") ? null : new Audio("audio/welcome.mp3");   /* the 3D intro plays its own sound (intro3d.js) */
-    if (!welcomeAudio) throw 0;
+    welcomeAudio = new Audio("audio/welcome.mp3");
     welcomeAudio.preload = "metadata";
     welcomeAudio.playsInline = true;
     welcomeAudio.setAttribute("playsinline", "");
@@ -2192,7 +2191,10 @@ updateScrollOrbit(true);
 
   const enterPortfolio = () => {
     if (welcomed) return;
+    // the intro (tm-intro.js) unlocks "Enter" only when the 3D logo is really loaded - until then clicks are ignored
+    if (gate && gate.classList.contains("tm-intro") && !gate.classList.contains("is-ready")) return;
     welcomed = true;
+    if (window.__tmMark) window.__tmMark();   // starts the shared intro clock (window.__tmTL, see index.html <head>)
     const ar = _isAr();
     const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -2238,8 +2240,8 @@ updateScrollOrbit(true);
         } catch (_) {}
         showWelcomeToast();
       };
-      // ~ after logo land (visual done) — synced with toast.mp3, not enter track length
-      setTimeout(show, 950 + (window.__introHold || 0));
+      // with the TM intro: after the logo, bar, orb and title have all arrived (window.__tmTL.toast); otherwise ~1 s
+      if (window.__tmDirected && window.__tmAt) window.__tmAt("toast", show); else setTimeout(show, 950);
     };
 
     // Particles swirl to logo center
@@ -2264,11 +2266,11 @@ updateScrollOrbit(true);
     try { window.__startMainParticles && window.__startMainParticles(); } catch(_){}
         setTimeout(() => gate.remove(), 500);
       }
-      setTimeout(() => {
+      if (!window.__tmDirected) setTimeout(() => {   // with the TM intro, tm-intro.js starts Home at its own moment
         const h1 = document.querySelector(".hero h1");
         if (h1) h1.classList.remove("hero-pending");
         if (typeof window.__restaggerHero === "function") window.__restaggerHero();
-      }, 180 + (window.__introHold || 0));
+      }, 180);
       scheduleWelcomeToast();
     };
 
@@ -2332,11 +2334,11 @@ updateScrollOrbit(true);
       gate.classList.add("is-leaving");
       setTimeout(() => gate.remove(), 480);
       // Hero title drops in AFTER the gate opens (visible animation)
-      setTimeout(() => {
+      if (!window.__tmDirected) setTimeout(() => {
         const h1 = document.querySelector(".hero h1");
         if (h1) h1.classList.remove("hero-pending");
         if (typeof window.__restaggerHero === "function") window.__restaggerHero();
-      }, 200 + (window.__introHold || 0));
+      }, 200);
       // Welcome toast waits until enter sound finishes (or scene fully settled)
       scheduleWelcomeToast();
     };
