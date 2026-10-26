@@ -6,7 +6,7 @@
 /* TM intro: (1) start the three 3D maps NOW (they used to start only after every other script had run),
    (2) one shared clock for everything that happens after "Enter". Times are ms after the click. Tune them here. */
 (function(){
-  var im={};["alb","nor","hei"].forEach(function(k){var i=new Image();i.decoding="async";try{i.fetchPriority="high"}catch(e){}i.src={alb:"images/intro-albedo.jpg?v=3",nor:"images/intro-normal.jpg?v=3",hei:"images/intro-height.jpg?v=3"}[k];im[k]=i});
+  var im={};["alb","nor","hei"].forEach(function(k){var i=new Image();i.decoding="async";try{i.fetchPriority="high"}catch(e){}i.src={alb:"images/intro-albedo.jpg?v=4",nor:"images/intro-normal.jpg?v=4",hei:"images/intro-height.jpg?v=4"}[k];im[k]=i});
   window.__tmImgs=im;
   var red=false;try{red=matchMedia("(prefers-reduced-motion: reduce)").matches}catch(e){}
   var k=red?0.12:1, T0=0;
@@ -53,10 +53,12 @@
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="story.css?v=1">
 <link rel="stylesheet" href="scenes.css?v=1">
-<link rel="stylesheet" href="tm-intro.css?v=3">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Michroma&display=swap" media="print" onload="this.media='all'"><noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Michroma&display=swap"></noscript>
+<link rel="stylesheet" href="tm-intro.css?v=4">
 <link rel="icon" href="images/favicon.png" type="image/png" sizes="32x32">
 <link rel="preconnect" href="https://gc.zgo.at"><link rel="prefetch" href="audio/welcome.mp3"><link rel="prefetch" href="audio/lang.mp3">
-<link rel="preload" as="image" href="images/intro-albedo.jpg?v=3" fetchpriority="high"><link rel="preload" as="image" href="images/intro-normal.jpg?v=3" fetchpriority="high"><link rel="preload" as="image" href="images/intro-height.jpg?v=3" fetchpriority="high">
+<link rel="preload" as="image" href="images/intro-albedo.jpg?v=4" fetchpriority="high"><link rel="preload" as="image" href="images/intro-normal.jpg?v=4" fetchpriority="high"><link rel="preload" as="image" href="images/intro-height.jpg?v=4" fetchpriority="high">
 <link rel="preload" as="image" href="images/main-logo.webp" type="image/webp">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Tiamo Mohamad">
@@ -544,22 +546,18 @@
 <div id="enterGate" class="enter-gate tm-intro" role="dialog" aria-modal="true" aria-label="Enter portfolio">
   <div class="tm-intro-stage" id="tmIntroStage" aria-hidden="true"><canvas id="tmIntroCv"></canvas></div>
   <div class="tm-intro-ui">
-    <div class="tm-intro-brand">
-      <span class="tm-intro-name tm-gl" data-text="TIAMO MOHAMAD">TIAMO MOHAMAD</span>
-      <span class="tm-intro-tag" data-en="Creative digital portfolio" data-ar="معرض أعمال رقمي إبداعي">Creative digital portfolio</span>
-    </div>
-    <div class="tm-intro-act">
-      <div class="tm-intro-load" aria-live="polite">
-        <span class="tm-load-num" id="tmLoadNum">0%</span>
-        <i class="tm-load-bar"><b id="tmLoadBar"></b></i>
-        <span class="tm-load-label" data-en="Loading" data-ar="جارٍ التحميل">Loading</span>
-      </div>
-    </div>
+    <span class="tm-intro-name" id="tmName">TIAMO MOHAMAD</span>
+    <span class="tm-intro-tag"><i></i><em data-en="Creative digital portfolio" data-ar="معرض أعمال رقمي إبداعي">Creative digital portfolio</em><i></i></span>
+  </div>
+  <div class="tm-intro-load" aria-live="polite">
+    <div class="tm-load-top"><span class="tm-load-num" id="tmLoadNum">000</span><span class="tm-load-pct">%</span></div>
+    <i class="tm-load-bar"><b id="tmLoadBar"></b></i>
+    <span class="tm-load-label" id="tmLoadMsg" data-en="Waking the stone" data-ar="إيقاظ الحجر">Waking the stone</span>
   </div>
   <button type="button" class="tm-enter" id="enterGateBtn">
     <i class="tm-c tl"></i><i class="tm-c tr"></i><i class="tm-c bl"></i><i class="tm-c br"></i>
-    <span class="tm-enter-word tm-gl" data-en="Enter" data-ar="ادخل" data-text="Enter">Enter</span>
-    <span class="tm-enter-sub" data-en="with sound" data-ar="بالصوت">with sound</span>
+    <span class="tm-enter-word" data-en="Enter" data-ar="ادخل">Enter</span>
+    <span class="tm-enter-sub"><span class="tm-eq" aria-hidden="true"><b></b><b></b><b></b><b></b><b></b></span><span data-en="with sound" data-ar="بالصوت">with sound</span></span>
   </button>
 </div>
 <div id="cursorDot" class="cursor-dot" aria-hidden="true"></div>
@@ -663,7 +661,7 @@
 </footer><button class="music-mini" id="tmMini" type="button" aria-label="Pause music" tabindex="-1"><span class="mm-phones" aria-hidden="true"><i class="mm-band"></i><i class="mm-cup mm-l"></i><i class="mm-cup mm-r"></i><i class="mm-led mm-led-l"></i><i class="mm-led mm-led-r"></i></span><span class="mm-eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span></button>
 <button class="scroll-orbit" id="scrollOrbit" type="button" aria-label="Scroll to bottom"><span class="scroll-orbit-core">⌄</span><span class="scroll-orbit-ring"></span><span class="scroll-orbit-label" data-en="DOWN" data-ar="لأسفل">DOWN</span></button>
 <div class="media-lightbox" id="mediaLightbox" role="dialog" aria-modal="true" aria-label="Image viewer" aria-hidden="true"><button class="lightbox-close" type="button" aria-label="Close">×</button><button class="lightbox-prev" type="button" aria-label="Previous">‹</button><button class="lightbox-next" type="button" aria-label="Next">›</button><div class="lightbox-stage"><img id="lightboxImage" alt="" loading="lazy"><div class="lightbox-count" id="lightboxCount" aria-live="polite"></div><div class="lightbox-caption" data-en="CLICK OUTSIDE TO CLOSE · ESC" data-ar="اضغط خارج الصورة للإغلاق · ESC">CLICK OUTSIDE TO CLOSE · ESC</div></div></div><div id="toastHost" class="toast-host" aria-live="polite" aria-relevant="additions"></div>
-<script src="tm-intro.js?v=3" defer></script><script src="script.js?v=9" defer></script><script src="creation.js" defer></script><script src="motion.js?v=9" defer></script><script src="enhance.js?v=8" defer></script><script src="about-fx.js?v=2" defer></script>
+<script src="tm-intro.js?v=4" defer></script><script src="script.js?v=9" defer></script><script src="creation.js" defer></script><script src="motion.js?v=9" defer></script><script src="enhance.js?v=8" defer></script><script src="about-fx.js?v=2" defer></script>
 <script src="about-reveal.js?v=1" defer></script><script src="creation-fx.js?v=1" defer></script><script src="story.js?v=2" defer></script><script src="scenes.js?v=1" defer></script><script id="contact-snap">
 /* Contact link framing: the view lands with the header sitting right under the Before/After pager arrows,
    i.e. "Find Me" starts directly under the header and Contact + footer follow. Pure layout maths, nothing else is touched. */

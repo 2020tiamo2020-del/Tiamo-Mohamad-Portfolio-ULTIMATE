@@ -285,3 +285,30 @@ FILES CHANGED: index.html, tm-intro.js, tm-intro.css, script.js, story.js  |  NE
    Each step waits for the previous one to really happen (+ a gap, see DEP in the same script), so on a slow phone the sequence stretches
    instead of everything appearing together. To speed up / slow down: edit the numbers in TL and DEP. Reduced-motion = about 8x faster.
    Safety net: after 14 s nothing can stay hidden. Old behaviour returns automatically if tm-intro.js is missing (window.__tmDirected).
+
+---
+UPDATE v4 (new stone-relief picture, mist lighting, new intro interface)
+FILES CHANGED SINCE v3: index.html, tm-intro.js, tm-intro.css  |  IMAGES (images/): intro-albedo.jpg, intro-normal.jpg, intro-height.jpg, intro-logo-bg.webp
+(script.js and story.js are unchanged since v3.)
+
+1) THE LIGHT - "mist", not a flashlight (tm-intro.js, top comment explains it)
+   A small light-memory grid (192x108) is filled by the pointer and by two slow wanderers. Each frame it fades slowly (trail) and spreads along the stone:
+   easily along a groove / ledge of the same height, held back by rock steps. The shader turns it into ragged, cloudy blue light that pools in the grooves,
+   clings to the cobbles and outlines the ridges. Small coloured point lights (turquoise, green, pink, amber, violet) flash when the mist reaches them.
+   Everything is time-based, so it looks the same on 30 / 60 / 120 Hz screens.
+   Tuning: pointer strength `per` and brush `rad` in pourPointer(); trail length = decay (3200 ms); spread speed = K in stepField(); base visibility of the relief = amb;
+   mist colours = mc in the shader; wanderers = pourWanderers().
+   Image geometry: RING_D = 469, EMB_X/EMB_Y = 802/446 (top of tm-intro.js).
+
+2) INTERFACE
+   - Fonts: Cinzel (name - inscription capitals, they feel carved) + Michroma (counter, labels, button). Loaded from Google Fonts without blocking the page (index.html <head>).
+     To try another pairing change the two --tm-title / --tm-ui lines at the top of tm-intro.css (and the font names in the Google Fonts link).
+   - Loader: 3-digit counter, hairline with tick marks and a glowing tip, status line (Waking the stone / Gathering light / Tracing the relief / Ready). It rests a beat on 100 and
+     dissolves into the Enter button in the same spot.
+   - Letter effects (one score, no random noise): 1 DECODE (letters flicker through glyphs and lock in, left to right) - 2 SWEEP (a scan passes over the name every ~7 s, letters split
+     into cyan/magenta for an instant) - 3 TWITCH (a single letter hiccups every few seconds). The Enter text decodes when it appears and quickly again on hover/focus.
+     Arabic text is never split (it would break the joined letters); switching language re-builds it correctly.
+   - SOUND: the hover/scratch sounds on the intro are gone; the gate is silent until you press Enter (then welcome.mp3 as before). Side-menu and "Start a project" sounds are unchanged.
+   - prefers-reduced-motion: no glitch, no sweep, static letters.
+
+3) Image URLs now end with ?v=4 so browsers drop the old pictures.

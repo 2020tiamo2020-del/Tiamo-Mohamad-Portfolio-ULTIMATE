@@ -1,21 +1,19 @@
 /* ==========================================================================
-   TM INTRO — cinematic 3D relief logo  (v3)
-   The artwork is never redrawn or altered: it is the albedo of a real-time
-   relief (normal + height maps derived from it), lit in real time.
-   Loading -> Enter with sound -> camera pushes through the emblem -> the same
-   3D logo settles, transparent and still reactive, behind Home only.
+   TM INTRO v4 — carved-stone relief, lit by drifting blue mist
+   The artwork is never repainted: it is the albedo of a real-time relief (normal + height maps derived from it).
+   Loading -> Enter with sound -> the camera pushes into the medallion -> the same 3D relief settles, transparent and
+   still reactive, behind Home only.
 
-   LIGHTING (what you see on the rocks and around the emblem)
-     1  Ambient    : cold blue-cyan wash over the whole scene
-     2  Fog        : thick volumetric fog (two drifting layers) hiding the horizon
-     3  Under-light: light rising from beneath the rocks and the emblem
-     4  Rim light  : ridges and rock edges outlined with a pale blue shimmer
-     5  Markers    : small coloured point lights (turquoise / green / pink) that flash
-     6  Contrast   : deep blacks against tiny flashes (filmic curve + vignette)
+   THE LIGHT (not a torch):
+     A low-resolution "mist field" remembers where light has been. The pointer (and two slow wanderers) pour light
+     into it; every frame it  fades slowly (the trail lingers)  and  diffuses along the stone: it flows easily along a
+     groove or a ledge at the same height and is held back by steps, so the glow creeps round the rings between the
+     rocks. The shader turns the field into ragged, cloudy blue light that pools in the grooves, clings to the cobbles
+     and outlines the ridges. On top of it:  cold ambient · drifting fog lit from below · rim light ·
+     small coloured point lights (turquoise / green / pink / amber / violet) that flash when the mist reaches them.
 
    ORDER AFTER "ENTER" (all times come from window.__tmTL in index.html <head>)
-     0 ms  sound + camera push  ->  logo settles  ->  header  ->  music orb
-     -> title + copy -> role scramble -> welcome toast (+ its sound) -> side rail / floating buttons
+     0 ms sound + push -> logo settles -> header -> music orb -> title + copy -> role words -> toast (+sound) -> side rail
 
    Raw WebGL, no libraries. If WebGL is unavailable, a flat fallback is used.
    ========================================================================== */
@@ -37,14 +35,16 @@
   const easeOut5 = (t) => 1 - Math.pow(1 - clamp(t, 0, 1), 5);
   const easeInOut = (t) => { t = clamp(t, 0, 1); return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; };
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const isAr = () => document.documentElement.lang === "ar";
 
-  /* artwork geometry: 1600x900 source, emblem ring is 404 px wide and its centre sits at (810,390) */
-  const IMG_W = 1600, IMG_H = 900, RING_D = 404, EMB_X = 810, EMB_Y = 390;
-  const SRC = { alb: "images/intro-albedo.jpg?v=3", nor: "images/intro-normal.jpg?v=3", hei: "images/intro-height.jpg?v=3" };
-  const NMK = 12;
+  /* artwork geometry: 1600x900 source; the medallion's outer ring is 469 px wide and centred at (802,446) */
+  const IMG_W = 1600, IMG_H = 900, RING_D = 469, EMB_X = 802, EMB_Y = 446;
+  const SRC = { alb: "images/intro-albedo.jpg?v=4", nor: "images/intro-normal.jpg?v=4", hei: "images/intro-height.jpg?v=4" };
+  const NMK = 10;
+  const GW = 192, GH = 108;                      /* mist-field resolution */
 
   gate.classList.add("tm-js");
-  const numEl = document.getElementById("tmLoadNum"), barEl = document.getElementById("tmLoadBar");
+  const numEl = document.getElementById("tmLoadNum"), barEl = document.getElementById("tmLoadBar"), msgEl = document.getElementById("tmLoadMsg");
   btn.disabled = true;
 
   /* ------------------------------------------------------------------ GL */
@@ -52,19 +52,19 @@
   const FS = [
     "#ifdef GL_FRAGMENT_PRECISION_HIGH", "precision highp float;", "#else", "precision mediump float;", "#endif",
     "varying vec2 vP;",
-    "uniform sampler2D uAlb,uNor,uHei;",
+    "uniform sampler2D uAlb,uNor,uHei,uFld;",
     "uniform vec2 uRes,uZc,uTilt,uEmb;",
     "uniform vec4 uRect;",
-    "uniform float uZoom,uAmb,uInt,uTime,uAlphaMode,uOpacity,uRing,uMk,uGlow;",
-    "uniform vec3 uCol;",
-    "uniform vec4 uL[16];",
+    "uniform float uZoom,uAmb,uInt,uTime,uAlphaMode,uOpacity,uRing,uMk,uGlow,uFlood;",
     "uniform vec4 uM[" + NMK + "];",
     "float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}",
     "float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);",
     " return mix(mix(hash(i),hash(i+vec2(1.0,0.0)),f.x),mix(hash(i+vec2(0.0,1.0)),hash(i+vec2(1.0,1.0)),f.x),f.y);}",
     "float fbm(vec2 p){float a=0.5,s=0.0;for(int i=0;i<3;i++){s+=a*noise(p);p*=2.03;a*=0.5;}return s;}",
-    /* marker palette: turquoise / green / soft pink */
-    "vec3 mkCol(float i){float k=mod(i,3.0);return k<0.5?vec3(0.08,0.95,0.86):(k<1.5?vec3(0.38,1.0,0.48):vec3(1.0,0.46,0.78));}",
+    /* marker palette: turquoise / green / soft pink / amber / violet */
+    "vec3 mkCol(float i){float k=mod(i,5.0);",
+    " if(k<0.5)return vec3(0.08,0.95,0.86); if(k<1.5)return vec3(0.38,1.0,0.48); if(k<2.5)return vec3(1.0,0.46,0.78);",
+    " if(k<3.5)return vec3(1.0,0.62,0.22); return vec3(0.62,0.45,1.0);}",
     "void main(){",
     " vec2 p=vec2(vP.x,1.0-vP.y)*uRes;",
     /* pass 1: height at uniform zoom, so nearer (taller) stone magnifies more = real dolly parallax */
@@ -80,79 +80,74 @@
     "  float h=texture2D(uHei,uv).r;",
     "  vec3 alb=texture2D(uAlb,uv).rgb;",
     "  vec3 n=normalize(texture2D(uNor,uv).rgb*2.0-1.0);",
+    "  vec3 ac=pow(alb,vec3(1.35));",
     "  float lumA=dot(alb,vec3(0.299,0.587,0.114));",
     "  float rr=length(q-uEmb)/uRing;",
-    /* volumetric fog fields */
+    /* fog */
     "  float f1=fbm(q*0.0042+vec2(t*0.030,-t*0.018));",
     "  float f2=fbm(q*0.0095+vec2(-t*0.022,t*0.012)+7.3);",
     "  float fog=smoothstep(0.30,0.86,f1*0.62+f2*0.38);",
     "  float low=smoothstep(0.10,0.95,uv.y);",
-    /* 1 - cold ambient */
-    "  vec3 ac=pow(alb,vec3(1.7));",
-    "  col=ac*vec3(0.20,0.52,0.88)*uAmb;",
-    /* 3 - light rising from beneath the rocks and the emblem */
-    "  vec3 lu=normalize(vec3(0.0,0.9,0.5));",
-    "  float du=max(dot(n,lu),0.0);",
-    "  float lowLit=0.20+1.0*smoothstep(0.0,1.0,(q.y-uEmb.y)/(uRing*2.2)+0.30);",
-    "  col+=ac*vec3(0.22,0.66,1.0)*(0.06+du*1.7)*lowLit*uGlow*0.55;",
-    /* 4 - rim light on ridges and edges */
-    "  float edge=smoothstep(0.22,0.72,length(n.xy));",
-    "  float shim=0.62+0.38*sin(t*1.25+h*18.0+f2*6.0);",
-    "  col+=vec3(0.40,0.74,1.0)*edge*edge*(0.15+0.95*h)*shim*uGlow*0.46;",
-    /* emblem lines glow softly */
-    "  float em=1.0-smoothstep(0.92,1.06,rr);",
-    "  col+=vec3(0.55,0.85,1.0)*pow(lumA,2.4)*em*uGlow*0.50;",
-    /* 2 - fog, lit from below */
-    "  vec2 gq=(q-uEmb-vec2(0.0,uRing*0.85))/vec2(uRing*2.6,uRing*1.35);",
+    /* the mist field: ragged, cloudy edges (the noise only bites where there is light) */
+    "  float nz=fbm(q*0.0065+vec2(t*0.035,-t*0.020));",
+    "  float nz2=noise(q*0.021+vec2(-t*0.05,t*0.03));",
+    "  vec2 wv=(vec2(nz,nz2)-0.5)*0.022;",
+    "  float fr=texture2D(uFld,uv+wv).r;",
+    "  float m=smoothstep(0.07,0.55,fr+(nz-0.5)*0.46*smoothstep(0.0,0.35,fr));",
+    "  m=max(m,uFlood*smoothstep(0.22,0.80,nz+0.20*(1.0-clamp(rr*0.25,0.0,1.0))));",
+    "  float halo=smoothstep(0.0,0.45,fr);",
+    "  vec3 mc=mix(vec3(0.04,0.13,0.40),vec3(0.46,0.72,1.0),pow(m,0.72));",
+    "  float cav=1.0-smoothstep(0.12,0.72,h);",
+    "  float edge=smoothstep(0.14,0.62,length(n.xy));",
+    /* cold ambient: the relief is always faintly there */
+    "  col=ac*vec3(0.20,0.42,0.74)*uAmb;",
+    /* rim light on ridges: pale blue, shimmering, strongest where the mist passes */
+    "  float shim=0.68+0.32*sin(t*1.1+h*14.0+nz*5.0);",
+    "  col+=vec3(0.46,0.75,1.0)*edge*(0.10+0.60*h)*shim*uGlow*(0.10+1.15*m)*0.85;",
+    /* mist light between the rocks: pools in the grooves, clings to the cobbles */
+    "  float stone=0.30+1.35*lumA;",
+    "  col+=mc*m*(0.26+0.95*cav+0.55*edge)*stone*uGlow*1.30;",
+    "  col+=mc*halo*fog*0.20*uGlow;",
+    /* the emblem's own lines glow softly where light reaches them */
+    "  float em=1.0-smoothstep(0.88,1.05,rr);",
+    "  col+=vec3(0.50,0.80,1.0)*pow(lumA,2.2)*em*(0.14+0.95*m)*uGlow*0.42;",
+    /* fog lit from below */
+    "  vec2 gq=(q-uEmb-vec2(0.0,uRing*0.9))/vec2(uRing*2.7,uRing*1.4);",
     "  float under=exp(-dot(gq,gq)*1.4);",
-    "  vec3 fogC=vec3(0.014,0.050,0.100)+vec3(0.04,0.24,0.46)*under*uGlow*1.05;",
-    "  float fk=clamp(fog*(0.30+0.55*low),0.0,1.0)*0.85;",
-    "  col=col*(1.0-fk*0.62)+fogC*fk;",
-    /* pointer torch: raised stone catches the light first = ragged rocky edge */
-    "  for(int i=0;i<16;i++){",
-    "   vec4 L=uL[i];",
-    "   if(L.w>0.001){",
-    "    vec2 dv=L.xy-p;float d=length(dv);",
-    "    float a=1.0-clamp(d/L.z,0.0,1.0);a=a*a*(3.0-2.0*a);",
-    "    float m=smoothstep(0.02,0.42,a*1.55+(h-0.38)*0.55);",
-    "    vec3 ld=normalize(vec3(dv/L.z,0.55));",
-    "    float dif=max(dot(n,ld),0.0);",
-    "    float sp=pow(max(dot(n,normalize(ld+vec3(0.0,0.0,1.0))),0.0),30.0);",
-    "    float rim=smoothstep(0.08,0.5,length(n.xy));",
-    "    vec3 lc=uCol*1.1;",
-    "    col+=alb*(0.6+0.55*dif)*0.8*m*L.w*(uCol*0.9+0.25)+lc*sp*m*L.w*0.3+uCol*rim*m*L.w*0.2;",
-    "   }",
-    "  }",
-    /* 5 - coloured point lights (project markers) */
+    "  vec3 fogC=vec3(0.012,0.045,0.095)+vec3(0.04,0.22,0.44)*under*uGlow*(0.45+0.9*m);",
+    "  float fk=clamp(fog*(0.26+0.55*low),0.0,1.0)*0.80;",
+    "  col=col*(1.0-fk*0.55)+fogC*fk;",
+    /* coloured point lights: they wake up when the mist reaches them */
     "  for(int i=0;i<" + NMK + ";i++){",
-    "   vec4 m=uM[i];",
-    "   if(m.z>0.0){",
-    "    vec2 mp=uRect.xy+m.xy*uRect.zw;",
-    "    float r=m.z*uRing;",
+    "   vec4 mk=uM[i];",
+    "   if(mk.z>0.0){",
+    "    vec2 mp=uRect.xy+mk.xy*uRect.zw;",
+    "    float r=mk.z*uRing;",
     "    vec2 dv=mp-q;float d=length(dv);",
-    "    float fl=pow(max(0.0,sin(t*(0.55+0.5*fract(m.w*3.7))+m.w*40.0)),6.0);",
-    "    float k=(0.20+0.80*fl)*uMk;",
-    "    vec3 mc=mkCol(float(i));",
+    "    float fl=pow(max(0.0,sin(t*(0.55+0.5*fract(mk.w*3.7))+mk.w*40.0)),6.0);",
+    "    float near=texture2D(uFld,mk.xy).r;",
+    "    float k=(0.14+0.55*fl+1.1*smoothstep(0.05,0.5,near))*uMk;",
+    "    vec3 c=mkCol(float(i));",
     "    float a=1.0-clamp(d/(r*3.4),0.0,1.0);a*=a;",
     "    vec3 ld=normalize(vec3(dv/(r*2.2),0.7));",
     "    float dif=max(dot(n,ld),0.0);",
-    "    col+=mc*ac*(0.9+2.6*dif)*a*k*2.0;",
-    "    col+=mc*exp(-d*d/(r*r*0.05))*k*1.6;",
-    "    col+=mc*exp(-d/(r*1.5))*0.22*k*(0.5+fog);",
+    "    col+=c*ac*(0.9+2.6*dif)*a*k*1.9;",
+    "    col+=c*exp(-d*d/(r*r*0.05))*k*1.5;",
+    "    col+=c*exp(-d/(r*1.5))*0.20*k*(0.5+fog);",
     "   }",
     "  }",
-    /* 6 - contrast: vignette, filmic curve, crushed blacks */
-    "  float vk=mix(2.05,1.85,uAlphaMode);",
-    "  float v=smoothstep(1.0,0.28,length((uv-0.5)*vec2(1.0,1.15)*vk));",
-    "  v*=smoothstep(0.0,0.26,uv.x)*smoothstep(0.0,0.26,1.0-uv.x)*smoothstep(0.0,0.3,uv.y)*smoothstep(0.0,0.3,1.0-uv.y);",
+    /* contrast: vignette, filmic curve, crushed blacks */
+    "  float vk=mix(1.72,1.80,uAlphaMode);",
+    "  float v=smoothstep(1.0,0.22,length((uv-0.5)*vec2(1.0,1.12)*vk));",
+    "  v*=smoothstep(0.0,0.14,uv.x)*smoothstep(0.0,0.14,1.0-uv.x)*smoothstep(0.0,0.16,uv.y)*smoothstep(0.0,0.16,1.0-uv.y);",
     "  col*=v*uInt;",
     "  col=1.0-exp(-col*1.15);",
     "  col=max(col-0.006,0.0);",
-    "  col=pow(col,vec3(1.38));",
+    "  col=pow(col,vec3(1.34));",
     "  lum=dot(col,vec3(0.299,0.587,0.114));",
     " }",
-    " vec2 bp=(p/uRes-vec2(0.5,0.46))*vec2(1.0,1.25);",
-    " vec3 bg=mix(vec3(0.030,0.058,0.120),vec3(0.012,0.016,0.040),smoothstep(0.0,1.0,length(bp)*1.25));",
+    " vec2 bp=(p/uRes-vec2(0.5,0.44))*vec2(1.0,1.25);",
+    " vec3 bg=mix(vec3(0.026,0.050,0.108),vec3(0.010,0.014,0.036),smoothstep(0.0,1.0,length(bp)*1.25));",
     " float ef=mix(smoothstep(0.0,0.2,vP.x)*smoothstep(0.0,0.2,1.0-vP.x)*smoothstep(0.0,0.16,vP.y)*smoothstep(0.0,0.24,1.0-vP.y),1.0,uAlphaMode);",
     " lum*=ef;col*=ef;",
     " float a=mix(clamp(lum*2.8,0.0,1.0),1.0,uAlphaMode)*uOpacity;",
@@ -217,7 +212,7 @@
   };
   const initGL = () => {
     verify(prog); verify(pprog);
-    ["uAlb","uNor","uHei","uRes","uZc","uTilt","uEmb","uRect","uZoom","uAmb","uInt","uTime","uAlphaMode","uOpacity","uRing","uMk","uGlow","uL","uM","uCol"].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
+    ["uAlb","uNor","uHei","uFld","uRes","uZc","uTilt","uEmb","uRect","uZoom","uAmb","uInt","uTime","uAlphaMode","uOpacity","uRing","uMk","uGlow","uFlood","uM"].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
     ["uRes","uZc","uTilt","uZoom","uTime","uDpr","uAlphaMode"].forEach((n) => { PU[n] = gl.getUniformLocation(pprog, n); });
     quad = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, quad);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
@@ -226,16 +221,73 @@
     pbuf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, pbuf); gl.bufferData(gl.ARRAY_BUFFER, d, gl.STATIC_DRAW);
     gl.disable(gl.DEPTH_TEST); gl.enable(gl.BLEND);
   };
-  const upload = (key, unit) => {
-    const t = gl.createTexture(); gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, t);
+  const setTexParams = () => {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  };
+  const upload = (key, unit) => {
+    const t = gl.createTexture(); gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, t);
+    setTexParams();
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, imgs[key]);
     tex[key] = t;
   };
 
+  /* ------------------------------------------------------------ the mist field
+     fld   : how much light each cell holds (0..1.4)
+     condH / condV : how easily light flows between two neighbouring cells = exp(-|height step|):
+                     flat ground and grooves conduct, rock steps resist -> the glow follows the stone */
+  const fld = new Float32Array(GW * GH), fu8 = new Uint8Array(GW * GH);
+  const condH = new Float32Array((GW - 1) * GH), condV = new Float32Array(GW * (GH - 1));
+  let fldTex = null, fldBoot = false;
+  const buildField = () => {
+    let hl = null;
+    try {
+      const c = document.createElement("canvas"); c.width = GW; c.height = GH;
+      const x = c.getContext("2d", { willReadFrequently: true });
+      x.drawImage(imgs.hei, 0, 0, GW, GH);
+      const d = x.getImageData(0, 0, GW, GH).data;
+      hl = new Float32Array(GW * GH);
+      for (let i = 0; i < GW * GH; i++) hl[i] = d[i * 4] / 255;
+    } catch (_) { hl = null; }
+    for (let y = 0; y < GH; y++) for (let x = 0; x < GW - 1; x++) condH[y * (GW - 1) + x] = hl ? Math.exp(-Math.abs(hl[y * GW + x] - hl[y * GW + x + 1]) * 7) : 0.8;
+    for (let y = 0; y < GH - 1; y++) for (let x = 0; x < GW; x++) condV[y * GW + x] = hl ? Math.exp(-Math.abs(hl[y * GW + x] - hl[(y + 1) * GW + x]) * 7) : 0.8;
+    gl.activeTexture(gl.TEXTURE3);
+    fldTex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, fldTex); setTexParams();
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, GW, GH, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, fu8);
+    fldBoot = true;
+  };
+  const dep = (u, v, amt, rad) => {                         /* pour light at image position (u,v), radius in cells */
+    const cxc = u * GW, cyc = v * GH, r2 = rad * 2.2;
+    const x0 = Math.max(0, Math.floor(cxc - r2)), x1 = Math.min(GW - 1, Math.ceil(cxc + r2));
+    const y0 = Math.max(0, Math.floor(cyc - r2)), y1 = Math.min(GH - 1, Math.ceil(cyc + r2));
+    const k = 1 / (2 * rad * rad * 0.3);
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+      const dx = x + 0.5 - cxc, dy = y + 0.5 - cyc, w = Math.exp(-(dx * dx + dy * dy) * k);
+      const i = y * GW + x; const nv = fld[i] + amt * w; fld[i] = nv > 1.4 ? 1.4 : nv;
+    }
+  };
+  const stepField = (dt) => {
+    const decay = Math.exp(-dt / (mode === "intro" ? 3200 : 2400));
+    for (let i = 0; i < fld.length; i++) fld[i] *= decay;
+    const subs = dt > 28 ? 4 : 2, K = 0.21;
+    for (let s = 0; s < subs; s++) {
+      for (let y = 0; y < GH; y++) {
+        const row = y * GW, crow = y * (GW - 1);
+        for (let x = 0; x < GW - 1; x++) { const f = (fld[row + x] - fld[row + x + 1]) * condH[crow + x] * K; fld[row + x] -= f; fld[row + x + 1] += f; }
+      }
+      for (let y = 0; y < GH - 1; y++) {
+        const row = y * GW;
+        for (let x = 0; x < GW; x++) { const f = (fld[row + x] - fld[row + GW + x]) * condV[row + x] * K; fld[row + x] -= f; fld[row + GW + x] += f; }
+      }
+    }
+    for (let i = 0; i < fld.length; i++) { const v = fld[i] * 255; fu8[i] = v > 255 ? 255 : v; }
+    gl.activeTexture(gl.TEXTURE3); gl.bindTexture(gl.TEXTURE_2D, fldTex);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, GW, GH, gl.LUMINANCE, gl.UNSIGNED_BYTE, fu8);
+  };
+
   /* ------------------------------------------------------------ markers
-     Small coloured point lights sit on the raised stone around the emblem (picked from the height map). */
+     Small coloured point lights sit on the raised stone around the medallion (picked from the height map). */
   const pickMarkers = () => {
     let rnd = 20261026;
     const rand = () => { rnd = (rnd * 1664525 + 1013904223) >>> 0; return rnd / 4294967296; };
@@ -248,18 +300,18 @@
     } catch (_) { hd = null; }
     const R0 = RING_D / 2, list = [];
     for (let tries = 0; tries < 900 && list.length < NMK; tries++) {
-      const ang = rand() * Math.PI * 2, rho = 1.18 + Math.pow(rand(), 0.8) * 2.5;
-      const px = EMB_X + Math.cos(ang) * rho * R0 * 1.12, py = EMB_Y + Math.sin(ang) * rho * R0 * 0.92;
-      if (px < IMG_W * 0.07 || px > IMG_W * 0.93 || py < IMG_H * 0.08 || py > IMG_H * 0.93) continue;
+      const ang = rand() * Math.PI * 2, rho = 1.25 + Math.pow(rand(), 0.8) * 1.5;
+      const px = EMB_X + Math.cos(ang) * rho * R0 * 1.15, py = EMB_Y + Math.sin(ang) * rho * R0 * 0.82;
+      if (px < IMG_W * 0.08 || px > IMG_W * 0.92 || py < IMG_H * 0.08 || py > IMG_H * 0.92) continue;
       const hv = hd ? hd[((Math.floor(py / IMG_H * hh)) * hw + Math.floor(px / IMG_W * hw)) * 4] / 255 : 0.5;
-      if (hv < 0.40) continue;
-      if (list.some((m) => Math.hypot(m.x - px, m.y - py) < R0 * 0.62)) continue;
+      if (hv < 0.42) continue;
+      if (list.some((m) => Math.hypot(m.x - px, m.y - py) < R0 * 0.55)) continue;
       list.push({ x: px, y: py });
     }
     for (let i = 0; i < NMK; i++) {
       const m = list[i];
       markers[i*4] = m ? m.x / IMG_W : 0.5; markers[i*4+1] = m ? m.y / IMG_H : 0.5;
-      markers[i*4+2] = m ? 0.055 + rand() * 0.07 : 0;       /* radius in ring units (0 = off) */
+      markers[i*4+2] = m ? 0.040 + rand() * 0.050 : 0;      /* radius in ring units (0 = off) */
       markers[i*4+3] = rand();                              /* flash phase */
     }
   };
@@ -273,17 +325,20 @@
     if (mode === "intro") {
       W = innerWidth; H = innerHeight;
       dpr = Math.min(window.devicePixelRatio || 1, 1.5) * renderScale;
-      const target = Math.min(W * 0.8, H * 0.46);
-      const S = target / RING_D; R = target / 2;
-      cx = W / 2; cy = H * 0.42;
+      const portrait = W < H * 0.9;
+      let S = Math.min(W * 0.8, H * 0.46) / RING_D * (portrait ? 1 : 1.12);
+      if (!portrait) S = Math.max(S, W / IMG_W * 1.02, H / IMG_H * 1.02);     /* wide screens: the relief covers the whole viewport */
+      R = RING_D / 2 * S;
+      cx = W / 2; cy = H * (portrait ? 0.36 : 0.385);
       rect = [cx - EMB_X * S, cy - EMB_Y * S, IMG_W * S, IMG_H * S];
       gate.style.setProperty("--tm-r", R.toFixed(1) + "px");
+      gate.style.setProperty("--tm-ty", Math.round(cy + R * 0.98 + 14) + "px");
     } else {
       const r = host.getBoundingClientRect();
       W = Math.max(2, Math.round(r.width)); H = Math.max(2, Math.round(r.height));
       dpr = Math.min(window.devicePixelRatio || 1, W < 700 ? 1 : 1.25) * renderScale;
       const wide = innerWidth > 900;
-      const target = clamp(Math.min(H * 0.5, W * (wide ? 0.44 : 0.74)), 200, 560);
+      const target = clamp(Math.min(H * 0.62, W * (wide ? 0.50 : 0.80)), 220, 640);
       const S = target / RING_D; R = target / 2;
       cx = wide ? W * 0.68 : W * 0.5; cy = wide ? H * 0.5 : H * 0.42;
       rect = [cx - EMB_X * S, cy - EMB_Y * S, IMG_W * S, IMG_H * S];
@@ -292,71 +347,60 @@
     cv.width = Math.max(2, Math.round(W * dpr)); cv.height = Math.max(2, Math.round(H * dpr));
   };
 
-  /* ---------------------------------------------------------- the torch */
-  let pts = [], lastEmit = null, px = -1, py = -1, lastMove = 0, moved = false, ptrInside = false;
-  const lights = new Float32Array(64);
-  const emit = (x, y, k, rr) => { pts.push({ x, y, t: performance.now(), r: rr * (0.85 + Math.random() * 0.35), k }); if (pts.length > 40) pts.splice(0, pts.length - 40); };
-  const move = (x, y, k, rr, step) => {
-    if (!lastEmit) { lastEmit = { x, y }; emit(x, y, k, rr); return; }
-    const dx = x - lastEmit.x, dy = y - lastEmit.y, d = Math.hypot(dx, dy);
-    if (d < step) return;
-    const n = Math.max(1, Math.floor(d / step));
-    for (let i = 1; i <= n; i++) emit(lastEmit.x + dx * i / n, lastEmit.y + dy * i / n, k, rr);
-    lastEmit = { x, y };
-  };
-  const torchR = () => (mode === "intro" ? clamp(R * 0.98, 90, 280) : clamp(R * 0.78, 110, 260));
-
+  /* ---------------------------------------------------- the pointer pours light */
+  let px = -1, py = -1, lpx = -1, lpy = -1, lastMove = 0, moved = false;
+  const toUV = (x, y) => [(x - rect[0]) / rect[2], (y - rect[1]) / rect[3]];
   gate.addEventListener("pointermove", (e) => {
     if (entering || mode !== "intro") return;
     px = e.clientX; py = e.clientY; lastMove = performance.now(); moved = true;
-    move(px, py, 0.42, torchR(), 34);
   }, { passive: true });
   addEventListener("pointermove", (e) => {
     if (mode !== "home" || !host) return;
     const r = host.getBoundingClientRect();
     const x = e.clientX - r.left, y = e.clientY - r.top;
-    ptrInside = x >= 0 && y >= 0 && x <= r.width && y <= r.height;
-    if (!ptrInside) return;
+    if (x < 0 || y < 0 || x > r.width || y > r.height) return;
     px = x; py = y; lastMove = performance.now(); moved = true;
-    move(x, y, 0.3, torchR(), 46);
   }, { passive: true });
 
-  /* ------------------------------------------------------------ frame loop */
-  let ready = false, entering = false, enterT = 0, handT = 0, raf = 0, alive = true, shown = 0, t0 = performance.now(), litT = 0;
-  let tilt = [0, 0], homeVisible = true, lastNow = 0, slow = 0, fast = 0, renderScale = 1;
-  let amb = 0.76, inten = 1.15, zoomV = 0, opac = 1, alphaMode = 1, glow = 0, mk = 0;
-  const ZOOM_MAX = 2.4, PUSH = 1500;
-
-  const fillLights = (now) => {
-    lights.fill(0);
-    let n = 0;
-    const life = mode === "intro" ? 1800 : 1500;
-    for (let i = pts.length - 1; i >= 0 && n < 13; i--) {
-      const p = pts[i], age = (now - p.t) / life;
-      if (age >= 1) continue;
-      lights[n * 4] = p.x; lights[n * 4 + 1] = p.y; lights[n * 4 + 2] = p.r * (1 + age * 0.3); lights[n * 4 + 3] = Math.pow(1 - age, 1.45) * p.k;
-      n++;
-    }
-    if (pts.length > 24) pts = pts.filter((p) => now - p.t < life);
-    /* slot 13: live pointer light */
-    if (moved && px >= 0 && !entering) {
-      const f = clamp(1 - (now - lastMove) / 1300, 0, 1);
-      lights[52] = px; lights[53] = py; lights[54] = torchR() * 0.8; lights[55] = f * (mode === "intro" ? 0.22 : 0.16);
-    }
-    /* slot 14: a slow light drifting over the relief (keeps the 3D alive without a mouse) */
-    {
-      const t = (now - t0) / 1000;
-      const gx = cx + Math.cos(t * 0.55) * R * 0.85 + Math.sin(t * 1.3) * R * 0.18;
-      const gy = cy + Math.sin(t * 0.72) * R * 0.62;
-      lights[56] = gx; lights[57] = gy; lights[58] = R * (mode === "intro" ? 1.15 : 1.1);
-      lights[59] = mode === "intro" ? (moved && now - lastMove < 2400 ? 0.05 : 0.10) : 0.10;
-    }
-    /* slot 15: ignition when entering */
-    if (entering && mode === "intro") {
-      const o = easeOut((now - enterT) / 950);
-      lights[60] = cx; lights[61] = cy; lights[62] = R * (0.5 + 2.2 * o); lights[63] = 0.5 * o;
+  const pourPointer = (now) => {
+    if (!moved || px < 0) return;
+    if (lpx < 0 || now - lastMove > 400) { lpx = px; lpy = py; }
+    const dx = px - lpx, dy = py - lpy, dist = Math.hypot(dx, dy);
+    if (dist < 1) return;
+    const cell = rect[2] / GW;                                      /* one field cell in screen px */
+    const n = Math.max(1, Math.ceil(dist / (cell * 1.4)));          /* samples are spaced by distance, never by frame rate */
+    const rad = mode === "intro" ? 8.5 : 7;
+    const per = mode === "intro" ? 0.095 : 0.07;
+    for (let i = 1; i <= n; i++) { const u = toUV(lpx + dx * i / n, lpy + dy * i / n); dep(u[0], u[1], per, rad); }
+    lpx = px; lpy = py;
+  };
+  /* two slow wanderers keep light alive between the rocks even when nobody touches the mouse */
+  const pourWanderers = (now, dt) => {
+    const t = (now - t0) / 1000;
+    const idle = !moved || now - lastMove > 3000;
+    const amt = (idle ? 0.20 : 0.07) * (dt / 1000);               /* per second, so every frame rate looks the same */
+    const R0 = RING_D / 2;
+    for (let k = 0; k < 2; k++) {
+      const ang = t * (0.17 + k * 0.06) + k * 3.1, rho = 1.15 + 0.85 * (0.5 + 0.5 * Math.sin(t * 0.13 + k * 2.0));
+      const x = EMB_X + Math.cos(ang) * rho * R0 * 1.12, y = EMB_Y + Math.sin(ang) * rho * R0 * 0.82;
+      dep(x / IMG_W, y / IMG_H, amt, 8);
     }
   };
+  /* the push: a ring of light opens outward from the medallion */
+  const pourEntry = (now, dt) => {
+    const e = clamp((now - enterT) / 1300, 0, 1), rho = 0.15 + 3.2 * easeOut(e), R0 = RING_D / 2;
+    const amt = 0.10 * (1 - e * 0.6) * (dt / 16.7);
+    for (let i = 0; i < 28; i++) {
+      const a = (i / 28) * Math.PI * 2 + now * 0.0004;
+      dep((EMB_X + Math.cos(a) * rho * R0) / IMG_W, (EMB_Y + Math.sin(a) * rho * R0 * 0.85) / IMG_H, amt, 5.5);
+    }
+  };
+
+  /* ------------------------------------------------------------ frame loop */
+  let ready = false, readyPending = false, entering = false, enterT = 0, handT = 0, raf = 0, alive = true, shown = 0, t0 = performance.now(), litT = 0;
+  let tilt = [0, 0], homeVisible = true, lastNow = 0, slow = 0, fast = 0, renderScale = 1;
+  let amb = 0.55, inten = 1.1, zoomV = 0, opac = 1, alphaMode = 1, glow = 0, mk = 0, flood = 0;
+  const ZOOM_MAX = 2.4, PUSH = 1500;
 
   const draw = (now) => {
     const sec = (now - t0) / 1000;
@@ -366,7 +410,6 @@
     const ty = idle ? Math.cos(sec * 0.37) * 0.35 : clamp((py / H - 0.5) * 2, -1, 1);
     tilt[0] += (tx - tilt[0]) * 0.05; tilt[1] += (ty - tilt[1]) * 0.05;
 
-    fillLights(now);
     gl.viewport(0, 0, cv.width, cv.height);
     gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
 
@@ -374,14 +417,13 @@
     gl.useProgram(prog);
     gl.bindBuffer(gl.ARRAY_BUFFER, quad);
     const loc = gl.getAttribLocation(prog, "aPos"); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-    gl.uniform1i(U.uAlb, 0); gl.uniform1i(U.uNor, 1); gl.uniform1i(U.uHei, 2);
+    gl.uniform1i(U.uAlb, 0); gl.uniform1i(U.uNor, 1); gl.uniform1i(U.uHei, 2); gl.uniform1i(U.uFld, 3);
     gl.uniform2f(U.uRes, W, H); gl.uniform2f(U.uZc, zc[0], zc[1]); gl.uniform2f(U.uTilt, tilt[0], tilt[1]); gl.uniform2f(U.uEmb, cx, cy);
     gl.uniform4f(U.uRect, rect[0], rect[1], rect[2], rect[3]);
     gl.uniform1f(U.uZoom, zoomV); gl.uniform1f(U.uAmb, amb); gl.uniform1f(U.uInt, inten);
     gl.uniform1f(U.uTime, sec); gl.uniform1f(U.uAlphaMode, alphaMode); gl.uniform1f(U.uOpacity, opac);
-    gl.uniform1f(U.uRing, R); gl.uniform1f(U.uMk, mk); gl.uniform1f(U.uGlow, glow);
-    gl.uniform4fv(U.uL, lights); gl.uniform4fv(U.uM, markers);
-    if (mode === "intro") gl.uniform3f(U.uCol, 0.40, 0.68, 1.0); else gl.uniform3f(U.uCol, 0.50, 0.62, 1.0);
+    gl.uniform1f(U.uRing, R); gl.uniform1f(U.uMk, mk); gl.uniform1f(U.uGlow, glow); gl.uniform1f(U.uFlood, flood);
+    gl.uniform4fv(U.uM, markers);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
     /* depth dust */
@@ -396,7 +438,20 @@
     gl.drawArrays(gl.POINTS, 0, mode === "home" ? 70 : PN);
   };
 
-  const MIN_LOAD = reduce ? 200 : 900;     /* the counter always has time to breathe, but never longer than this */
+  const MIN_LOAD = reduce ? 200 : 1100;    /* the counter always has time to breathe, but never longer than this */
+  const MSG = [
+    [0,  "Waking the stone",   "إيقاظ الحجر"],
+    [28, "Gathering light",    "جمع الضوء"],
+    [62, "Tracing the relief", "رسم التضاريس"],
+    [92, "Ready",              "جاهز"]
+  ];
+  let msgI = -1;
+  const setMsg = (pct) => {
+    let i = 0; for (let k = 0; k < MSG.length; k++) if (pct >= MSG[k][0]) i = k;
+    if (i === msgI || !msgEl) return;
+    msgI = i; msgEl.setAttribute("data-en", MSG[i][1]); msgEl.setAttribute("data-ar", MSG[i][2]);
+    msgEl.textContent = isAr() ? MSG[i][2] : MSG[i][1];
+  };
   const frame = (now) => {
     if (!alive) return;
     raf = requestAnimationFrame(frame);
@@ -415,34 +470,45 @@
       const cap = clamp(((now - t0) / MIN_LOAD) * 100, 0, 100);
       const target = Math.min(real, cap);
       shown += (target - shown) * (1 - Math.exp(-dt / 90));
-      if (real >= 100 && cap >= 100 && shown > 99.4) setReady();
-      else { numEl.textContent = Math.floor(shown) + "%"; barEl.style.width = shown.toFixed(1) + "%"; }
+      if (!readyPending) {
+        if (real >= 100 && cap >= 100 && shown > 99.4) setReady();
+        else { numEl.textContent = String(Math.floor(shown)).padStart(3, "0"); barEl.style.width = shown.toFixed(1) + "%"; setMsg(shown); }
+      }
     }
 
-    /* lights fade up once the scene is ready, so the first thing you see is the emblem emerging from black */
+    /* the mist field lives only while the scene is on screen */
+    if (gl && prog && texDone && fldBoot && (mode === "intro" || homeVisible)) {
+      pourPointer(now); pourWanderers(now, dt);
+      if (entering && mode === "intro") pourEntry(now, dt);
+      stepField(dt);
+    }
+
+    /* lights fade up once the scene is ready, so the first thing you see is the relief emerging from black */
     if (mode === "intro") {
       if (texDone && !litT) litT = now;
       const lt = litT ? now - litT : 0;
-      glow = easeOut(lt / 1900);
-      mk = easeOut((lt - 500) / 1800);
-      if (!entering) { amb = 0.76; inten = 1.15; }
+      glow = easeOut(lt / 2000);
+      mk = easeOut((lt - 600) / 2000);
+      if (!entering) { amb = 0.82 * easeOut(lt / 1600); inten = 1.12; flood = 0; }
     }
     /* the camera push */
     if (entering && mode === "intro") {
       const t = (now - enterT) / PUSH;
       zoomV = ZOOM_MAX * easeInOut(t);
-      inten = 1 + 0.08 * easeOut((now - enterT) / 900);
-      amb = 0.76 + 0.10 * easeOut((now - enterT) / 900);
+      inten = 1.12 + 0.02 * easeOut((now - enterT) / 900);
+      amb = 0.82 + 0.02 * easeOut((now - enterT) / 900);
       glow = 1; mk = 1 + 0.4 * easeOut((now - enterT) / 900);
+      flood = 0.5 * easeOut((now - enterT) / 1100);
     }
     /* the settle behind Home */
     if (mode === "home" && handT) {
       const t = now - handT;
       zoomV = ZOOM_MAX * (1 - easeOut5(t / 3800));
-      opac = 0.66 * easeOut(t / 1700);
-      amb = lerp(0.78, 0.66, easeOut(t / 2600));
-      glow = lerp(1.0, 0.85, easeOut(t / 2600));
+      opac = 0.62 * easeOut(t / 1700);
+      amb = lerp(0.70, 0.52, easeOut(t / 2600));
+      glow = lerp(1.0, 0.80, easeOut(t / 2600));
       mk = lerp(1.2, 0.75, easeOut(t / 3200));
+      flood = lerp(0.5, 0.12, easeOut(t / 3600));
       if (t > 4000) handT = 0;
     }
     if (mode === "home" && !homeVisible) return;
@@ -456,11 +522,16 @@
      so the logo can never be missing after "Enter". */
   let texDone = false, flat = false, failsafe = 0;
   const setReady = () => {
-    ready = true;
-    numEl.textContent = "100%"; barEl.style.width = "100%";
-    gate.classList.add("is-ready");
-    btn.disabled = false;
-    try { btn.focus({ preventScroll: true }); } catch (_) {}
+    readyPending = true;
+    numEl.textContent = "100"; barEl.style.width = "100%"; setMsg(100);
+    gate.classList.add("is-full");
+    setTimeout(() => {                         /* a short beat on 100 %, then the counter dissolves into the button */
+      ready = true;
+      gate.classList.add("is-ready");
+      btn.disabled = false;
+      try { btn.focus({ preventScroll: true }); } catch (_) {}
+      window.dispatchEvent(new CustomEvent("tm:ready"));
+    }, reduce ? 0 : 750);
   };
   const early = window.__tmImgs || {};
   const grab = (k, tries) => {
@@ -476,7 +547,6 @@
     if (im.complete) { if (im.naturalWidth) ok(); else if (tries > 0 || early[k]) bad(); }
   };
   ["alb", "nor", "hei"].forEach((k) => grab(k, 0));
-  if (document.fonts && document.fonts.load) { try { document.fonts.load('30px "Rubik Dirt"', "0123456789%"); } catch (_) {} }
 
   let started = false;
   const tryUpload = () => {
@@ -487,7 +557,7 @@
     if (!(imgs.alb.naturalWidth && imgs.nor.naturalWidth && imgs.hei.naturalWidth)) return;
     if (!done(prog) || !done(pprog)) return;
     /* step 2: maps + shaders are both here */
-    try { initGL(); upload("alb", 0); upload("nor", 1); upload("hei", 2); pickMarkers(); texDone = true; layout(); }
+    try { initGL(); upload("alb", 0); upload("nor", 1); upload("hei", 2); buildField(); pickMarkers(); texDone = true; layout(); }
     catch (e) { console.warn("[tm-intro] GL init failed", e); gl = null; prog = null; fallback(); }
   };
   const upTimer = setInterval(() => { tryUpload(); if (texDone || flat || !alive) clearInterval(upTimer); }, 40);
@@ -549,7 +619,7 @@
     if (reduce) zoomV = ZOOM_MAX;
 
     /* ---- the director: one clock, one order ---- */
-    /* 1 · the stage hands the canvas to Home (invisible at this moment) and the logo settles in */
+    /* 1 · the stage hands the canvas to Home (invisible at this moment) and the relief settles in */
     setTimeout(() => {
       try { fade.cancel(); } catch (_) {}
       try { if (flatAnim) flatAnim.cancel(); } catch (_) {}
@@ -560,8 +630,8 @@
         host = heroEl; mode = "home";
         cv.className = "tm-hero-cv"; cv.style.display = "";
         heroEl.insertBefore(cv, heroEl.firstChild);
-        alphaMode = 0; opac = 0; zoomV = ZOOM_MAX; inten = 1.15; amb = 0.78; glow = 1; mk = 1.2;
-        pts = []; lastEmit = null; moved = false; entering = false;
+        alphaMode = 0; opac = 0; zoomV = ZOOM_MAX; inten = 1.1; amb = 0.70; glow = 1; mk = 1.2; flood = 0.5;
+        moved = false; lpx = -1; entering = false;
         layout();
         handT = performance.now();
         if ("IntersectionObserver" in window) new IntersectionObserver((es) => { homeVisible = es[0].isIntersecting; }, { threshold: 0 }).observe(heroEl);
@@ -595,9 +665,10 @@
     setTimeout(() => { document.body.classList.remove("tm-pre-h", "tm-pre-r"); dropPh(); const t = document.querySelector(".hero h1"); if (t) t.classList.remove("hero-pending"); }, 14000);
   };
   btn.addEventListener("click", enter);
-  gate.addEventListener("click", (e) => { if (!e.target.closest || !e.target.closest("button")) btn.click(); });   /* a tap anywhere on the gate = the Enter button (so every part of the site gets the same click) */
+  gate.addEventListener("click", (e) => { if (!e.target.closest || !e.target.closest("button")) btn.click(); });   /* a tap anywhere on the gate = the Enter button */
   gate.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") enter(); });
-  window.__tmIntroState = () => ({ mode, opac, zoomV, amb, glow, mk, homeVisible, W, H, dpr, rect, zc, handT, alphaMode, renderScale, texDone, flat, ready, glOK: !!(gl && prog) });
+  window.__tmIntroState = () => ({ mode, opac, zoomV, amb, glow, mk, flood, homeVisible, W, H, dpr, rect, zc, handT, alphaMode, renderScale, texDone, flat, ready, glOK: !!(gl && prog) });
+  window.__tmField = () => ({ max: Math.max.apply(null, Array.from(fu8)), mean: fu8.reduce((a, b) => a + b, 0) / fu8.length });
 
   /* if the gate is removed some other way, clean up */
   const mo = new MutationObserver(() => { if (!gate.isConnected && !window.__tmGoing && !document.getElementById("tmIntroStage")) { alive = false; cancelAnimationFrame(raf); mo.disconnect(); } });
@@ -606,11 +677,11 @@
 
 
 /* ==========================================================================
-   UI SOUNDS + SCRATCH/GLITCH TEXT
-   - tick-click.wav  : side menu buttons (press)
-   - tick-hover.wav  : every button inside "Start a project" (hover; tap on touch)
-   - intro: name + Enter button glitch (synthesised scratch sound, no file needed)
-   Browsers only allow sound after the first click/tap/key, so hover sounds start then.
+   UI SOUNDS + INTRO TEXT FX
+   - tick-click.wav : side menu buttons (press)
+   - tick-hover.wav : every button inside "Start a project" (hover; tap on touch)
+   The intro itself is silent until you press Enter (no hover / glitch sounds on the gate any more).
+   Browsers only allow sound after the first click/tap/key, so these start then.
    ========================================================================== */
 (() => {
   "use strict";
@@ -662,73 +733,139 @@
     if (e.target.closest(BRIEF_BTN)) tick("hover", 0.8);
   }, true);
 
-  /* ---------- scratch / glitch text ---------- */
+  /* ================================================================== intro text FX (silent) ==================
+     Every glitch is part of ONE score, not random noise:
+       1 DECODE  : each letter flickers through a few random glyphs, then locks in with a bright flash (left -> right)
+       2 SWEEP   : every ~7 s a scan-line passes left -> right; each letter splits into cyan / magenta ghosts for an instant
+       3 TWITCH  : between sweeps, one single letter hiccups (glyph swap + 1-2 px split) every few seconds
+     The Enter button text decodes when the button appears and again (fast) on hover / focus.
+     Arabic text is never split (it would break the joined letters) - it just fades.                              */
   const gate = document.getElementById("enterGate");
   if (!gate || !gate.classList.contains("tm-intro")) return;
-  const svgNS = "http://www.w3.org/2000/svg";
-  const svg = document.createElementNS(svgNS, "svg");
-  svg.setAttribute("width", "0"); svg.setAttribute("height", "0"); svg.setAttribute("aria-hidden", "true"); svg.style.cssText = "position:absolute;width:0;height:0";
-  svg.innerHTML = '<filter id="tmGlitchF" x="-8%" y="-20%" width="116%" height="140%" color-interpolation-filters="sRGB"><feTurbulence id="tmGlitchT" type="fractalNoise" baseFrequency="0.012 0.7" numOctaves="1" seed="3" result="n"/><feDisplacementMap id="tmGlitchD" in="SourceGraphic" in2="n" scale="0" xChannelSelector="R" yChannelSelector="G"/></filter>';
-  document.body.appendChild(svg);
-  const turb = svg.querySelector("#tmGlitchT"), disp = svg.querySelector("#tmGlitchD");
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const GLY = "ABCDEFGHJKLMNPRSTUVXYZ0123456789#/<>+=*";
+  const rg = () => GLY[(Math.random() * GLY.length) | 0];
+  const hasAr = (s) => /[\u0600-\u06FF]/.test(s);
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
-  const gls = Array.from(gate.querySelectorAll(".tm-gl"));
-  const sync = () => gls.forEach((el) => { el.setAttribute("data-text", el.textContent); });
-  sync();
-  gls.forEach((el) => new MutationObserver(sync).observe(el, { childList: true, characterData: true, subtree: true }));
-
-  let busy = 0;
-  const burst = (el, strength) => {
-    if (!el.isConnected || busy > 1) return;
-    busy++;
-    el.classList.add("tm-burst");
-    let n = 0;
-    const iv = setInterval(() => {
-      n++;
-      turb.setAttribute("seed", String((Math.random() * 90) | 0));
-      turb.setAttribute("baseFrequency", (0.004 + Math.random() * 0.02).toFixed(3) + " " + (0.35 + Math.random() * 0.6).toFixed(2));
-      disp.setAttribute("scale", String(n >= 5 ? 0 : (strength * (0.5 + Math.random())).toFixed(1)));
-      if (n >= 5) { clearInterval(iv); el.classList.remove("tm-burst"); busy--; }
-    }, 42);
-  };
-  const loop = (el, min, max, str) => {
-    const go = () => { if (!el.isConnected) return; burst(el, str); setTimeout(go, min + Math.random() * (max - min)); };
-    setTimeout(go, 900 + Math.random() * 900);
-  };
-  const nameEl = gate.querySelector(".tm-intro-name"), wordEl = gate.querySelector(".tm-enter-word");
-  if (nameEl) loop(nameEl, 2200, 4800, 16);
-  if (wordEl) loop(wordEl, 3000, 6000, 9);
-
-  /* synthesised scratch / crackle */
-  const scratch = (kind) => {
-    const a = getAC(); if (!a) return;
-    if (a.state !== "running") { if (kind === "click") a.resume().then(() => { if (a.state === "running") scratch(kind); }).catch(() => {}); return; }
-    const dur = kind === "click" ? 0.34 : 0.13, n = Math.floor(a.sampleRate * dur);
-    const buf = a.createBuffer(1, n, a.sampleRate), d = buf.getChannelData(0);
-    const step = kind === "click" ? 22 : 12; let hv = 0;
-    for (let i = 0; i < n; i++) {
-      const t = i / n, env = Math.pow(1 - t, kind === "click" ? 1.8 : 2.6);
-      if (i % step === 0) hv = Math.random() * 2 - 1;
-      const f = kind === "click" ? 150 + t * 520 : 1100 + t * 600;
-      const sq = (Math.floor(i / (a.sampleRate / f)) % 2 ? 1 : -1) * 0.45;
-      const crackle = Math.random() < 0.015 ? (Math.random() * 2 - 1) * 1.6 : 0;
-      d[i] = (hv * 0.6 + sq * 0.35 + crackle) * env;
-    }
-    const src = a.createBufferSource(), bp = a.createBiquadFilter(), g = a.createGain();
-    src.buffer = buf; bp.type = "bandpass"; bp.frequency.value = kind === "click" ? 1400 : 2600; bp.Q.value = 0.8;
-    g.gain.value = kind === "click" ? 0.34 : 0.16;
-    src.connect(bp); bp.connect(g); g.connect(a.destination); src.start();
-    if (kind === "click") {              /* low hit under the scratch */
-      const o = a.createOscillator(), og = a.createGain();
-      o.type = "sine"; o.frequency.setValueAtTime(110, a.currentTime); o.frequency.exponentialRampToValueAtTime(42, a.currentTime + 0.3);
-      og.gain.setValueAtTime(0.32, a.currentTime); og.gain.exponentialRampToValueAtTime(0.001, a.currentTime + 0.32);
-      o.connect(og); og.connect(a.destination); o.start(); o.stop(a.currentTime + 0.35);
-    }
-  };
+  const nameEl = gate.querySelector(".tm-intro-name");
+  const wordEl = gate.querySelector(".tm-enter-word");
   const enterBtn = document.getElementById("enterGateBtn");
-  if (enterBtn) {
-    enterBtn.addEventListener("pointerenter", () => { if (wordEl) burst(wordEl, 18); scratch("hover"); });
-    enterBtn.addEventListener("focus", () => { if (wordEl) burst(wordEl, 18); });
-    enterBtn.addEventListener("click", () => { if (wordEl) burst(wordEl, 26); if (nameEl) burst(nameEl, 22); }, true);   /* no sound on press */
+
+  /* split an element's text into letter spans (idempotent, language aware) */
+  const rigs = new Map();
+  const split = (el) => {
+    const text = (el.dataset.src && el.dataset.own === "1") ? el.dataset.src : el.textContent;
+    if (reduce || hasAr(text) || document.documentElement.lang === "ar") { unsplit(el, text); return null; }
+    el.dataset.src = text; el.dataset.own = "1";
+    el.setAttribute("aria-label", text);
+    el.classList.add("tm-split");
+    rigs.get(el) && rigs.get(el).mo.disconnect();
+    el.textContent = "";
+    const spans = [];
+    for (const ch of text) {
+      const s = document.createElement("span");
+      if (ch === " ") { s.className = "tm-sp"; s.textContent = "\u00a0"; }
+      else { s.className = "tm-ch"; s.textContent = ch; s.setAttribute("data-c", ch); s.setAttribute("aria-hidden", "true"); spans.push(s); }
+      el.appendChild(s);
+    }
+    const rig = { spans, text, mo: null };
+    rig.mo = new MutationObserver(() => {                       /* the language switch overwrote our spans: rebuild */
+      if (el.querySelector(".tm-ch")) return;
+      rig.mo.disconnect(); el.dataset.own = "0"; split(el); const r = rigs.get(el); if (r) lockWidths(r);
+    });
+    rig.mo.observe(el, { childList: true });
+    rigs.set(el, rig);
+    return rig;
+  };
+  const unsplit = (el, text) => {
+    const r = rigs.get(el); if (r) { r.mo.disconnect(); rigs.delete(el); }
+    el.classList.remove("tm-split"); el.dataset.own = "0"; el.removeAttribute("aria-label");
+    if (el.querySelector(".tm-ch")) el.textContent = text;
+  };
+  /* fix each letter's width so scrambled glyphs never make the line jump */
+  const lockWidths = (rig) => rig.spans.forEach((s) => { s.style.width = ""; const w = s.getBoundingClientRect().width; if (w > 0) s.style.width = w.toFixed(2) + "px"; });
+
+  /* 1 · decode */
+  const decode = (el, o) => {
+    const rig = rigs.get(el); if (!rig) { el.classList.add("tm-shown"); return Promise.resolve(); }
+    o = Object.assign({ delay: 0, per: 70, cycles: 7, step: 42 }, o || {});
+    const jobs = rig.spans.map((s, i) => new Promise((res) => {
+      const real = s.getAttribute("data-c");
+      s.classList.remove("on", "lock"); s.textContent = real;
+      setTimeout(async () => {
+        s.classList.add("on", "scr");
+        for (let k = 0; k < o.cycles; k++) { s.textContent = rg(); await wait(o.step); }
+        s.textContent = real; s.classList.remove("scr"); s.classList.add("lock");
+        setTimeout(() => s.classList.remove("lock"), 320);
+        res();
+      }, o.delay + i * o.per);
+    }));
+    return Promise.all(jobs);
+  };
+  /* 2 · sweep */
+  const sweep = (el) => {
+    const rig = rigs.get(el); if (!rig) return;
+    rig.spans.forEach((s, i) => setTimeout(() => { s.classList.add("gl"); setTimeout(() => s.classList.remove("gl"), 150); }, i * 58));
+  };
+  /* 3 · twitch */
+  const twitch = (el) => {
+    const rig = rigs.get(el); if (!rig || !rig.spans.length) return;
+    const s = rig.spans[(Math.random() * rig.spans.length) | 0], real = s.getAttribute("data-c");
+    s.classList.add("gl", "tw"); s.textContent = rg();
+    setTimeout(() => { s.textContent = rg(); }, 55);
+    setTimeout(() => { s.textContent = real; s.classList.remove("gl", "tw"); }, 120);
+  };
+
+  /* score for the name */
+  const sec = (el) => document.body.contains(el) && !document.hidden && !window.__tmGoing;
+  const score = (el) => {
+    let nextSweep = performance.now() + 5200, nextTw = performance.now() + 2600;
+    const loop = () => {
+      if (!el.isConnected || window.__tmGoing) return;
+      const now = performance.now();
+      if (sec(el)) {
+        if (now >= nextSweep) { sweep(el); nextSweep = now + 6800 + Math.random() * 1800; nextTw = Math.max(nextTw, now + 2200); }
+        else if (now >= nextTw) { twitch(el); nextTw = now + 2400 + Math.random() * 2200; }
+      }
+      setTimeout(loop, 200);
+    };
+    loop();
+  };
+
+  const fontsReady = () => new Promise((res) => {
+    const to = setTimeout(res, 1100);
+    if (document.fonts && document.fonts.load) {
+      Promise.all([document.fonts.load('600 30px "Cinzel"', "TIAMO"), document.fonts.load('13px "Michroma"', "ENTER 0123456789")]).then(() => { clearTimeout(to); res(); }, () => { clearTimeout(to); res(); });
+    } else { clearTimeout(to); res(); }
+  });
+
+  /* name: decode as soon as the fonts are in (the loader is already running underneath) */
+  if (nameEl) {
+    const rig = split(nameEl);
+    if (rig) {
+      fontsReady().then(async () => {
+        lockWidths(rig);
+        await wait(380);
+        await decode(nameEl, { per: 78, cycles: 8, step: 44 });
+        score(nameEl);
+      });
+      setTimeout(() => rig.spans.forEach((s) => s.classList.add("on")), 7000);          /* safety: never leave it hidden */
+    }
   }
+  /* Enter text: decode when the button appears, again (fast) when pointed at */
+  if (wordEl && enterBtn) {
+    const r0 = split(wordEl);
+    const show = () => { const r = rigs.get(wordEl); if (r) { lockWidths(r); decode(wordEl, { per: 55, cycles: 6, step: 40 }); } };
+    if (r0) setTimeout(() => r0.spans.forEach((s) => s.classList.add("on")), 9000);
+    window.addEventListener("tm:ready", () => setTimeout(show, 120));
+    let busy = 0;
+    const again = () => { if (busy || window.__tmGoing) return; const r = rigs.get(wordEl); if (!r) return; busy = 1; decode(wordEl, { per: 28, cycles: 4, step: 34 }).then(() => { busy = 0; }); };
+    enterBtn.addEventListener("pointerenter", again);
+    enterBtn.addEventListener("focus", again);
+    /* language switch: re-split the new word */
+    new MutationObserver(() => { if (!wordEl.querySelector(".tm-ch") && !hasAr(wordEl.textContent) && document.documentElement.lang !== "ar") { wordEl.dataset.own = "0"; const r = split(wordEl); if (r) { r.spans.forEach((s) => s.classList.add("on")); lockWidths(r); } } else if (hasAr(wordEl.textContent)) wordEl.classList.add("tm-shown"); }).observe(document.documentElement, { attributes: true, attributeFilter: ["lang"] });
+  }
+  /* the press: one clean chromatic hit on both lines, no sound */
+  if (enterBtn) enterBtn.addEventListener("click", () => { [nameEl, wordEl].forEach((el) => { const r = el && rigs.get(el); if (r) r.spans.forEach((s, i) => setTimeout(() => { s.classList.add("gl"); setTimeout(() => s.classList.remove("gl"), 160); }, i * 22)); }); }, true);
 })();
