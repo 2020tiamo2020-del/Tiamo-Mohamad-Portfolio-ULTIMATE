@@ -1,0 +1,42 @@
+/* 03 / SELECTED WORK - 3D studio walkthrough (work3d.js). Undo: delete this file, work3d.js and their 2 tags. */
+body.w3-on #work .gallery-grid,body.w3-on .st-chap{display:none!important}
+body.w3-on #work{min-height:0!important;padding-bottom:3vh!important}
+.w3{position:relative;background:#03050a}
+.w3-stage{position:sticky;top:0;height:100vh;overflow:hidden;background:radial-gradient(120% 80% at 50% 40%,#0c1827 0,#04070d 62%,#010204)}
+.w3-cam{position:absolute;inset:0;perspective:1000px;perspective-origin:50% 44%}
+.w3-rig,.w3-world{position:absolute;inset:0;transform-style:preserve-3d}
+.w3-world>*{position:absolute;left:50%;top:50%}
+.w3-floor,.w3-ceil{width:3600px;margin-left:-1800px;transform-origin:50% 0;
+  background:repeating-linear-gradient(180deg,rgba(150,200,255,.13) 0 2px,transparent 2px 180px),linear-gradient(90deg,transparent 49.9%,rgba(120,220,255,.35) 50%,transparent 50.1%),linear-gradient(90deg,#03060b,#0b1524 50%,#03060b)}
+.w3-ceil{background:repeating-linear-gradient(180deg,transparent 0 520px,rgba(200,230,255,.7) 520px 530px,transparent 530px 600px),linear-gradient(#02040a,#060b14)}
+.w3-wall{background:linear-gradient(#0a1220,#05080f);box-shadow:inset 0 0 120px #000}
+.w3-lintel{background:linear-gradient(#0c1626,#070b14);display:flex;align-items:flex-end;justify-content:center;padding-bottom:3%}
+.w3-lintel b{font:800 clamp(26px,4.4vw,74px)/1 Michroma,system-ui,sans-serif;letter-spacing:.14em;color:#e9fbff;text-shadow:0 0 12px #16d8ff,0 0 40px #16d8ff,0 0 90px #b794ff;animation:w3n 5s infinite}
+@keyframes w3n{0%,92%,100%{opacity:1}94%{opacity:.35}96%{opacity:1}97%{opacity:.5}}
+.w3-onair{position:absolute;right:6%;top:12%;padding:.5em 1em;border:2px solid #ff3d5a;color:#ff3d5a;font:700 14px Michroma,sans-serif;letter-spacing:.3em;box-shadow:0 0 24px #ff3d5a;animation:w3n 3s infinite}
+.w3-door{background:repeating-linear-gradient(90deg,#101a2b 0 34px,#0a111d 34px 40px);box-shadow:inset 0 0 0 3px #18263d,inset 0 0 60px #000;backface-visibility:visible}
+.w3-glow{background:radial-gradient(closest-side,#fff 0,#bfefff 22%,rgba(22,216,255,.45) 55%,transparent 100%)}
+.w3-plate{width:min(900px,86vw);margin-left:calc(min(900px,86vw)/-2);margin-top:-170px;text-align:center;color:#fff;pointer-events:none}
+.w3-plate b{display:block;font:800 clamp(120px,22vw,300px)/.8 Michroma,system-ui,sans-serif;color:transparent;-webkit-text-stroke:2px var(--c);filter:drop-shadow(0 0 26px var(--c))}
+.w3-plate h3{margin:.2em 0 .15em;font:600 clamp(26px,4.4vw,60px)/1.1 "Instrument Serif",Georgia,serif;letter-spacing:.01em}
+.w3-plate small{font:500 12px Michroma,sans-serif;letter-spacing:.3em;opacity:.7;color:var(--c)}
+.w3-plate .btn{pointer-events:auto;margin-top:26px;display:inline-block}
+.w3-f{visibility:hidden}
+.w3-f.on{visibility:visible}
+.w3-in{display:block;position:absolute;inset:0;border:0;padding:0;overflow:hidden;cursor:pointer;border-radius:3px;background:#05070c;
+  box-shadow:0 0 0 1px rgba(255,255,255,.16),0 0 70px -16px var(--c),0 40px 70px -24px #000;transition:box-shadow .35s}
+.w3-f:hover .w3-in,.w3-in:focus-visible{box-shadow:0 0 0 2px var(--c),0 0 90px -8px var(--c),0 40px 70px -24px #000}
+.w3-in img,.w3-in video{display:block;width:100%;height:100%;object-fit:cover}
+.w3-cap{position:absolute;left:0;top:100%;margin-top:12px;font:600 11px Michroma,sans-serif;letter-spacing:.22em;color:var(--c)}
+.w3-chip{position:absolute;right:10px;top:10px;padding:6px 10px;border-radius:99px;font:600 10px Michroma,sans-serif;letter-spacing:.14em;color:#fff;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);border:1px solid var(--c)}
+.w3-f.x{display:none}
+.w3-fog{position:absolute;inset:0;pointer-events:none;background:radial-gradient(90% 70% at 50% 46%,transparent 40%,rgba(1,2,5,.88) 100%),linear-gradient(transparent 70%,rgba(1,2,5,.6))}
+.w3-hud{position:absolute;inset:0;pointer-events:none;color:#fff;font-family:Michroma,system-ui,sans-serif}
+.w3-hn{position:absolute;left:clamp(16px,3vw,44px);top:clamp(16px,3vh,40px);font-size:12px;letter-spacing:.24em;text-transform:uppercase;text-shadow:0 0 14px #000}
+.w3-hc{position:absolute;right:clamp(16px,3vw,44px);top:clamp(16px,3vh,40px);font-size:12px;letter-spacing:.24em;color:var(--hc,#16d8ff)}
+.w3-rail{position:absolute;left:50%;bottom:clamp(14px,3vh,32px);transform:translateX(-50%);display:flex;gap:8px;pointer-events:auto;padding:8px;border-radius:99px;background:rgba(6,10,18,.55);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.14)}
+.w3-rail button{all:unset;cursor:pointer;min-width:42px;padding:9px 14px;border-radius:99px;text-align:center;font:600 11px Michroma,sans-serif;letter-spacing:.14em;color:#cfe;opacity:.6;transition:.3s}
+.w3-rail button.on{opacity:1;background:var(--c);color:#04070d;box-shadow:0 0 22px var(--c)}
+.w3-rail button:focus-visible{outline:2px solid #fff}
+.w3-hint{position:absolute;left:50%;bottom:clamp(70px,11vh,110px);transform:translateX(-50%);font-size:11px;letter-spacing:.3em;opacity:.75;transition:opacity .5s;white-space:nowrap}
+@media(max-width:700px){.w3-hn{display:none}.w3-rail button{padding:9px 11px;min-width:36px}}
