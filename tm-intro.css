@@ -120,3 +120,14 @@ body.tm-zoom-lock { overflow: hidden; }
    ========================================================================== */
 body.tm-pre-h .site-header { opacity: 0 !important; pointer-events: none !important; }
 body.tm-pre-r .st-rail, body.tm-pre-r .st-chap, body.tm-pre-r .float-wa, body.tm-pre-r .scroll-orbit { opacity: 0 !important; visibility: hidden !important; pointer-events: none !important; }
+
+
+/* The old music orb (sphere, headphones, orbits, tags, stars, ripples and the 3D crystal layer) is retired:
+   the carved medallion behind Home is the player. Static rules, no class toggled during the entrance.
+   Without WebGL, tm-intro.js adds html.tm-orb-fallback and the old orb comes back as the player. */
+html:not(.tm-orb-fallback) .hero-visual .orbit,
+html:not(.tm-orb-fallback) .hero-visual .neon-star,
+html:not(.tm-orb-fallback) .hero-visual .floating-tag,
+html:not(.tm-orb-fallback) .hero-visual .tm-hero-gl,
+html:not(.tm-orb-fallback) .tm-rip{visibility:hidden !important}
+html:not(.tm-orb-fallback) #tmOrb{opacity:0 !important;pointer-events:none !important}
