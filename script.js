@@ -1106,6 +1106,93 @@ if (canvas && ctx && !reduceMotion) {
       setTimeout(() => { if (!hinted && !playing) hint.classList.add("show"); }, 1600);
       setTimeout(() => { if (!playing) hint.classList.remove("show"); }, 14000);
     }
+    /* ---- 3D audio ring around the TM disc. The disc rises / sinks through the CSS variable --pop; this canvas follows the same value,
+       so ring and disc move as one. Delete this block (and the "Music orb v3" block in style.css) to undo. ---- */
+    {
+      const cv = document.createElement("canvas");
+      cv.className = "tm-ring"; cv.setAttribute("aria-hidden", "true");
+      orb.insertBefore(cv, orb.firstChild);
+      const g = cv.getContext("2d");
+      if (g) {
+        const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const N = 96, lv = new Float32Array(N), cs = getComputedStyle(orb);
+        let S = 0, Rd = 0, DPR = 1, pop = 0, raf2 = 0, rot = 0, tl = 0, shown = true;
+        const fit = () => {
+          DPR = Math.min(window.devicePixelRatio || 1, 2);
+          S = Math.round((cv.offsetWidth || 0) * DPR); cv.width = cv.height = S;
+          Rd = (orb.offsetWidth / 2) * DPR;
+        };
+        const frame = now => {
+          raf2 = 0;
+          const t = now / 1000, dt = Math.min(0.05, (now - (tl || now)) / 1000); tl = now;
+          const pv = parseFloat(cs.getPropertyValue("--pop"));
+          pop = isNaN(pv) ? pop + ((playing ? 1 : 0) - pop) * 0.08 : Math.max(0, Math.min(1.12, pv));
+          const ry = parseFloat(orb.style.getPropertyValue("--ry")) || 0, rx = parseFloat(orb.style.getPropertyValue("--rx")) || 0;
+          // spectrum -> 96 bars, mirrored (lows on top, highs at the bottom)
+          let sum = 0;
+          if (playing && analyser) analyser.getByteFrequencyData(data);
+          for (let i = 0; i < N; i++) {
+            const m = i < N / 2 ? i : N - 1 - i;
+            let v = 0;
+            if (playing) {
+              if (analyser) v = Math.min(1, Math.pow(data[1 + Math.floor(m * 0.85)] / 255, 0.9) * (0.85 + m / 40));
+              else v = (0.22 + 0.5 * Math.abs(Math.sin(t * 2.1 + m * 0.37))) * (0.65 + 0.35 * Math.sin(t * 5.3 + i * 0.11));
+            }
+            lv[i] += (v - lv[i]) * (v > lv[i] ? 0.55 : 0.12);
+            sum += lv[i];
+          }
+          g.clearRect(0, 0, S, S);
+          const C = S / 2, u = Rd / 95, F = Rd * 3.6, p = Math.max(0, pop), lift = Rd * 0.09 * p;
+          const yaw = ry * 0.42 + (still ? 0 : Math.sin(t * 0.7) * 0.1 * p), pit = -rx * 0.42 + (still ? 0 : Math.cos(t * 0.55) * 0.07 * p);
+          const ca = Math.cos(yaw), sa = Math.sin(yaw), cb = Math.cos(pit), sb = Math.sin(pit);
+          const P = (x, y, z) => {                       // tiny 3D projection: yaw, pitch, perspective
+            const x1 = x * ca + z * sa, z1 = -x * sa + z * ca, y2 = y * cb - z1 * sb, z2 = y * sb + z1 * cb, k = F / (F - z2);
+            return [C + x1 * k, C + y2 * k];
+          };
+          const circle = (r, z) => { g.beginPath(); for (let i = 0; i <= 90; i++) { const a = i / 90 * 6.2832, q = P(Math.cos(a) * r, Math.sin(a) * r, z); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); } g.stroke(); };
+          g.lineCap = "round";
+          // engraved bezel: two hairline rings + tick marks (always there, like carving in the stone; they light up as the disc rises)
+          const flash = Math.min(1, beatS) * p;
+          g.lineWidth = Math.max(1, DPR * 0.9);
+          g.strokeStyle = "rgba(150,170,225," + (0.16 + 0.3 * p + 0.25 * flash).toFixed(3) + ")"; circle(Rd * 1.13, lift);
+          g.strokeStyle = "rgba(150,170,225," + (0.1 + 0.2 * p).toFixed(3) + ")"; circle(Rd * 1.27, lift * 1.4);
+          if (!still) rot += dt * 0.3 * p;
+          g.strokeStyle = "rgba(170,190,235," + (0.2 + 0.32 * p).toFixed(3) + ")";
+          for (let i = 0; i < 72; i++) {
+            const a = i / 72 * 6.2832 + rot, l = i % 6 === 0 ? 0.085 : 0.04, c = Math.cos(a), s = Math.sin(a);
+            const A = P(c * Rd * 1.27, s * Rd * 1.27, lift * 1.4), B = P(c * Rd * (1.27 + l), s * Rd * (1.27 + l), lift * 1.4);
+            g.beginPath(); g.moveTo(A[0], A[1]); g.lineTo(B[0], B[1]); g.stroke();
+          }
+          // sound bars: spikes grow out of the ring and lean toward the viewer
+          if (p > 0.004) {
+            const r0 = Rd * 1.13, maxL = Rd * 0.66 * (1 + flash * 0.06);
+            g.globalCompositeOperation = "lighter";
+            for (let pass = 0; pass < 2; pass++) {
+              g.lineWidth = (pass ? 1.8 : 6) * u;
+              for (let i = 0; i < N; i++) {
+                const m = i < N / 2 ? i : N - 1 - i, len = (u * 2 + lv[i] * maxL) * p;
+                if (len < 0.5) continue;
+                const a = i / N * 6.2832 - 1.5708, c = Math.cos(a), s = Math.sin(a), k = m / 47;
+                const A = P(c * r0, s * r0, lift), B = P(c * (r0 + len), s * (r0 + len), lift + len * 0.5);
+                g.strokeStyle = "rgba(" + Math.round(92 + 58 * k) + "," + Math.round(225 - 115 * k) + ",255," + ((pass ? 0.55 + 0.45 * lv[i] : 0.1 + 0.1 * lv[i]) * Math.min(1, p)).toFixed(3) + ")";
+                g.beginPath(); g.moveTo(A[0], A[1]); g.lineTo(B[0], B[1]); g.stroke();
+                if (pass && lv[i] > 0.55) { g.fillStyle = "rgba(235,250,255," + (lv[i] * Math.min(1, p)).toFixed(3) + ")"; g.beginPath(); g.arc(B[0], B[1], 1.5 * u, 0, 6.2832); g.fill(); }
+              }
+            }
+            g.globalCompositeOperation = "source-over";
+          }
+          if (shown && !document.hidden && (playing || pop > 0.003 || sum > 0.02 || orb.matches(":hover"))) raf2 = requestAnimationFrame(frame);
+        };
+        const kick = () => { if (!raf2 && shown && !document.hidden) { tl = 0; raf2 = requestAnimationFrame(frame); } };
+        fit(); kick();
+        addEventListener("resize", () => { fit(); kick(); });
+        new MutationObserver(kick).observe(orb, { attributes: true, attributeFilter: ["class"] });
+        orb.addEventListener("pointerenter", kick); orb.addEventListener("pointerleave", kick);
+        document.addEventListener("visibilitychange", kick);
+        if ("IntersectionObserver" in window) new IntersectionObserver(es => { shown = es.some(e => e.isIntersecting); kick(); }, { rootMargin: "120px" }).observe(orb);
+      }
+    }
+
     labels();
   }
 }
@@ -2191,10 +2278,7 @@ updateScrollOrbit(true);
 
   const enterPortfolio = () => {
     if (welcomed) return;
-    // the intro (tm-intro.js) unlocks "Enter" only when the 3D logo is really loaded - until then clicks are ignored
-    if (gate && gate.classList.contains("tm-intro") && !gate.classList.contains("is-ready")) return;
     welcomed = true;
-    if (window.__tmMark) window.__tmMark();   // starts the shared intro clock (window.__tmTL, see index.html <head>)
     const ar = _isAr();
     const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -2240,8 +2324,8 @@ updateScrollOrbit(true);
         } catch (_) {}
         showWelcomeToast();
       };
-      // with the TM intro: after the logo, bar, orb and title have all arrived (window.__tmTL.toast); otherwise ~1 s
-      if (window.__tmDirected && window.__tmAt) window.__tmAt("toast", show); else setTimeout(show, 950);
+      // ~ after logo land (visual done) — synced with toast.mp3, not enter track length
+      setTimeout(show, 950);
     };
 
     // Particles swirl to logo center
@@ -2266,7 +2350,7 @@ updateScrollOrbit(true);
     try { window.__startMainParticles && window.__startMainParticles(); } catch(_){}
         setTimeout(() => gate.remove(), 500);
       }
-      if (!window.__tmDirected) setTimeout(() => {   // with the TM intro, tm-intro.js starts Home at its own moment
+      setTimeout(() => {
         const h1 = document.querySelector(".hero h1");
         if (h1) h1.classList.remove("hero-pending");
         if (typeof window.__restaggerHero === "function") window.__restaggerHero();
@@ -2334,7 +2418,7 @@ updateScrollOrbit(true);
       gate.classList.add("is-leaving");
       setTimeout(() => gate.remove(), 480);
       // Hero title drops in AFTER the gate opens (visible animation)
-      if (!window.__tmDirected) setTimeout(() => {
+      setTimeout(() => {
         const h1 = document.querySelector(".hero h1");
         if (h1) h1.classList.remove("hero-pending");
         if (typeof window.__restaggerHero === "function") window.__restaggerHero();
