@@ -954,7 +954,6 @@ if (canvas && ctx && !reduceMotion) {
     const BINS = [0, 2, 4, 7, 12], MINI_BINS = [1, 3, 6, 10];
     const MSG = { en: { play: "Play music", pause: "Pause music" }, ar: { play: "تشغيل الموسيقى", pause: "إيقاف الموسيقى" } };
     let audio = null, ctx = null, analyser = null, gain = null, data = null;
-    const M = window.__tmMusic = { playing: false, data: null, beat: 0 };   // read by the hero medallion (tm-intro.js)
     let playing = false, token = 0, raf = 0, fadeT = 0, beatS = 0, avgB = 0, orbVisible = true, hinted = false;
     const mean = new Float32Array(BINS.length + MINI_BINS.length).fill(0.5);   // per-bar running average (keeps bars lively on loud or quiet tracks)
 
@@ -971,7 +970,7 @@ if (canvas && ctx && !reduceMotion) {
     };
     const hideHint = () => { hinted = true; hint && hint.classList.remove("show"); };
     const setUI = on => {
-      playing = on; M.playing = on; if (!on) { M.beat = 0; M.data = null; }
+      playing = on;
       orb.classList.toggle("is-playing", on);
       orb.setAttribute("aria-pressed", on ? "true" : "false");
       if (!on) {
@@ -1057,7 +1056,6 @@ if (canvas && ctx && !reduceMotion) {
       const swayV = (Math.max(-7, Math.min(7, sway))).toFixed(2);
       const spinV = (Math.max(-5, Math.min(5, spin))).toFixed(2);
       const beatV = beatS.toFixed(3);
-      M.data = data; M.beat = beatS;
       orb.style.setProperty("--beat", beatV);
       orb.style.setProperty("--sway", swayV);
       orb.style.setProperty("--spin", spinV);
@@ -2193,7 +2191,10 @@ updateScrollOrbit(true);
 
   const enterPortfolio = () => {
     if (welcomed) return;
+    // the intro (tm-intro.js) unlocks "Enter" only when the 3D logo is really loaded - until then clicks are ignored
+    if (gate && gate.classList.contains("tm-intro") && !gate.classList.contains("is-ready")) return;
     welcomed = true;
+    if (window.__tmMark) window.__tmMark();   // starts the shared intro clock (window.__tmTL, see index.html <head>)
     const ar = _isAr();
     const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -2239,8 +2240,8 @@ updateScrollOrbit(true);
         } catch (_) {}
         showWelcomeToast();
       };
-      // ~ after logo land (visual done) — synced with toast.mp3, not enter track length
-      setTimeout(show, 950);
+      // with the TM intro: after the logo, bar, orb and title have all arrived (window.__tmTL.toast); otherwise ~1 s
+      if (window.__tmDirected && window.__tmAt) window.__tmAt("toast", show); else setTimeout(show, 950);
     };
 
     // Particles swirl to logo center
@@ -2265,7 +2266,7 @@ updateScrollOrbit(true);
     try { window.__startMainParticles && window.__startMainParticles(); } catch(_){}
         setTimeout(() => gate.remove(), 500);
       }
-      setTimeout(() => {
+      if (!window.__tmDirected) setTimeout(() => {   // with the TM intro, tm-intro.js starts Home at its own moment
         const h1 = document.querySelector(".hero h1");
         if (h1) h1.classList.remove("hero-pending");
         if (typeof window.__restaggerHero === "function") window.__restaggerHero();
@@ -2333,7 +2334,7 @@ updateScrollOrbit(true);
       gate.classList.add("is-leaving");
       setTimeout(() => gate.remove(), 480);
       // Hero title drops in AFTER the gate opens (visible animation)
-      setTimeout(() => {
+      if (!window.__tmDirected) setTimeout(() => {
         const h1 = document.querySelector(".hero h1");
         if (h1) h1.classList.remove("hero-pending");
         if (typeof window.__restaggerHero === "function") window.__restaggerHero();

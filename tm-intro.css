@@ -120,9 +120,3 @@ body.tm-zoom-lock { overflow: hidden; }
    ========================================================================== */
 body.tm-pre-h .site-header { opacity: 0 !important; pointer-events: none !important; }
 body.tm-pre-r .st-rail, body.tm-pre-r .st-chap, body.tm-pre-r .float-wa, body.tm-pre-r .scroll-orbit { opacity: 0 !important; visibility: hidden !important; pointer-events: none !important; }
-
-
-/* The carved medallion behind Home is the music player (WebGL scene only): the old sphere is hidden, its click target and ripples with it.
-   Without WebGL this class is never added, so the sphere stays as the player. */
-html.tm-logo-player #tmOrb{opacity:0 !important;pointer-events:none !important}
-html.tm-logo-player .tm-rip{display:none !important}
