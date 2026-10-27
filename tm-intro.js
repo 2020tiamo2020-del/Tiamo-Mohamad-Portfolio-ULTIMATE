@@ -116,35 +116,20 @@
     "  vec3 fogC=vec3(0.018,0.055,0.105)+vec3(0.04,0.14,0.28)*under*uGlow*(0.35+0.6*m);",
     "  float fk=clamp(fog*(0.24+0.52*low),0.0,1.0)*0.78;",
     "  col=col*(1.0-fk*0.52)+fogC*fk;",
-    /* HOME only: SYNTHETIC rock slab on the right + smoke drifting in front of it */
+    /* HOME only: light synthetic rock + smoke on the right (reuses existing noise) */
     "  float homeK=1.0-uAlphaMode;",
-    "  if(homeK>0.01){",
-    "   vec2 rp=(q-uEmb)/uRing;",
-    "   float ang=atan(rp.y,rp.x);",
-    "   float rightArc=smoothstep(0.15,0.55,ang)*smoothstep(1.55,1.05,ang)+smoothstep(-0.15,-0.55,ang)*smoothstep(-1.35,-0.85,ang);",
-    "   rightArc=max(rightArc, smoothstep(0.20,0.55,rp.x)*smoothstep(1.9,0.7,abs(rp.y)));",
-    "   float rBand=smoothstep(0.95,1.20,rr)*smoothstep(2.6,1.45,rr);",
-    "   float slab=rBand*rightArc*homeK;",
-    "   float rockN=fbm(q*0.011+vec2(3.1,1.7));",
-    "   float rockN2=fbm(q*0.028+vec2(-1.4,4.2));",
-    "   float cracks=smoothstep(0.42,0.58,rockN)*smoothstep(0.60,0.40,rockN2);",
-    "   float body=smoothstep(0.28,0.72,rockN*0.65+rockN2*0.35);",
-    "   vec3 rockDeep=vec3(0.04,0.08,0.16);",
-    "   vec3 rockMid=vec3(0.10,0.20,0.36);",
-    "   vec3 rockHi=vec3(0.18,0.34,0.55);",
-    "   vec3 rockCol=mix(rockDeep,rockMid,body);",
-    "   rockCol=mix(rockCol,rockHi,cracks*0.55);",
-    "   float edgeFade=smoothstep(0.0,0.25,slab)*smoothstep(1.0,0.55,slab);",
-    "   col=mix(col, rockCol*(0.55+0.45*uAmb), slab*edgeFade*0.92);",
-    "   lum=max(lum, dot(rockCol,vec3(0.299,0.587,0.114))*slab*edgeFade);",
-    /* smoke drifting in front of the right slab (the cyan path) */
-    "   float smPath=smoothstep(1.05,1.35,rr)*smoothstep(2.35,1.55,rr)*rightArc;",
-    "   float smWave=fbm(q*0.007+vec2(t*0.045,-t*0.02));",
-    "   float sm=smPath*smoothstep(0.25,0.70,smWave*0.55+m*0.55+0.15);",
-    "   vec3 smC=mix(vec3(0.08,0.22,0.42),vec3(0.45,0.78,0.98),smWave);",
-    "   col+=smC*sm*uGlow*homeK*0.85;",
-    "   lum+=sm*0.35*homeK;",
-    "  }",
+    "  vec2 rp=(q-uEmb)/uRing;",
+    "  float rightArc=smoothstep(0.18,0.55,rp.x)*smoothstep(1.85,0.55,abs(rp.y));",
+    "  float rBand=smoothstep(0.95,1.22,rr)*smoothstep(2.55,1.40,rr);",
+    "  float slab=rBand*rightArc*homeK;",
+    "  float body=smoothstep(0.30,0.75,nz*0.6+f2*0.4);",
+    "  vec3 rockCol=mix(vec3(0.05,0.10,0.18),vec3(0.14,0.28,0.48),body);",
+    "  rockCol=mix(rockCol,vec3(0.20,0.38,0.58),smoothstep(0.45,0.62,nz)*0.4);",
+    "  float edgeFade=smoothstep(0.0,0.22,slab)*smoothstep(1.0,0.50,slab);",
+    "  col=mix(col, rockCol*(0.55+0.45*uAmb), slab*edgeFade*0.90);",
+    "  float smPath=smoothstep(1.05,1.35,rr)*smoothstep(2.30,1.50,rr)*rightArc*homeK;",
+    "  float sm=smPath*smoothstep(0.22,0.68,m*0.5+nz*0.5);",
+    "  col+=mix(vec3(0.08,0.22,0.42),vec3(0.42,0.76,0.96),nz)*sm*uGlow*0.80;",
     "  for(int i=0;i<" + NMK + ";i++){",
     "   vec4 mk=uM[i];",
     "   if(mk.z>0.0&&uMk>0.001){",
@@ -755,6 +740,7 @@
   const upTimer = setInterval(() => { tryUpload(); if (texDone || flat || !alive) clearInterval(upTimer); }, 40);
   /* after 12 s of nothing we stop waiting: the flat picture is shown instead of a dead gate */
   failsafe = setTimeout(() => { if (!texDone) fallback(); }, 12000);
+  setTimeout(() => { if (!ready && !readyPending) { flat = true; setReady(); } }, 8000);
 
   /* flat fallback (no WebGL / lost context / assets that never arrive) */
   let heroBgEl = null;
@@ -769,6 +755,7 @@
     flat = true;
     stage.classList.add("tm-nogl");
     cv.style.display = "none";
+    if (!ready && !readyPending) setTimeout(setReady, 100);
   }
   if (!gl) fallback();
 
