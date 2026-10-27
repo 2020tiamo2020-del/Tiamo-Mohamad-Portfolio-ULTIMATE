@@ -40,7 +40,7 @@
 
   /* artwork geometry: 1600x900 source; the medallion's outer ring is 469 px wide and centred at (802,446) */
   const IMG_W = 1600, IMG_H = 900, RING_D = 469, EMB_X = 802, EMB_Y = 446;
-  const SRC = { alb: "images/intro-albedo.jpg?v=7", nor: "images/intro-normal.jpg?v=4", hei: "images/intro-height.jpg?v=7", cls: "images/intro-cavity.png?v=7" };
+  const SRC = { alb: "images/intro-albedo.jpg?v=8", nor: "images/intro-normal.jpg?v=4", hei: "images/intro-height.jpg?v=8", cls: "images/intro-cavity.png?v=8" };
   const NMK = 12;
   const GW = 192, GH = 108;                      /* mist-field resolution */
 
@@ -76,10 +76,11 @@
     " float rr0=length(q-uEmb)/max(uRing,1.0);",
     " float outer=smoothstep(0.78,0.88,rr0)*(1.0-smoothstep(1.02,1.14,rr0));",
     " float mid=smoothstep(0.55,0.66,rr0)*(1.0-smoothstep(0.78,0.88,rr0));",
-    " float mech=uMech*0.38;",
-    " float faceLock=smoothstep(0.52,0.38,rr0);",
-    " q=mix(q,rotAround(q+vec2(0.0,uRing*0.014*mech),uEmb,mech*0.045),outer*(1.0-faceLock));",
-    " q=mix(q,rotAround(q+vec2(0.0,-uRing*0.009*mech),uEmb,-mech*0.055),mid*(1.0-faceLock));",
+    " float mech=uMech;",
+    " float faceLock=smoothstep(0.48,0.32,rr0);",
+    " q=mix(q,rotAround(q+vec2(0.0,uRing*0.055*mech),uEmb,mech*0.14),outer*(1.0-faceLock));",
+    " q=mix(q,rotAround(q+vec2(0.0,-uRing*0.035*mech),uEmb,-mech*0.18),mid*(1.0-faceLock));",
+    " q=mix(q,q+vec2(0.0,-uRing*0.02*mech),(1.0-smoothstep(0.35,0.55,rr0))*mech*0.5);",
     " vec2 uv=(q-uRect.xy)/uRect.zw;",
     " col=vec3(0.0);lum=0.0;",
     " if(uv.x>0.0&&uv.x<1.0&&uv.y>0.0&&uv.y<1.0){",
@@ -126,14 +127,15 @@
     "    vec2 dv=mp-q;float d=length(dv);",
     "    float fl=pow(max(0.0,sin(t*(0.55+0.5*fract(mk.w*3.7))+mk.w*40.0)),6.0);",
     "    float near=texture2D(uFld,mk.xy).r;",
-    "    float k=(0.14+0.55*fl+1.1*smoothstep(0.05,0.5,near))*uMk;",
+    "    float k=(0.45+0.40*fl+0.55*smoothstep(0.05,0.5,near))*uMk;",
     "    vec3 c=mkCol(float(i));",
-    "    float a=1.0-clamp(d/(r*3.4),0.0,1.0);a*=a;",
+    "    float a=1.0-clamp(d/(r*4.5),0.0,1.0);a*=a;",
     "    vec3 ld=normalize(vec3(dv/(r*2.2),0.7));",
     "    float dif=max(dot(n,ld),0.0);",
-    "    col+=c*ac*(0.9+2.6*dif)*a*k*1.9;",
-    "    col+=c*exp(-d*d/(r*r*0.05))*k*1.5;",
-    "    col+=c*exp(-d/(r*1.5))*0.20*k*(0.5+fog);",
+    "    col+=c*(0.55+0.45*ac)*(1.0+2.4*dif)*a*k*2.6;",
+    "    col+=c*exp(-d*d/(r*r*0.07))*k*2.2;",
+    "    col+=c*exp(-d/(r*1.8))*0.35*k*(0.6+fog);",
+    "    lum=max(lum,k*a*0.9);",
     "   }",
     "  }",
     /* music: EVERY carved hollow glows with the spectrum band that matches its size.
@@ -367,8 +369,8 @@
       const py = EMB_Y + Math.sin(a) * r * R0 * 0.88;
       markers[i*4] = px / IMG_W;
       markers[i*4+1] = py / IMG_H;
-      markers[i*4+2] = 0.055 + (i % 3) * 0.012;
-      markers[i*4+3] = (i * 0.17) % 1; /* hue seed → mkCol */
+      markers[i*4+2] = 0.075 + (i % 3) * 0.018;
+      markers[i*4+3] = (i * 0.17) % 1;
     }
   };
 
@@ -487,7 +489,7 @@
     gl.uniform4f(U.uRect, rect[0], rect[1], rect[2], rect[3]);
     gl.uniform1f(U.uZoom, zoomV); gl.uniform1f(U.uAmb, amb); gl.uniform1f(U.uInt, inten);
     gl.uniform1f(U.uTime, sec); gl.uniform1f(U.uAlphaMode, alphaMode); gl.uniform1f(U.uOpacity, opac);
-    gl.uniform1f(U.uRing, R); gl.uniform1f(U.uMk, 0); gl.uniform1f(U.uGlow, glow); gl.uniform1f(U.uFlood, 0);
+    gl.uniform1f(U.uRing, R); gl.uniform1f(U.uMk, mode === "home" ? Math.max(0.9, mk) * (0.85 + 0.45 * litV) : mk); gl.uniform1f(U.uGlow, glow); gl.uniform1f(U.uFlood, flood);
     gl.uniform4fv(U.uM, markers);
     gl.activeTexture(gl.TEXTURE4); gl.bindTexture(gl.TEXTURE_2D, spTex);
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 64, 1, gl.LUMINANCE, gl.UNSIGNED_BYTE, spBytes);
@@ -647,8 +649,8 @@
       opac = 0.92 * easeOut(t / 1700);
       amb = lerp(0.70, 0.62, easeOut(t / 2600));
       glow = lerp(1.0, 0.80, easeOut(t / 2600));
-      mk = lerp(1.2, 0.75, easeOut(t / 3200));
-      flood = lerp(0.5, 0.12, easeOut(t / 3600));
+      mk = lerp(1.2, 1.05, easeOut(t / 3200));
+      flood = lerp(0.5, 0.18, easeOut(t / 3600));
       if (t > 4000) handT = 0;
     }
     if (mode === "home") stepMusic(now, dt);
