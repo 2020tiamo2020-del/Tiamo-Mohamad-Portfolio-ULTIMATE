@@ -105,7 +105,7 @@ body.tm-zoom-lock { overflow: hidden; }
 .hero { position: relative; isolation: isolate; }
 .tm-hero-cv {
   position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; display: block; pointer-events: none;
-  -webkit-mask-image: radial-gradient(ellipse 60% 66% at 68% 50%, #000 30%, transparent 100%); mask-image: radial-gradient(ellipse 60% 66% at 68% 50%, #000 30%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 72% 74% at 68% 50%, #000 38%, transparent 100%); mask-image: radial-gradient(ellipse 72% 74% at 68% 50%, #000 38%, transparent 100%);
 }
 @media (max-width: 900px) { .tm-hero-cv { -webkit-mask-image: radial-gradient(ellipse 70% 52% at 50% 42%, #000 30%, transparent 100%); mask-image: radial-gradient(ellipse 70% 52% at 50% 42%, #000 30%, transparent 100%); } }
 .hero-logo-bg { position: absolute; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; transform-origin: 68% 50%; transform: scale(.86); -webkit-mask-image: linear-gradient(#000 0, #000 70%, transparent 100%); mask-image: linear-gradient(#000 0, #000 70%, transparent 100%); }
@@ -165,7 +165,7 @@ html:not(.tm-orb-fallback) .core-hint { display: none !important; }
 @media (prefers-reduced-motion: reduce) { .tm-stone i, .tm-stone i::after { animation: none; } }
 
 /* Arabic: the medallion sits on the left, the mask follows it; the joined word only sways gently (3D tilt would break the letters) */
-html[dir="rtl"] .tm-hero-cv { -webkit-mask-image: radial-gradient(ellipse 60% 66% at 32% 50%, #000 30%, transparent 100%); mask-image: radial-gradient(ellipse 60% 66% at 32% 50%, #000 30%, transparent 100%); }
+html[dir="rtl"] .tm-hero-cv { -webkit-mask-image: radial-gradient(ellipse 72% 74% at 32% 50%, #000 38%, transparent 100%); mask-image: radial-gradient(ellipse 72% 74% at 32% 50%, #000 38%, transparent 100%); }
 @media (max-width: 900px) { html[dir="rtl"] .tm-hero-cv { -webkit-mask-image: radial-gradient(ellipse 70% 52% at 50% 42%, #000 30%, transparent 100%); mask-image: radial-gradient(ellipse 70% 52% at 50% 42%, #000 30%, transparent 100%); } }
 .tm-stone-ar i { animation-name: tmStoneDriftAr; animation-duration: 5.2s; }
 @keyframes tmStoneDriftAr {
@@ -179,6 +179,6 @@ html[dir="rtl"] .tm-hero-cv { -webkit-mask-image: radial-gradient(ellipse 60% 66
 
 /* v6 · Home: the rock rings around the player stay visible and melt softly into the page (mask follows the medallion, any language / screen) */
 .tm-hero-cv, html[dir="rtl"] .tm-hero-cv {
-  -webkit-mask-image: radial-gradient(circle at var(--tm-cx, 68%) var(--tm-cy, 50%), #000 calc(var(--tm-r, 220px) * 1.35), rgba(0,0,0,.55) calc(var(--tm-r, 220px) * 2.0), transparent calc(var(--tm-r, 220px) * 2.9));
-          mask-image: radial-gradient(circle at var(--tm-cx, 68%) var(--tm-cy, 50%), #000 calc(var(--tm-r, 220px) * 1.35), rgba(0,0,0,.55) calc(var(--tm-r, 220px) * 2.0), transparent calc(var(--tm-r, 220px) * 2.9));
+  -webkit-mask-image: radial-gradient(circle at var(--tm-cx, 68%) var(--tm-cy, 50%), #000 calc(var(--tm-r, 220px) * 1.55), rgba(0,0,0,.65) calc(var(--tm-r, 220px) * 2.35), transparent calc(var(--tm-r, 220px) * 3.35));
+          mask-image: radial-gradient(circle at var(--tm-cx, 68%) var(--tm-cy, 50%), #000 calc(var(--tm-r, 220px) * 1.55), rgba(0,0,0,.65) calc(var(--tm-r, 220px) * 2.35), transparent calc(var(--tm-r, 220px) * 3.35));
 }

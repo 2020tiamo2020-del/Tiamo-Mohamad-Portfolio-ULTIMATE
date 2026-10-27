@@ -106,9 +106,13 @@
     "  mc=mix(mc,vec3(0.72,0.90,1.0),smoothstep(0.45,0.95,m)*0.55);",
     "  float cav=pow(1.0-smoothstep(0.14,0.50,h),1.2);",
     "  float edge=smoothstep(0.12,0.58,length(n.xy));",
-    "  col=ac*vec3(0.22,0.44,0.76)*uAmb;",
+    /* damp solid letter faces so they never look printed; mist can read inside the monogram */
+    "  float faceDamp=mix(1.0,0.62,smoothstep(0.0,0.42,rr)*smoothstep(0.55,0.22,h));",
+    "  col=ac*vec3(0.22,0.44,0.76)*uAmb*faceDamp;",
     "  float stone=0.55+0.9*lumA;",
-    "  col+=mc*m*cav*stone*uGlow*1.45;",
+    /* mist prefers cavities AND gently washes raised letter faces in the center */
+    "  float mistBody=mix(cav, max(cav,0.35+0.40*(1.0-h)), smoothstep(0.0,0.45,rr)*0.85);",
+    "  col+=mc*m*mistBody*stone*uGlow*1.45;",
     /* soft edge laser — smoke along edges, not solid letter paint */
     "  float laser=edge*cav*(0.22+0.65*m)*(0.50+0.40*halo);",
     "  col+=vec3(0.50,0.82,1.0)*laser*uGlow*0.48;",
@@ -118,6 +122,11 @@
     "  vec3 fogC=vec3(0.018,0.055,0.105)+vec3(0.04,0.14,0.28)*under*uGlow*(0.35+0.6*m);",
     "  float fk=clamp(fog*(0.24+0.52*low),0.0,1.0)*0.78;",
     "  col=col*(1.0-fk*0.52)+fogC*fk;",
+    /* soft rocky wash outside the ring so the right side is not empty */
+    "  float outerRock=smoothstep(0.95,1.15,rr)*smoothstep(2.6,1.35,rr);",
+    "  float orMist=m*0.55+0.25*nz*uGlow;",
+    "  vec3 orCol=ac*vec3(0.12,0.28,0.52)*uAmb*(0.35+0.65*orMist);",
+    "  col=mix(col, max(col,orCol), outerRock*0.55*uGlow);",
     "  for(int i=0;i<" + NMK + ";i++){",
     "   vec4 mk=uM[i];",
     "   if(mk.z>0.0&&uMk>0.001){",
@@ -138,27 +147,27 @@
     "  }",
     "  if(uLit>0.003){",
     "   vec3 cl=texture2D(uCls,uv).rgb;",
-    "   float b=clamp(cl.r+(cl.g-0.5)*0.10,0.0,1.0);",
+    "   float b=clamp(cl.r+(cl.g-0.5)*0.08,0.0,1.0);",
     "   float lv=texture2D(uSp,vec2(0.012+0.40*pow(b,1.15),0.5)).r;",
-    "   lv=clamp(lv*(0.85+1.9*b),0.0,1.4);",
+    "   lv=clamp(lv*(0.80+1.5*b),0.0,1.15);",
     "   float bass=texture2D(uSp,vec2(0.02,0.5)).r;",
     "   float thin=smoothstep(0.42,0.55,b);",
-    "   float flow=mix(0.60+0.40*sin(t*(1.1+2.2*b)+cl.g*25.0+nz*7.0),0.88+0.12*sin(t*1.7+cl.g*20.0),thin);",
+    /* smooth flow — less spatial noise so no blotches on TM faces */
+    "   float flow=mix(0.72+0.22*sin(t*(0.9+1.4*b)+cl.g*12.0),0.90+0.08*sin(t*1.2+cl.g*10.0),thin);",
     "   float cm=pow(1.0-smoothstep(0.14,0.46,h),1.25);",
-    "   cm=mix(cm,1.0-smoothstep(0.06,0.27,h),thin);",
+    "   cm=mix(cm,1.0-smoothstep(0.08,0.30,h),thin);",
     "   float zone=1.0-smoothstep(1.6,3.3,rr);",
     "   float zin=mix(1.0,0.62,smoothstep(1.1,1.9,rr));",
-    "   float cloud=mix(0.70+0.60*nz,0.86+0.28*nz,thin);",
-    /* much softer music light — hollows glow with mist, never solid fill */
-    "   float lt=uLit*cm*zone*zin*cloud*(0.04+0.38*lv*flow+0.12*uBeat*(1.0-0.7*b)+0.06*bass*(1.0-b));",
-    "   vec3 cc=mix(vec3(0.12,0.28,0.58),vec3(0.32,0.58,0.88),smoothstep(0.0,0.6,b));",
-    "   cc=mix(cc,vec3(0.55,0.78,0.95),thin*0.55);",
+    "   float cloud=mix(0.78+0.28*nz,0.90+0.12*nz,thin);",
+    "   float lt=uLit*cm*zone*zin*cloud*(0.035+0.28*lv*flow+0.08*uBeat*(1.0-0.6*b)+0.05*bass*(1.0-b));",
+    "   vec3 cc=mix(vec3(0.10,0.24,0.52),vec3(0.28,0.52,0.82),smoothstep(0.0,0.6,b));",
+    "   cc=mix(cc,vec3(0.42,0.68,0.90),thin*0.40);",
     "   float st2=stone;",
-    "   col+=cc*lt*st2*0.55+vec3(0.30,0.52,0.85)*lt*lt*0.08;",
-    /* thin edge laser only on letter/ring edges — no interior fill */
-    "   float edgeL=edge*thin*cm*(0.35+0.45*uBeat+0.20*lv);",
-    "   col+=vec3(0.60,0.88,1.0)*edgeL*uLit*0.42;",
-    "   col+=vec3(0.85,0.95,1.0)*edgeL*edgeL*uLit*0.12;",
+    "   col+=cc*lt*st2*0.42+vec3(0.25,0.45,0.75)*lt*lt*0.05;",
+    /* edge laser only — thin rim, no face fill / no patches */
+    "   float edgeL=edge*thin*cm*(0.28+0.32*uBeat+0.14*lv);",
+    "   col+=vec3(0.55,0.82,1.0)*edgeL*uLit*0.32;",
+    "   col+=vec3(0.80,0.92,1.0)*edgeL*edgeL*uLit*0.08;",
     "  }",
     "  float vk=mix(1.72,1.80,uAlphaMode);",
     "  float v=smoothstep(1.0,0.22,length((uv-0.5)*vec2(1.0,1.12)*vk));",
@@ -361,20 +370,34 @@
       hd = x.getImageData(0, 0, hw, hh).data;
     } catch (_) { hd = null; }
     const R0 = RING_D / 2, list = [];
+    /* preferred accents: top-right purple zone, bottom blue, left green (angles in radians) */
+    const preferred = [
+      { ang: -0.55, rho: 1.35 }, { ang: -0.25, rho: 1.55 },  /* top-right */
+      { ang:  1.15, rho: 1.40 }, { ang:  1.55, rho: 1.60 },  /* bottom */
+      { ang:  2.55, rho: 1.35 }, { ang:  3.00, rho: 1.50 },  /* left */
+      { ang: -1.20, rho: 1.45 }, { ang:  0.40, rho: 1.70 }   /* extra spread */
+    ];
+    for (const p of preferred) {
+      if (list.length >= NMK) break;
+      const px = EMB_X + Math.cos(p.ang) * p.rho * R0 * 1.12;
+      const py = EMB_Y + Math.sin(p.ang) * p.rho * R0 * 0.82;
+      if (px < IMG_W * 0.06 || px > IMG_W * 0.94 || py < IMG_H * 0.06 || py > IMG_H * 0.94) continue;
+      list.push({ x: px, y: py });
+    }
     for (let tries = 0; tries < 900 && list.length < NMK; tries++) {
-      const ang = rand() * Math.PI * 2, rho = 1.25 + Math.pow(rand(), 0.8) * 1.5;
+      const ang = rand() * Math.PI * 2, rho = 1.15 + Math.pow(rand(), 0.75) * 1.55;
       const px = EMB_X + Math.cos(ang) * rho * R0 * 1.15, py = EMB_Y + Math.sin(ang) * rho * R0 * 0.82;
-      if (px < IMG_W * 0.08 || px > IMG_W * 0.92 || py < IMG_H * 0.08 || py > IMG_H * 0.92) continue;
+      if (px < IMG_W * 0.06 || px > IMG_W * 0.94 || py < IMG_H * 0.06 || py > IMG_H * 0.94) continue;
       const hv = hd ? hd[((Math.floor(py / IMG_H * hh)) * hw + Math.floor(px / IMG_W * hw)) * 4] / 255 : 0.5;
-      if (hv < 0.42) continue;
-      if (list.some((m) => Math.hypot(m.x - px, m.y - py) < R0 * 0.55)) continue;
+      if (hv < 0.38) continue;
+      if (list.some((m) => Math.hypot(m.x - px, m.y - py) < R0 * 0.42)) continue;
       list.push({ x: px, y: py });
     }
     for (let i = 0; i < NMK; i++) {
       const m = list[i];
       markers[i*4] = m ? m.x / IMG_W : 0.5; markers[i*4+1] = m ? m.y / IMG_H : 0.5;
-      markers[i*4+2] = m ? 0.040 + rand() * 0.050 : 0;      /* radius in ring units (0 = off) */
-      markers[i*4+3] = rand();                              /* flash phase */
+      markers[i*4+2] = m ? 0.045 + rand() * 0.055 : 0;
+      markers[i*4+3] = rand();
     }
   };
 
