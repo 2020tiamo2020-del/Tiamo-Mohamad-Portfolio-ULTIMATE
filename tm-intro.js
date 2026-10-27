@@ -63,8 +63,8 @@
     " return mix(mix(hash(i),hash(i+vec2(1.0,0.0)),f.x),mix(hash(i+vec2(0.0,1.0)),hash(i+vec2(1.0,1.0)),f.x),f.y);}",
     "float fbm(vec2 p){float a=0.5,s=0.0;for(int i=0;i<3;i++){s+=a*noise(p);p*=2.03;a*=0.5;}return s;}",
     "vec3 mkCol(float i){float k=mod(i,5.0);",
-    " if(k<0.5)return vec3(0.62,0.45,1.0); if(k<1.5)return vec3(0.38,1.0,0.48); if(k<2.5)return vec3(1.0,0.62,0.22);",
-    " if(k<3.5)return vec3(0.08,0.95,0.86); return vec3(1.0,0.46,0.78);}",
+    " if(k<0.5)return vec3(0.08,0.95,0.86); if(k<1.5)return vec3(0.38,1.0,0.48); if(k<2.5)return vec3(1.0,0.46,0.78);",
+    " if(k<3.5)return vec3(1.0,0.62,0.22); return vec3(0.62,0.45,1.0);}",
     "vec2 rotAround(vec2 p,vec2 c,float a){vec2 d=p-c;float cs=cos(a),sn=sin(a);return c+vec2(d.x*cs-d.y*sn,d.x*sn+d.y*cs);}",
     "void shade(vec2 p,out vec3 col,out float lum){",
     " vec2 q=uZc+(p-uZc)/(1.0+uZoom);",
@@ -72,12 +72,14 @@
     " q-=uTilt*(h0-0.32)*uRect.z*0.0085;",
     /* mechanical ring layers driven by uMech */
     " float rr0=length(q-uEmb)/max(uRing,1.0);",
-    " float outer=smoothstep(0.78,0.88,rr0)*(1.0-smoothstep(1.02,1.14,rr0));",
-    " float mid  =smoothstep(0.58,0.68,rr0)*(1.0-smoothstep(0.80,0.90,rr0));",
-    " float mech=uMech*0.40;",
-    /* rings only — TM monogram is never warped */
-    " q=mix(q,rotAround(q+vec2(0.0,uRing*0.016*mech),uEmb,mech*0.05),outer);",
-    " q=mix(q,rotAround(q+vec2(0.0,-uRing*0.010*mech),uEmb,-mech*0.06),mid);",
+    " float outer=smoothstep(0.72,0.84,rr0)*(1.0-smoothstep(1.00,1.12,rr0));",
+    " float mid  =smoothstep(0.50,0.60,rr0)*(1.0-smoothstep(0.76,0.86,rr0));",
+    " float inn  =1.0-smoothstep(0.38,0.52,rr0);",
+    " float mech=uMech*0.55;",
+    /* subtle mechanical layers — keep TM readable, no melt */
+    " q=mix(q,rotAround(q+vec2(0.0,uRing*0.022*mech),uEmb,mech*0.06),outer);",
+    " q=mix(q,rotAround(q+vec2(0.0,-uRing*0.012*mech),uEmb,-mech*0.08),mid);",
+    " q=mix(q,uEmb+(q-uEmb)*(1.0-0.012*mech),inn*mech);",
     " vec2 uv=(q-uRect.xy)/uRect.zw;",
     " col=vec3(0.0);lum=0.0;",
     " if(uv.x>0.0&&uv.x<1.0&&uv.y>0.0&&uv.y<1.0){",
@@ -116,20 +118,12 @@
     "  vec3 fogC=vec3(0.018,0.055,0.105)+vec3(0.04,0.14,0.28)*under*uGlow*(0.35+0.6*m);",
     "  float fk=clamp(fog*(0.24+0.52*low),0.0,1.0)*0.78;",
     "  col=col*(1.0-fk*0.52)+fogC*fk;",
-    /* HOME only: light synthetic rock + smoke on the right (reuses existing noise) */
+    /* HOME only: soft rocky wash past the outer ring (fills empty right side, melts into page) */
     "  float homeK=1.0-uAlphaMode;",
-    "  vec2 rp=(q-uEmb)/uRing;",
-    "  float rightArc=smoothstep(0.18,0.55,rp.x)*smoothstep(1.85,0.55,abs(rp.y));",
-    "  float rBand=smoothstep(0.95,1.22,rr)*smoothstep(2.55,1.40,rr);",
-    "  float slab=rBand*rightArc*homeK;",
-    "  float body=smoothstep(0.30,0.75,nz*0.6+f2*0.4);",
-    "  vec3 rockCol=mix(vec3(0.05,0.10,0.18),vec3(0.14,0.28,0.48),body);",
-    "  rockCol=mix(rockCol,vec3(0.20,0.38,0.58),smoothstep(0.45,0.62,nz)*0.4);",
-    "  float edgeFade=smoothstep(0.0,0.22,slab)*smoothstep(1.0,0.50,slab);",
-    "  col=mix(col, rockCol*(0.55+0.45*uAmb), slab*edgeFade*0.90);",
-    "  float smPath=smoothstep(1.05,1.35,rr)*smoothstep(2.30,1.50,rr)*rightArc*homeK;",
-    "  float sm=smPath*smoothstep(0.22,0.68,m*0.5+nz*0.5);",
-    "  col+=mix(vec3(0.08,0.22,0.42),vec3(0.42,0.76,0.96),nz)*sm*uGlow*0.80;",
+    "  float outerRock=smoothstep(0.92,1.12,rr)*smoothstep(2.8,1.40,rr)*homeK;",
+    "  float orMist=(m*0.50+0.22*nz)*uGlow;",
+    "  vec3 orCol=ac*vec3(0.11,0.26,0.48)*(0.30+0.70*orMist)+mc*orMist*0.35;",
+    "  col=mix(col, max(col,orCol), outerRock*0.62);",
     "  for(int i=0;i<" + NMK + ";i++){",
     "   vec4 mk=uM[i];",
     "   if(mk.z>0.0&&uMk>0.001){",
@@ -137,9 +131,8 @@
     "    float r=mk.z*uRing;",
     "    vec2 dv=mp-q;float d=length(dv);",
     "    float fl=pow(max(0.0,sin(t*(0.55+0.5*fract(mk.w*3.7))+mk.w*40.0)),6.0);",
-    "    fl=mix(fl,0.85,clamp(uLit,0.0,1.0));",
     "    float near=texture2D(uFld,mk.xy).r;",
-    "    float k=(0.18+0.50*fl+0.9*smoothstep(0.05,0.5,near))*uMk;",
+    "    float k=(0.14+0.55*fl+1.1*smoothstep(0.05,0.5,near))*uMk;",
     "    vec3 c=mkCol(float(i));",
     "    float a=1.0-clamp(d/(r*3.4),0.0,1.0);a*=a;",
     "    vec3 ld=normalize(vec3(dv/(r*2.2),0.7));",
@@ -150,17 +143,29 @@
     "   }",
     "  }",
     "  if(uLit>0.003){",
-    /* NO internal TM lighting — only soft mist walking in wide stone grooves (not letter faces) */
     "   vec3 cl=texture2D(uCls,uv).rgb;",
     "   float b=clamp(cl.r+(cl.g-0.5)*0.06,0.0,1.0);",
-    "   float thin=smoothstep(0.42,0.55,b);",
-    "   float lv=texture2D(uSp,vec2(0.02+0.25*b,0.5)).r;",
+    "   float lv=texture2D(uSp,vec2(0.012+0.40*pow(b,1.15),0.5)).r;",
+    "   lv=clamp(lv*(0.80+1.6*b),0.0,1.2);",
     "   float bass=texture2D(uSp,vec2(0.02,0.5)).r;",
-    "   float cm=pow(1.0-smoothstep(0.14,0.48,h),1.2)*(1.0-thin);",
-    "   float zone=1.0-smoothstep(1.5,3.2,rr);",
-    "   float flow=0.75+0.20*sin(t*0.9+cl.g*8.0+nz*3.0);",
-    "   float lt=uLit*cm*zone*(0.04+0.30*lv*flow+0.08*uBeat+0.06*bass);",
-    "   col+=vec3(0.14,0.32,0.62)*lt*stone*0.45;",
+    "   float thin=smoothstep(0.42,0.55,b);",
+    /* smooth phase — no blotchy spatial noise on TM faces */
+    "   float flow=mix(0.74+0.20*sin(t*(0.85+1.2*b)+cl.g*10.0),0.90+0.08*sin(t*1.1+cl.g*8.0),thin);",
+    "   float cm=pow(1.0-smoothstep(0.14,0.46,h),1.25);",
+    "   cm=mix(cm,1.0-smoothstep(0.08,0.30,h),thin);",
+    "   float zone=1.0-smoothstep(1.6,3.3,rr);",
+    "   float zin=mix(1.0,0.62,smoothstep(1.1,1.9,rr));",
+    "   float cloud=mix(0.80+0.25*nz,0.90+0.12*nz,thin);",
+    /* readable reaction: grooves + letter EDGES pulse; faces stay carved not painted */
+    "   float lt=uLit*cm*zone*zin*cloud*(0.05+0.42*lv*flow+0.14*uBeat*(1.0-0.55*b)+0.07*bass*(1.0-b));",
+    "   vec3 cc=mix(vec3(0.12,0.28,0.56),vec3(0.30,0.55,0.86),smoothstep(0.0,0.6,b));",
+    "   cc=mix(cc,vec3(0.48,0.74,0.95),thin*0.35);",
+    "   float st2=stone;",
+    "   col+=cc*lt*st2*0.58+vec3(0.28,0.50,0.82)*lt*lt*0.06;",
+    /* edge laser along TM / ring strokes — the line-art silhouette */
+    "   float edgeL=edge*max(thin,smoothstep(0.55,0.85,edge))*cm*(0.40+0.50*uBeat+0.22*lv);",
+    "   col+=vec3(0.58,0.86,1.0)*edgeL*uLit*0.48;",
+    "   col+=vec3(0.88,0.96,1.0)*edgeL*edgeL*uLit*0.14;",
     "  }",
     "  float vk=mix(1.72,1.80,uAlphaMode);",
     "  float v=smoothstep(1.0,0.22,length((uv-0.5)*vec2(1.0,1.12)*vk));",
@@ -174,8 +179,8 @@
     "}",
     "void main(){",
     " vec2 p=vec2(vP.x,1.0-vP.y)*uRes;",
-    " float s=1.0+uPop*0.028;",
-    " vec2 c1=uEmb+vec2(uTilt.x*uRing*0.008,-uRing*0.018)*uPop;",
+    " float s=1.0+uPop*0.055;",
+    " vec2 c1=uEmb+vec2(uTilt.x*uRing*0.012,-uRing*0.06)*uPop;",
     " float rf=length(p-c1)/(uRing*s);",
     " bool face=uPop>0.002&&rf<1.0;",
     " vec2 ps=face?uEmb+(p-c1)/s:p;",
@@ -183,24 +188,24 @@
     " shade(ps,col,lum);",
     " if(uPop>0.002){",
     "  if(face){",
-    "   float rim=smoothstep(0.94,1.0,rf);",
+    "   float rim=smoothstep(0.93,1.0,rf);",
     "   float top=0.5+0.5*dot(normalize(p-c1+vec2(0.001)),vec2(-0.5,-0.85));",
-    "   col*=1.0+uPop*0.06;",
-    "   col+=vec3(0.28,0.50,0.85)*rim*top*uPop*0.12;lum+=rim*top*uPop*0.12;",
+    "   col*=1.0+uPop*0.10;",
+    "   col+=vec3(0.30,0.52,0.88)*rim*top*uPop*0.18;lum+=rim*top*uPop*0.18;",
     "  }else{",
     "   float r0=length(p-uEmb)/uRing;",
-    "   vec2 sdv=(p-c1-vec2(uRing*0.02,uRing*0.08*uPop))/(uRing*s);",
-    "   float shd=(1.0-smoothstep(0.97,1.40,length(sdv)))*uPop*0.55;",
+    "   vec2 sdv=(p-c1-vec2(uRing*0.03,uRing*0.18*uPop))/(uRing*s);",
+    "   float shd=(1.0-smoothstep(0.95,1.55,length(sdv)))*uPop*0.75;",
     "   col*=1.0-shd;lum*=1.0-shd;",
-    "   float hole=(1.0-smoothstep(0.99,1.0,r0))*uPop;",
-    "   col*=1.0-hole*0.85;lum*=1.0-hole*0.85;",
-    "   for(int i=0;i<6;i++){",
-    "    float k=float(i)/5.0;",
+    "   float hole=(1.0-smoothstep(0.985,1.0,r0))*uPop;",
+    "   col*=1.0-hole*0.9;lum*=1.0-hole*0.9;",
+    "   for(int i=0;i<8;i++){",
+    "    float k=float(i)/7.0;",
     "    vec2 ci=mix(uEmb,c1,k);float ri=uRing*mix(1.0,s,k);",
-    "    float mi=1.0-smoothstep(ri-1.0,ri,length(p-ci));",
+    "    float mi=1.0-smoothstep(ri-1.2,ri,length(p-ci));",
     "    float lit=0.5+0.5*dot(normalize(p-ci+vec2(0.001)),vec2(-0.55,-0.83));",
     "    vec3 wc=vec3(0.10,0.20,0.38)*(0.40+0.9*k)*(0.45+1.1*lit);",
-    "    col=mix(col,wc,mi*0.85);lum=mix(lum,dot(wc,vec3(0.299,0.587,0.114))*3.0,mi*0.85);",
+    "    col=mix(col,wc,mi);lum=mix(lum,dot(wc,vec3(0.299,0.587,0.114))*3.2,mi);",
     "   }",
     "  }",
     " }",
@@ -365,10 +370,10 @@
     const R0 = RING_D / 2, list = [];
     /* fixed accents: purple top-right, green left, blue bottom — then fill the rest */
     const preferred = [
-      { ang: -0.55, rho: 1.42 }, { ang: -0.35, rho: 1.65 },  /* top-right purple */
-      { ang:  0.15, rho: 1.48 }, { ang:  0.45, rho: 1.72 },  /* mid-right green / amber */
-      { ang:  0.85, rho: 1.50 }, { ang:  1.20, rho: 1.68 },  /* lower-right orange zone */
-      { ang:  2.70, rho: 1.40 }, { ang: -1.10, rho: 1.55 }   /* left + top fill */
+      { ang: -0.50, rho: 1.38 }, { ang: -0.20, rho: 1.58 },  /* top-right (purple family) */
+      { ang:  2.60, rho: 1.36 }, { ang:  3.05, rho: 1.52 },  /* left (green family) */
+      { ang:  1.20, rho: 1.42 }, { ang:  1.55, rho: 1.62 },  /* bottom (blue family) */
+      { ang: -1.15, rho: 1.48 }, { ang:  0.45, rho: 1.68 }
     ];
     for (const p of preferred) {
       if (list.length >= NMK) break;
@@ -391,17 +396,6 @@
       markers[i*4] = m ? m.x / IMG_W : 0.5; markers[i*4+1] = m ? m.y / IMG_H : 0.5;
       markers[i*4+2] = m ? 0.045 + rand() * 0.055 : 0;
       markers[i*4+3] = rand();
-    }
-    /* dedicated right-side lamps: purple top, green mid, amber bottom (image space) */
-    const Rlamps = [
-      { ang: -0.42, rho: 1.48, col: 4 },  /* violet */
-      { ang:  0.28, rho: 1.55, col: 1 },  /* green */
-      { ang:  0.95, rho: 1.52, col: 3 }   /* amber */
-    ];
-    for (let i = 0; i < 3; i++) {
-      const L = Rlamps[i], px = EMB_X + Math.cos(L.ang) * L.rho * R0 * 1.12, py = EMB_Y + Math.sin(L.ang) * L.rho * R0 * 0.82;
-      markers[i*4] = px / IMG_W; markers[i*4+1] = py / IMG_H;
-      markers[i*4+2] = 0.085; markers[i*4+3] = L.col * 0.19 + 0.05;
     }
   };
 
@@ -520,7 +514,7 @@
     gl.uniform4f(U.uRect, rect[0], rect[1], rect[2], rect[3]);
     gl.uniform1f(U.uZoom, zoomV); gl.uniform1f(U.uAmb, amb); gl.uniform1f(U.uInt, inten);
     gl.uniform1f(U.uTime, sec); gl.uniform1f(U.uAlphaMode, alphaMode); gl.uniform1f(U.uOpacity, opac);
-    gl.uniform1f(U.uRing, R); gl.uniform1f(U.uMk, mode === "home" ? mk * (0.70 + 0.55 * litV) : mk); gl.uniform1f(U.uGlow, glow); gl.uniform1f(U.uFlood, flood);
+    gl.uniform1f(U.uRing, R); gl.uniform1f(U.uMk, mk); gl.uniform1f(U.uGlow, glow); gl.uniform1f(U.uFlood, flood);
     gl.uniform4fv(U.uM, markers);
     gl.activeTexture(gl.TEXTURE4); gl.bindTexture(gl.TEXTURE_2D, spTex);
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 64, 1, gl.LUMINANCE, gl.UNSIGNED_BYTE, spBytes);
@@ -536,7 +530,7 @@
     gl.enableVertexAttribArray(a1); gl.vertexAttribPointer(a1, 1, gl.FLOAT, false, 20, 16);
     gl.uniform2f(PU.uRes, W, H); gl.uniform2f(PU.uZc, zc[0], zc[1]); gl.uniform2f(PU.uTilt, tilt[0], tilt[1]);
     gl.uniform1f(PU.uZoom, zoomV); gl.uniform1f(PU.uTime, sec); gl.uniform1f(PU.uDpr, dpr); gl.uniform1f(PU.uAlphaMode, alphaMode);
-    gl.drawArrays(gl.POINTS, 0, mode === "home" ? ((litV > 0.15) ? Math.min(PN, 120) : 40) : PN);
+    gl.drawArrays(gl.POINTS, 0, mode === "home" ? ((popV > 0.02 || litV > 0.02) ? 0 : 70) : PN);
   };
 
   /* The carved medallion is the player: it follows the music state published by script.js (window.__tmMusic) */
@@ -554,20 +548,6 @@
     if (mechV < 0) { mechV = 0; mechVel = 0; }
     if (mechV > 1.0) { mechV = 1.0; }
     litV += ((on ? 1 : 0) - litV) * (1 - Math.exp(-Math.min(dt, 100) / (on ? 450 : 800)));
-    if (on && fldBoot) {
-      const t = now / 1000, R0 = RING_D / 2, amt = 0.06 * (dt / 1000);
-      for (let k = 0; k < 3; k++) {
-        const a = t * (0.22 + k * 0.09) + k * 2.1;
-        const rho = 0.55 + 0.35 * k + 0.08 * Math.sin(t * 0.4 + k);
-        dep((EMB_X + Math.cos(a) * rho * R0) / IMG_W, (EMB_Y + Math.sin(a) * rho * R0 * 0.9) / IMG_H, amt, 4.5);
-      }
-      /* right-side smoke corridor (matches the sketched path) */
-      for (let k = 0; k < 4; k++) {
-        const a = -0.35 + 1.3 * ((t * 0.08 + k * 0.21) % 1);
-        const rho = 1.35 + 0.25 * Math.sin(t * 0.3 + k);
-        dep((EMB_X + Math.cos(a) * rho * R0 * 1.12) / IMG_W, (EMB_Y + Math.sin(a) * rho * R0 * 0.82) / IMG_H, amt * 1.3, 6.0);
-      }
-    }
     const t = now / 1000;
     for (let i = 0; i < 64; i++) {
       let v = 0;
@@ -740,7 +720,6 @@
   const upTimer = setInterval(() => { tryUpload(); if (texDone || flat || !alive) clearInterval(upTimer); }, 40);
   /* after 12 s of nothing we stop waiting: the flat picture is shown instead of a dead gate */
   failsafe = setTimeout(() => { if (!texDone) fallback(); }, 12000);
-  setTimeout(() => { if (!ready && !readyPending) { flat = true; setReady(); } }, 8000);
 
   /* flat fallback (no WebGL / lost context / assets that never arrive) */
   let heroBgEl = null;
@@ -755,7 +734,6 @@
     flat = true;
     stage.classList.add("tm-nogl");
     cv.style.display = "none";
-    if (!ready && !readyPending) setTimeout(setReady, 100);
   }
   if (!gl) fallback();
 
