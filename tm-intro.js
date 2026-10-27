@@ -104,7 +104,7 @@
     "   vec2 o1=vec2(0.012,0.0213);",
     "   float hb=0.125*(texture2D(uHei,uv+vec2(o1.x,0.0)).r+texture2D(uHei,uv-vec2(o1.x,0.0)).r+texture2D(uHei,uv+vec2(0.0,o1.y)).r+texture2D(uHei,uv-vec2(0.0,o1.y)).r+texture2D(uHei,uv+o1*0.7071).r+texture2D(uHei,uv-o1*0.7071).r+texture2D(uHei,uv+vec2(o1.x,-o1.y)*0.7071).r+texture2D(uHei,uv+vec2(-o1.x,o1.y)*0.7071).r);",
     "   float lowH=pow(1.0-smoothstep(0.14,0.50,h),1.2);",
-    "   float narrow=smoothstep(0.03,0.17,hb-h);",
+    "   float narrow=smoothstep(0.02,0.22,hb-h);",
     "   float dk=0.35+0.65*(1.0-smoothstep(0.16,0.42,lumA));",
     "   w1=rg(rr,0.671,0.016)*dk;w2=rg(rr,0.737,0.016)*dk;w3=rg(rr,0.793,0.016)*dk;",
     "   glyphM=(1.0-smoothstep(0.50,0.60,rr))*narrow;",
@@ -112,8 +112,8 @@
     "   cavAll=clamp(max(max(lowH*0.9,narrow*0.85),max(w1,max(w2,w3))),0.0,1.0);",
     "   sm=0.55+0.9*fbm(q*0.016+vec2(-t*0.06,t*0.04));",
     "  }",
-    "  vec3 mc=mix(vec3(0.05,0.14,0.34),vec3(0.52,0.70,0.96),smoothstep(0.30,1.0,m*sm));",
-    "  col+=mc*m*sm*cavAll*stone*uGlow*1.6;",
+    "  vec3 mc=mix(vec3(0.03,0.10,0.28),vec3(0.30,0.48,0.80),smoothstep(0.30,1.1,m*sm));",
+    "  col+=mc*m*sm*cavAll*stone*uGlow*1.35;",
     /* fog lit from below */
     "  vec2 gq=(q-uEmb-vec2(0.0,uRing*0.9))/vec2(uRing*2.7,uRing*1.4);",
     "  float under=exp(-dot(gq,gq)*1.4);",
@@ -148,12 +148,12 @@
     "   float bass=texture2D(uSp,vec2(0.02,0.5)).r;",
     "   float mid=texture2D(uSp,vec2(0.07+0.06*mcen,0.5)).r;",
     "   float hi=texture2D(uSp,vec2(0.16+0.10*mcen,0.5)).r;",
-    "   float dR=1.3*(w1*(0.40+1.8*hi)+w2*(0.40+1.7*mid)+w3*(0.40+1.5*(0.5*mid+0.5*bass)));",
-    "   float dT=glyphM*(0.15+0.9*bass+0.9*uBeat);",
-    "   float dB=wideH*(0.16+1.0*band+0.7*bass);",
-    "   float drv=clamp(max(dB,max(dT,dR)),0.0,1.6)*uLit;",
-    "   vec3 lc=mix(vec3(0.05,0.14,0.34),vec3(0.52,0.70,0.96),smoothstep(0.25,1.0,drv*sm));",
-    "   col+=lc*drv*sm*stone*1.35;",
+    "   float dR=w1*(0.30+1.2*hi)+w2*(0.30+1.1*mid)+w3*(0.30+1.0*(0.5*mid+0.5*bass));",
+    "   float dT=glyphM*(0.15+0.75*bass+0.75*uBeat);",
+    "   float dB=wideH*(0.12+0.75*band+0.55*bass);",
+    "   float drv=clamp(max(dB,max(dT,dR)),0.0,1.1)*uLit;",
+    "   vec3 lc=mix(vec3(0.03,0.10,0.28),vec3(0.34,0.54,0.88),smoothstep(0.25,1.1,drv*sm));",
+    "   col+=lc*drv*sm*stone*1.2;",
     "  }",
     /* contrast: vignette, filmic curve, crushed blacks */
     "  float vk=mix(1.72,1.80,uAlphaMode);",
@@ -399,7 +399,8 @@
       const wide = innerWidth > 900;
       const target = clamp(Math.min(H * 0.62, W * (wide ? 0.50 : 0.80)), 220, 640);
       const S = target / RING_D; R = target / 2;
-      cx = wide ? W * 0.68 : W * 0.5; cy = wide ? H * 0.5 : H * 0.42;
+      const rtl = document.documentElement.dir === "rtl" || document.documentElement.lang === "ar";
+      cx = wide ? W * (rtl ? 0.32 : 0.68) : W * 0.5; cy = wide ? H * 0.5 : H * 0.42;
       rect = [cx - EMB_X * S, cy - EMB_Y * S, IMG_W * S, IMG_H * S];
     }
     zc = [cx, cy];
@@ -541,7 +542,7 @@
     const op = hn.offsetParent || document.body;       /* left/top are relative to its positioned parent; layout offsets ignore the entrance transforms */
     const off = (el) => { let x = 0, y = 0; for (let e = el; e; e = e.offsetParent) { x += e.offsetLeft; y += e.offsetTop; } return [x, y]; };
     const a = off(host), o = off(op);
-    hn.style.left = (a[0] + cx - o[0]) + "px"; hn.style.top = (a[1] + cy + R * 1.06 + 12 - o[1]) + "px";
+    hn.style.right = "auto"; hn.style.left = (a[0] + cx - o[0]) + "px"; hn.style.top = (a[1] + cy + R * 1.06 + 12 - o[1]) + "px";
   };
 
   const MIN_LOAD = reduce ? 200 : 1100;    /* the counter always has time to breathe, but never longer than this */
@@ -739,6 +740,7 @@
         alphaMode = 0; opac = 0; zoomV = ZOOM_MAX; inten = 1.1; amb = 0.70; glow = 1; mk = 1.2; flood = 0.5;
         moved = false; lpx = -1; entering = false;
         layout();
+        new MutationObserver(() => { if (mode === "home" && gl && prog) { layout(); placeHint(); } }).observe(document.documentElement, { attributes: true, attributeFilter: ["dir", "lang"] });
         heroEl.addEventListener("click", (e) => {            /* a click on the medallion (blank background only) = play / pause */
           const t = e.target;
           if (mode !== "home" || !(t === heroEl || t === cv || (t.closest && t.closest(".hero-visual") && !t.closest("a,button,input,textarea,select,[role=button],[tabindex]")))) return;

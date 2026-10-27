@@ -157,3 +157,20 @@ html:not(.tm-orb-fallback) .tm-hero-space{display:none !important}
 .core.is-playing ~ .core-hint.tm-stone-cta{opacity:0 !important;visibility:hidden !important}
 @media (max-width:900px){.core-hint.tm-stone-cta{font-size:14px}[dir=rtl] .core-hint.tm-stone-cta{font-size:18px}}
 @media (prefers-reduced-motion:reduce){.core-hint.tm-stone-cta{animation:none !important;transform:perspective(640px) rotateX(6deg) rotateY(-8deg)}}
+
+/* Arabic gate title keeps the Latin name left-to-right (it was mirrored letter by letter in RTL) */
+.tm-intro-name{direction:ltr;unicode-bidi:isolate}
+
+/* Arabic CTA: gentler tilt and a shallower carving so the joined letters stay clean */
+@keyframes tmStoneCtaAr{
+  0%,100%{transform:perspective(900px) rotateX(3deg) rotateY(-5deg) translateY(0px);filter:drop-shadow(-0.50px 0.70px 0 rgba(70,98,158,1)) drop-shadow(-0.50px 0.70px 0 rgba(58,84,142,1)) drop-shadow(-0.50px 0.70px 0 rgba(48,70,124,1)) drop-shadow(-0.50px 0.70px 0 rgba(38,57,104,1)) drop-shadow(0 0 8px rgba(80,150,255,.28))}
+  25%{transform:perspective(900px) rotateX(-2deg) rotateY(4deg) translateY(-1px);filter:drop-shadow(0.50px 0.70px 0 rgba(70,98,158,1)) drop-shadow(0.50px 0.70px 0 rgba(58,84,142,1)) drop-shadow(0.50px 0.70px 0 rgba(48,70,124,1)) drop-shadow(0.50px 0.70px 0 rgba(38,57,104,1)) drop-shadow(0 0 8px rgba(80,150,255,.28))}
+  50%{transform:perspective(900px) rotateX(3deg) rotateY(6deg) translateY(1px);filter:drop-shadow(0.60px 0.60px 0 rgba(70,98,158,1)) drop-shadow(0.60px 0.60px 0 rgba(58,84,142,1)) drop-shadow(0.60px 0.60px 0 rgba(48,70,124,1)) drop-shadow(0.60px 0.60px 0 rgba(38,57,104,1)) drop-shadow(0 0 8px rgba(80,150,255,.28))}
+  75%{transform:perspective(900px) rotateX(-3deg) rotateY(-3deg) translateY(-1px);filter:drop-shadow(-0.50px 0.80px 0 rgba(70,98,158,1)) drop-shadow(-0.50px 0.80px 0 rgba(58,84,142,1)) drop-shadow(-0.50px 0.80px 0 rgba(48,70,124,1)) drop-shadow(-0.50px 0.80px 0 rgba(38,57,104,1)) drop-shadow(0 0 8px rgba(80,150,255,.28))}
+}
+[dir=rtl] .core-hint.tm-stone-cta{font:700 25px/1.3 "Reem Kufi","Cinzel",serif;animation:tmStoneCtaAr 12s ease-in-out infinite !important;padding:8px 6px}
+@media (max-width:900px){[dir=rtl] .core-hint.tm-stone-cta{font-size:20px}}
+@media (prefers-reduced-motion:reduce){[dir=rtl] .core-hint.tm-stone-cta{animation:none !important;transform:perspective(900px) rotateX(2deg) rotateY(-4deg)}}
+
+/* Arabic (RTL): the medallion sits on the left, so the soft edge mask follows it */
+@media (min-width: 901px) { [dir="rtl"] .tm-hero-cv { -webkit-mask-image: radial-gradient(ellipse 60% 66% at 32% 50%, #000 30%, transparent 100%); mask-image: radial-gradient(ellipse 60% 66% at 32% 50%, #000 30%, transparent 100%); } }
