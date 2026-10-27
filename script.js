@@ -2192,6 +2192,7 @@ updateScrollOrbit(true);
   }
 
   const enterPortfolio = () => {
+    if (window.__tmDirected && !window.__tmGoing) return;     /* tm-intro.js owns the gate: wait until it has really started the entrance */
     if (welcomed) return;
     welcomed = true;
     const ar = _isAr();
@@ -2240,8 +2241,21 @@ updateScrollOrbit(true);
         showWelcomeToast();
       };
       // ~ after logo land (visual done) — synced with toast.mp3, not enter track length
-      setTimeout(show, 950);
+      if (window.__tmDirected && window.__tmAt) window.__tmAt("toast", show);     /* the intro director's clock (index.html <head>) */
+      else setTimeout(show, 950);
     };
+
+    /* Directed entrance (tm-intro.js): the director already runs the push, the header, the title and the rail, in ONE order.
+       Here we only add the sound and the welcome toast (on the director's clock). The old gate morph + second title replay are skipped. */
+    if (window.__tmDirected) {
+      playEnterSound();
+      document.body.classList.remove("gate-locked");
+      try { stopCubes(); } catch (_) {}
+      try { window.__startMainParticles && window.__startMainParticles(); } catch (_) {}
+      if (gate) { gate.classList.add("is-leaving"); setTimeout(() => gate.remove(), 500); }   /* tm-intro already moved its stage out of the gate */
+      scheduleWelcomeToast();
+      return;
+    }
 
     // Particles swirl to logo center
     if (typeof gatherOrbs === "function") {

@@ -136,15 +136,18 @@
     "   float lv=texture2D(uSp,vec2(0.012+0.40*pow(b,1.15),0.5)).r;",
     "   lv=clamp(lv*(0.85+1.9*b),0.0,1.4);",
     "   float bass=texture2D(uSp,vec2(0.02,0.5)).r;",
-    "   float flow=0.60+0.40*sin(t*(1.1+2.2*b)+cl.g*25.0+nz*7.0);",
+    "   float thin=smoothstep(0.42,0.55,b);",
+    "   float flow=mix(0.60+0.40*sin(t*(1.1+2.2*b)+cl.g*25.0+nz*7.0),0.88+0.12*sin(t*1.7+cl.g*20.0),thin);",
     "   float cm=pow(1.0-smoothstep(0.14,0.46,h),1.25);",
+    "   cm=mix(cm,1.0-smoothstep(0.17,0.27,h),thin);",
     "   float zone=1.0-smoothstep(1.6,3.3,rr);",
     "   float zin=mix(1.0,0.62,smoothstep(1.1,1.9,rr));",
-    "   float cloud=0.70+0.60*nz;",
-    "   float lt=uLit*cm*zone*zin*cloud*(0.06+0.80*lv*flow+0.26*uBeat*(1.0-0.7*b)+0.12*bass*(1.0-b));",
-    "   vec3 cc=mix(vec3(0.05,0.36,0.95),vec3(0.20,0.90,0.95),smoothstep(0.0,0.55,b));",
-    "   cc=mix(cc,vec3(0.80,0.45,1.0),smoothstep(0.62,1.0,b));",
-    "   col+=cc*lt*stone*1.05+vec3(0.30,0.60,1.0)*lt*lt*0.22;",
+    "   float cloud=mix(0.70+0.60*nz,1.0,thin);",
+    "   float lt=uLit*cm*zone*zin*cloud*(0.05+0.72*lv*flow+0.22*uBeat*(1.0-0.7*b)+0.10*bass*(1.0-b));",
+    "   vec3 cc=mix(vec3(0.10,0.26,0.62),vec3(0.30,0.52,0.92),smoothstep(0.0,0.6,b));",
+    "   cc=mix(cc,vec3(0.60,0.80,1.0),thin);",
+    "   float st2=mix(stone,0.92+0.2*lumA,thin);",
+    "   col+=cc*lt*st2*1.0+vec3(0.35,0.58,1.0)*lt*lt*0.16;",
     "  }",
     /* contrast: vignette, filmic curve, crushed blacks */
     "  float vk=mix(1.72,1.80,uAlphaMode);",
@@ -160,8 +163,8 @@
     "void main(){",
     " vec2 p=vec2(vP.x,1.0-vP.y)*uRes;",
     /* the medallion is the player: it rises out of its socket (lifted face, side wall, cast shadow, empty socket) */
-    " float s=1.0+uPop*0.085;",
-    " vec2 c1=uEmb+vec2(uTilt.x*uRing*0.02,-uRing*0.11)*uPop;",
+    " float s=1.0+uPop*0.04;",
+    " vec2 c1=uEmb+vec2(uTilt.x*uRing*0.012,-uRing*0.05)*uPop;",
     " float rf=length(p-c1)/(uRing*s);",
     " bool face=uPop>0.002&&rf<1.0;",
     " vec2 ps=face?uEmb+(p-c1)/s:p;",
@@ -395,6 +398,7 @@
       rect = [cx - EMB_X * S, cy - EMB_Y * S, IMG_W * S, IMG_H * S];
     }
     zc = [cx, cy];
+    if (mode === "home") { cv.style.setProperty("--tm-cx", cx.toFixed(1) + "px"); cv.style.setProperty("--tm-cy", cy.toFixed(1) + "px"); cv.style.setProperty("--tm-r", R.toFixed(1) + "px"); if (stoneEl) placeHint(); }
     cv.width = Math.max(2, Math.round(W * dpr)); cv.height = Math.max(2, Math.round(H * dpr));
   };
 
@@ -524,7 +528,7 @@
   /* "TAP TO PLAY": carved stone letters that drift strangely in place, under the medallion. Visible while the music is stopped. */
   let stoneEl = null, stoneLang = "";
   const buildStone = () => {
-    const hv = document.querySelector(".hero-visual"); if (!hv) return null;
+    const hv = host || document.querySelector(".hero"); if (!hv) return null;
     if (!stoneEl) { stoneEl = document.createElement("div"); stoneEl.className = "tm-stone"; stoneEl.setAttribute("aria-hidden", "true"); hv.appendChild(stoneEl); }
     const ar = isAr(), key = ar ? "ar" : "en";
     if (stoneLang !== key) {
@@ -545,10 +549,9 @@
     return stoneEl;
   };
   const placeHint = () => {
-    const hv = document.querySelector(".hero-visual"), el = buildStone();
-    if (!hv || !el || !host) return;
-    const hr = host.getBoundingClientRect(), vr = hv.getBoundingClientRect();
-    el.style.left = (hr.left + cx - vr.left) + "px"; el.style.top = (hr.top + cy + R * 1.04 + 12 - vr.top) + "px";
+    const el = buildStone();
+    if (!el || !host || mode !== "home") return;
+    el.style.left = cx + "px"; el.style.top = (cy + R * 1.04 + 14) + "px";       /* hero coordinates: the hero itself never moves during the entrance */
     el.style.setProperty("--ts", clamp(R / 300, 0.72, 1.1).toFixed(2));
   };
   new MutationObserver(() => { if (stoneEl) buildStone(); if (mode === "home" && gl && prog) { layout(); placeHint(); } }).observe(document.documentElement, { attributes: true, attributeFilter: ["lang", "dir"] });
@@ -618,8 +621,8 @@
     if (mode === "home" && handT) {
       const t = now - handT;
       zoomV = ZOOM_MAX * (1 - easeOut5(t / 3800));
-      opac = 0.62 * easeOut(t / 1700);
-      amb = lerp(0.70, 0.52, easeOut(t / 2600));
+      opac = 0.92 * easeOut(t / 1700);
+      amb = lerp(0.70, 0.62, easeOut(t / 2600));
       glow = lerp(1.0, 0.80, easeOut(t / 2600));
       mk = lerp(1.2, 0.75, easeOut(t / 3200));
       flood = lerp(0.5, 0.12, easeOut(t / 3600));
@@ -782,7 +785,7 @@
       try { if (typeof window.__restaggerHero === "function") window.__restaggerHero(); } catch (_) {}
       setTimeout(dropPh, 60);
     });
-    at("role", () => setTimeout(() => { hintGo = true; }, 1500));
+    at("rail", () => setTimeout(() => { hintGo = true; }, 700));
     /* 4 · side rail + floating buttons arrive last (the toast and its sound are timed by script.js with the same clock) */
     at("rail", () => {
       document.body.classList.remove("tm-pre-r");
