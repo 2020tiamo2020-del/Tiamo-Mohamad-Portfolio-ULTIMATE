@@ -63,8 +63,8 @@
     " return mix(mix(hash(i),hash(i+vec2(1.0,0.0)),f.x),mix(hash(i+vec2(0.0,1.0)),hash(i+vec2(1.0,1.0)),f.x),f.y);}",
     "float fbm(vec2 p){float a=0.5,s=0.0;for(int i=0;i<3;i++){s+=a*noise(p);p*=2.03;a*=0.5;}return s;}",
     "vec3 mkCol(float i){float k=mod(i,5.0);",
-    " if(k<0.5)return vec3(0.62,0.45,1.0); if(k<1.5)return vec3(0.38,1.0,0.48); if(k<2.5)return vec3(1.0,0.62,0.22);",
-    " if(k<3.5)return vec3(0.08,0.95,0.86); return vec3(1.0,0.46,0.78);}",
+    " if(k<0.5)return vec3(0.55,0.42,1.0); if(k<1.5)return vec3(0.25,0.95,0.85); if(k<2.5)return vec3(0.45,0.82,1.0);",
+    " if(k<3.5)return vec3(0.35,1.0,0.50); return vec3(1.0,0.50,0.78);}",
     "vec2 rotAround(vec2 p,vec2 c,float a){vec2 d=p-c;float cs=cos(a),sn=sin(a);return c+vec2(d.x*cs-d.y*sn,d.x*sn+d.y*cs);}",
     "void shade(vec2 p,out vec3 col,out float lum){",
     " vec2 q=uZc+(p-uZc)/(1.0+uZoom);",
@@ -116,21 +116,27 @@
     "  vec3 fogC=vec3(0.018,0.055,0.105)+vec3(0.04,0.14,0.28)*under*uGlow*(0.35+0.6*m);",
     "  float fk=clamp(fog*(0.24+0.52*low),0.0,1.0)*0.78;",
     "  col=col*(1.0-fk*0.52)+fogC*fk;",
-    /* HOME only: visible rock slab + smoke on the RIGHT of the medallion */
+    /* HOME only: crystalline cyan rock + gas smoke on the RIGHT */
     "  float homeK=1.0-uAlphaMode;",
     "  vec2 rp=(q-uEmb)/uRing;",
-    "  float rightArc=smoothstep(0.05,0.40,rp.x)*smoothstep(2.2,0.35,abs(rp.y));",
-    "  float rBand=smoothstep(0.88,1.08,rr)*smoothstep(2.80,1.25,rr);",
+    "  float rightArc=smoothstep(0.02,0.38,rp.x)*smoothstep(2.3,0.30,abs(rp.y));",
+    "  float rBand=smoothstep(0.86,1.05,rr)*smoothstep(2.90,1.20,rr);",
     "  float slab=clamp(rBand*rightArc*homeK,0.0,1.0);",
-    "  float body=smoothstep(0.22,0.78,nz*0.55+f2*0.45);",
-    "  vec3 rockCol=mix(vec3(0.06,0.12,0.22),vec3(0.18,0.34,0.55),body);",
-    "  rockCol=mix(rockCol,vec3(0.28,0.48,0.72),smoothstep(0.40,0.65,nz)*0.55);",
-    "  float edgeFade=smoothstep(0.0,0.18,slab)*smoothstep(1.0,0.40,slab);",
-    "  col=mix(col, max(col,rockCol*(0.70+0.50*uAmb)), slab*edgeFade);",
-    "  float smPath=smoothstep(0.95,1.25,rr)*smoothstep(2.50,1.40,rr)*rightArc*homeK;",
-    "  float sm=smPath*(0.35+0.65*smoothstep(0.15,0.70,m*0.45+nz*0.55+uFlood*0.25));",
-    "  col+=mix(vec3(0.10,0.28,0.50),vec3(0.50,0.82,1.0),nz)*sm*uGlow*1.15;",
-    "  lum=max(lum, slab*edgeFade*0.45+sm*0.40);",
+    "  float body=smoothstep(0.20,0.80,nz*0.5+f2*0.5);",
+    "  float crystal=smoothstep(0.55,0.85,nz)*smoothstep(0.35,0.65,f1);",
+    "  vec3 rockCol=mix(vec3(0.04,0.10,0.18),vec3(0.12,0.32,0.48),body);",
+    "  rockCol=mix(rockCol,vec3(0.20,0.72,0.85),crystal*0.75);",
+    "  rockCol=mix(rockCol,vec3(0.45,0.90,1.0),crystal*crystal*0.45);",
+    "  float edgeFade=smoothstep(0.0,0.16,slab)*smoothstep(1.0,0.38,slab);",
+    "  col=mix(col, max(col,rockCol*(0.75+0.55*uAmb)), slab*edgeFade);",
+    "  col+=vec3(0.15,0.55,0.75)*crystal*slab*edgeFade*uGlow*0.55;",
+    /* gas-like smoke puffs along the right corridor */
+    "  float smPath=smoothstep(0.92,1.22,rr)*smoothstep(2.60,1.35,rr)*rightArc*homeK;",
+    "  float puff=smoothstep(0.20,0.75,m)*smoothstep(0.15,0.60,nz);",
+    "  float gas=smPath*(0.25+0.90*puff+0.35*uFlood);",
+    "  vec3 gasC=mix(vec3(0.08,0.30,0.48),vec3(0.40,0.85,1.0),puff);",
+    "  col+=gasC*gas*uGlow*1.35;",
+    "  lum=max(lum, slab*edgeFade*0.50+gas*0.55);",
     "  for(int i=0;i<" + NMK + ";i++){",
     "   vec4 mk=uM[i];",
     "   if(mk.z>0.0&&uMk>0.001){",
@@ -138,17 +144,21 @@
     "    float r=mk.z*uRing;",
     "    vec2 dv=mp-q;float d=length(dv);",
     "    float fl=pow(max(0.0,sin(t*(0.55+0.5*fract(mk.w*3.7))+mk.w*40.0)),6.0);",
-    "    fl=mix(fl,0.90,clamp(uLit,0.0,1.0));",
+    "    fl=mix(fl,0.75,clamp(uLit,0.0,1.0));",
     "    float near=texture2D(uFld,mk.xy).r;",
-    "    float k=(0.35+0.55*fl+0.8*smoothstep(0.05,0.5,near))*uMk;",
+    "    float rightSide=smoothstep(0.50,0.60,mk.xy.x);",
+    /* left lights: visible idle; when music plays, dim ~40% so they don't overpower text */
+    "    float leftDim=mix(1.0,0.55,clamp(uLit,0.0,1.0));",
+    "    float sideK=mix(leftDim,1.0,rightSide);",
+    "    float k=(0.28+0.50*fl+0.7*smoothstep(0.05,0.5,near))*uMk*sideK;",
     "    vec3 c=mkCol(float(i));",
-    "    float a=1.0-clamp(d/(r*4.2),0.0,1.0);a*=a;",
+    "    float a=1.0-clamp(d/(r*3.8),0.0,1.0);a*=a;",
     "    vec3 ld=normalize(vec3(dv/(r*2.2),0.7));",
     "    float dif=max(dot(n,ld),0.0);",
-    "    col+=c*(0.55+0.45*ac)*(1.0+2.8*dif)*a*k*2.8;",
-    "    col+=c*exp(-d*d/(r*r*0.08))*k*2.4;",
-    "    col+=c*exp(-d/(r*1.8))*0.35*k*(0.6+fog);",
-    "    lum=max(lum, k*a*0.8);",
+    "    col+=c*(0.50+0.50*ac)*(1.0+2.5*dif)*a*k*2.2;",
+    "    col+=c*exp(-d*d/(r*r*0.07))*k*1.85;",
+    "    col+=c*exp(-d/(r*1.7))*0.28*k*(0.55+fog);",
+    "    lum=max(lum, k*a*0.7);",
     "   }",
     "  }",
     "  if(uLit>0.003){",
@@ -229,14 +239,15 @@
     " float sc=1.0+uZoom*(0.45+1.7*aP.z);",
     " p=uZc+(p-uZc)*sc;",
     " gl_Position=vec4(p.x/uRes.x*2.0-1.0,1.0-p.y/uRes.y*2.0,0.0,1.0);",
-    " gl_PointSize=max(1.0,(1.2+aP.z*3.6)*aS*sc*uDpr);",
+    " gl_PointSize=max(1.2,(1.6+aP.z*4.2)*aS*sc*uDpr);",
     " vA=(0.12+0.5*aP.z)*(0.55+0.45*sin(uTime*1.4+aP.w*30.0))*mix(0.55,1.0,uAlphaMode);",
     "}"
   ].join("\n");
   const PFS = [
     "precision mediump float;varying float vA;",
     "void main(){float d=length(gl_PointCoord-0.5);float a=smoothstep(0.5,0.0,d)*vA;",
-    " gl_FragColor=vec4(vec3(0.55,0.78,1.0)*a,a*0.7);}"
+    " vec3 c=mix(vec3(0.75,0.88,1.0),vec3(1.0,1.0,1.0),0.45);",
+    " gl_FragColor=vec4(c*a,a*0.75);}"
   ].join("\n");
 
   let gl = null;
@@ -396,15 +407,25 @@
       markers[i*4+3] = rand();
     }
     /* dedicated right-side lamps: purple top, green mid, amber bottom (image space) */
+    /* right crescent only: violet top, cyan mid (blue sun), soft cyan-green lower */
     const Rlamps = [
-      { ang: -0.55, rho: 1.35 },  /* violet top-right */
-      { ang:  0.25, rho: 1.42 },  /* green mid-right */
-      { ang:  1.05, rho: 1.38 }   /* amber lower-right */
+      { ang: -0.50, rho: 1.32 },  /* violet top-right */
+      { ang:  0.15, rho: 1.55 },  /* light cyan — blue sun spot */
+      { ang:  0.85, rho: 1.40 }   /* cyan-green lower-right */
     ];
     for (let i = 0; i < 3; i++) {
-      const L = Rlamps[i], px = EMB_X + Math.cos(L.ang) * L.rho * R0 * 1.15, py = EMB_Y + Math.sin(L.ang) * L.rho * R0 * 0.85;
+      const L = Rlamps[i], px = EMB_X + Math.cos(L.ang) * L.rho * R0 * 1.18, py = EMB_Y + Math.sin(L.ang) * L.rho * R0 * 0.88;
       markers[i*4] = px / IMG_W; markers[i*4+1] = py / IMG_H;
-      markers[i*4+2] = 0.12; markers[i*4+3] = 0.1 + i * 0.2;
+      markers[i*4+2] = i === 1 ? 0.14 : 0.11; markers[i*4+3] = 0.1 + i * 0.2;
+    }
+    /* remaining markers: push to outer ring, never over the left text column */
+    for (let i = 3; i < NMK; i++) {
+      if (markers[i*4] < 0.52) { /* left half of artwork → dim / relocate rightward */
+        const ang = -0.9 + (i * 0.35), rho = 1.25 + (i % 3) * 0.12;
+        markers[i*4] = (EMB_X + Math.cos(ang) * rho * R0 * 1.1) / IMG_W;
+        markers[i*4+1] = (EMB_Y + Math.sin(ang) * rho * R0 * 0.85) / IMG_H;
+        markers[i*4+2] = 0.06;
+      }
     }
   };
 
@@ -539,7 +560,7 @@
     gl.enableVertexAttribArray(a1); gl.vertexAttribPointer(a1, 1, gl.FLOAT, false, 20, 16);
     gl.uniform2f(PU.uRes, W, H); gl.uniform2f(PU.uZc, zc[0], zc[1]); gl.uniform2f(PU.uTilt, tilt[0], tilt[1]);
     gl.uniform1f(PU.uZoom, zoomV); gl.uniform1f(PU.uTime, sec); gl.uniform1f(PU.uDpr, dpr); gl.uniform1f(PU.uAlphaMode, alphaMode);
-    gl.drawArrays(gl.POINTS, 0, mode === "home" ? ((litV > 0.15) ? Math.min(PN, 120) : 40) : PN);
+    gl.drawArrays(gl.POINTS, 0, mode === "home" ? ((litV > 0.12) ? Math.min(PN, 220) : 50) : PN);
   };
 
   /* The carved medallion is the player: it follows the music state published by script.js (window.__tmMusic) */
@@ -559,19 +580,27 @@
     litV += ((on ? 1 : 0) - litV) * (1 - Math.exp(-Math.min(dt, 100) / (on ? 450 : 800)));
     if (fldBoot && mode === "home") {
       const t = now / 1000, R0 = RING_D / 2;
-      const amt = (on ? 0.10 : 0.03) * (dt / 1000);
+      const amt = (on ? 0.18 : 0.03) * (dt / 1000);
       if (on) {
-        for (let k = 0; k < 3; k++) {
-          const a = t * (0.22 + k * 0.09) + k * 2.1;
-          const rho = 0.55 + 0.35 * k + 0.08 * Math.sin(t * 0.4 + k);
-          dep((EMB_X + Math.cos(a) * rho * R0) / IMG_W, (EMB_Y + Math.sin(a) * rho * R0 * 0.9) / IMG_H, amt, 4.5);
+        /* wide gas spread across the medallion field */
+        for (let k = 0; k < 5; k++) {
+          const a = t * (0.18 + k * 0.07) + k * 1.7;
+          const rho = 0.45 + 0.55 * k / 4 + 0.12 * Math.sin(t * 0.5 + k);
+          dep((EMB_X + Math.cos(a) * rho * R0) / IMG_W, (EMB_Y + Math.sin(a) * rho * R0 * 0.9) / IMG_H, amt * 1.1, 6.0);
         }
-      }
-      /* right-side smoke corridor — always a trickle on home, strong when playing */
-      for (let k = 0; k < 5; k++) {
-        const a = -0.55 + 1.55 * ((t * (on ? 0.11 : 0.04) + k * 0.19) % 1);
-        const rho = 1.25 + 0.35 * Math.sin(t * 0.35 + k * 1.3);
-        dep((EMB_X + Math.cos(a) * rho * R0 * 1.15) / IMG_W, (EMB_Y + Math.sin(a) * rho * R0 * 0.85) / IMG_H, amt * (on ? 1.6 : 0.7), 7.0);
+        /* gas puffs pushing outward on the right */
+        const burst = 0.5 + 0.5 * Math.sin(t * 2.1);
+        for (let k = 0; k < 8; k++) {
+          const a = -0.70 + 1.80 * ((t * 0.16 + k * 0.125 + burst * 0.04) % 1);
+          const rho = 1.05 + 0.55 * Math.sin(t * 0.6 + k * 0.9);
+          dep((EMB_X + Math.cos(a) * rho * R0 * 1.2) / IMG_W, (EMB_Y + Math.sin(a) * rho * R0 * 0.9) / IMG_H, amt * (1.6 + burst * 0.8), 10.0);
+        }
+      } else {
+        for (let k = 0; k < 3; k++) {
+          const a = -0.40 + 1.2 * ((t * 0.03 + k * 0.28) % 1);
+          const rho = 1.30 + 0.2 * Math.sin(t * 0.2 + k);
+          dep((EMB_X + Math.cos(a) * rho * R0 * 1.15) / IMG_W, (EMB_Y + Math.sin(a) * rho * R0 * 0.85) / IMG_H, amt * 0.7, 5.0);
+        }
       }
     }
     const t = now / 1000;
