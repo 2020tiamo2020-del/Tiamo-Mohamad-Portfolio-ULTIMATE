@@ -1,18 +1,19 @@
 /* ==========================================================================
-   TM INTRO v5 — carved-stone relief, lit by drifting blue mist (TM + the three thin rings are now hollow too)
+   TM INTRO v6 — carved-stone relief, lit by slow heavy cyan/white smoke
+   (edge-laser mist on grooves + TM strokes; mechanical ring layers on play)
+
    The artwork is never repainted: it is the albedo of a real-time relief (normal + height maps derived from it).
    Loading -> Enter with sound -> the camera pushes into the medallion -> the same 3D relief settles, transparent and
    still reactive, behind Home only.
 
    THE LIGHT (not a torch):
-     A low-resolution "mist field" remembers where light has been. The pointer (and two slow wanderers) pour light
-     into it; every frame it  fades slowly (the trail lingers)  and  diffuses along the stone: it flows easily along a
-     groove or a ledge at the same height and is held back by steps, so the glow creeps round the rings between the
-     rocks. The shader turns the field into ragged, cloudy blue light that pools in the grooves, clings to the cobbles
-     and outlines the ridges. On top of it:  cold ambient · drifting fog lit from below · rim light ·
-     small coloured point lights (turquoise / green / pink / amber / violet) that flash when the mist reaches them.
+     A low-resolution "mist field" remembers where light has been. The pointer (and slow wanderers) pour light
+     into it; every frame it fades slowly (heavy trail) and diffuses along the stone. The shader turns the field
+     into soft cyan / white smoke that prefers edges and grooves (soft laser along the carved lines). On play the
+     three ring bands separate mechanically (outer drops + turns, mid counter-rotates, logo lifts) while a thin
+     edge laser on the TM letters reacts to the beat. Depth fill inside the letters stays light so the carve reads.
 
-   ORDER AFTER "ENTER" (all times come from window.__tmTL in index.html <head>)
+   ORDER AFTER "ENTER" (all times come from window.__tmTL in index.html <head> — DO NOT CHANGE)
      0 ms sound + push -> logo settles -> header -> music orb -> title + copy -> role words -> toast (+sound) -> side rail
 
    Raw WebGL, no libraries. If WebGL is unavailable, a flat fallback is used.
@@ -40,7 +41,7 @@
   /* artwork geometry: 1600x900 source; the medallion's outer ring is 469 px wide and centred at (802,446) */
   const IMG_W = 1600, IMG_H = 900, RING_D = 469, EMB_X = 802, EMB_Y = 446;
   const SRC = { alb: "images/intro-albedo.jpg?v=6", nor: "images/intro-normal.jpg?v=4", hei: "images/intro-height.jpg?v=6", cls: "images/intro-cavity.png?v=6" };
-  const NMK = 10;
+  const NMK = 12;
   const GW = 192, GH = 108;                      /* mist-field resolution */
 
   gate.classList.add("tm-js");
@@ -55,21 +56,28 @@
     "uniform sampler2D uAlb,uNor,uHei,uFld,uSp,uCls;",
     "uniform vec2 uRes,uZc,uTilt,uEmb;",
     "uniform vec4 uRect;",
-    "uniform float uZoom,uAmb,uInt,uTime,uAlphaMode,uOpacity,uRing,uMk,uGlow,uFlood,uPop,uBeat,uLit;",
+    "uniform float uZoom,uAmb,uInt,uTime,uAlphaMode,uOpacity,uRing,uMk,uGlow,uFlood,uPop,uBeat,uLit,uMech;",
     "uniform vec4 uM[" + NMK + "];",
     "float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}",
     "float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);",
     " return mix(mix(hash(i),hash(i+vec2(1.0,0.0)),f.x),mix(hash(i+vec2(0.0,1.0)),hash(i+vec2(1.0,1.0)),f.x),f.y);}",
     "float fbm(vec2 p){float a=0.5,s=0.0;for(int i=0;i<3;i++){s+=a*noise(p);p*=2.03;a*=0.5;}return s;}",
-    /* marker palette: turquoise / green / soft pink / amber / violet */
     "vec3 mkCol(float i){float k=mod(i,5.0);",
-    " if(k<0.5)return vec3(0.08,0.95,0.86); if(k<1.5)return vec3(0.38,1.0,0.48); if(k<2.5)return vec3(1.0,0.46,0.78);",
-    " if(k<3.5)return vec3(1.0,0.62,0.22); return vec3(0.62,0.45,1.0);}",
+    " if(k<0.5)return vec3(0.62,0.45,1.0); if(k<1.5)return vec3(0.38,1.0,0.48); if(k<2.5)return vec3(1.0,0.62,0.22);",
+    " if(k<3.5)return vec3(0.08,0.95,0.86); return vec3(1.0,0.46,0.78);}",
+    "vec2 rotAround(vec2 p,vec2 c,float a){vec2 d=p-c;float cs=cos(a),sn=sin(a);return c+vec2(d.x*cs-d.y*sn,d.x*sn+d.y*cs);}",
     "void shade(vec2 p,out vec3 col,out float lum){",
-    /* pass 1: height at uniform zoom, so nearer (taller) stone magnifies more = real dolly parallax */
-    " vec2 q=uZc+(p-uZc)/(1.0+uZoom);",                       /* the camera push is a pure, even zoom: the relief never swims or stretches */
+    " vec2 q=uZc+(p-uZc)/(1.0+uZoom);",
     " float h0=texture2D(uHei,(q-uRect.xy)/uRect.zw).r;",
-    " q-=uTilt*(h0-0.32)*uRect.z*0.0085;",                    /* tiny side-to-side parallax, the shape is untouched */
+    " q-=uTilt*(h0-0.32)*uRect.z*0.0085;",
+    /* mechanical ring layers driven by uMech */
+    " float rr0=length(q-uEmb)/max(uRing,1.0);",
+    " float outer=smoothstep(0.78,0.88,rr0)*(1.0-smoothstep(1.02,1.14,rr0));",
+    " float mid  =smoothstep(0.58,0.68,rr0)*(1.0-smoothstep(0.80,0.90,rr0));",
+    " float mech=uMech*0.40;",
+    /* rings only — TM monogram is never warped */
+    " q=mix(q,rotAround(q+vec2(0.0,uRing*0.016*mech),uEmb,mech*0.05),outer);",
+    " q=mix(q,rotAround(q+vec2(0.0,-uRing*0.010*mech),uEmb,-mech*0.06),mid);",
     " vec2 uv=(q-uRect.xy)/uRect.zw;",
     " col=vec3(0.0);lum=0.0;",
     " if(uv.x>0.0&&uv.x<1.0&&uv.y>0.0&&uv.y<1.0){",
@@ -80,34 +88,48 @@
     "  vec3 ac=pow(alb,vec3(1.35));",
     "  float lumA=dot(alb,vec3(0.299,0.587,0.114));",
     "  float rr=length(q-uEmb)/uRing;",
-    /* fog */
-    "  float f1=fbm(q*0.0042+vec2(t*0.030,-t*0.018));",
-    "  float f2=fbm(q*0.0095+vec2(-t*0.022,t*0.012)+7.3);",
-    "  float fog=smoothstep(0.30,0.86,f1*0.62+f2*0.38);",
+    "  float f1=fbm(q*0.0038+vec2(t*0.018,-t*0.012));",
+    "  float f2=fbm(q*0.0085+vec2(-t*0.014,t*0.009)+7.3);",
+    "  float fog=smoothstep(0.28,0.88,f1*0.62+f2*0.38);",
     "  float low=smoothstep(0.10,0.95,uv.y);",
-    /* the mist field: ragged, cloudy edges (the noise only bites where there is light) */
-    "  float nz=fbm(q*0.0065+vec2(t*0.035,-t*0.020));",
-    "  float nz2=noise(q*0.021+vec2(-t*0.05,t*0.03));",
-    "  vec2 wv=(vec2(nz,nz2)-0.5)*0.022;",
+    "  float nz=fbm(q*0.0058+vec2(t*0.022,-t*0.014));",
+    "  float nz2=noise(q*0.018+vec2(-t*0.032,t*0.020));",
+    "  vec2 wv=(vec2(nz,nz2)-0.5)*0.018;",
     "  float fr=texture2D(uFld,uv+wv).r;",
-    "  float m=smoothstep(0.07,0.55,fr+(nz-0.5)*0.46*smoothstep(0.0,0.35,fr));",
-    "  m=max(m,uFlood*smoothstep(0.22,0.80,nz+0.20*(1.0-clamp(rr*0.25,0.0,1.0))));",
-    "  float halo=smoothstep(0.0,0.45,fr);",
-    "  vec3 mc=mix(vec3(0.015,0.05,0.20),vec3(0.17,0.34,0.62),pow(m,0.85));",
+    "  float m=smoothstep(0.06,0.52,fr+(nz-0.5)*0.42*smoothstep(0.0,0.32,fr));",
+    "  m=max(m,uFlood*smoothstep(0.20,0.78,nz+0.18*(1.0-clamp(rr*0.25,0.0,1.0))));",
+    "  float halo=smoothstep(0.0,0.42,fr);",
+    /* lighter cyan / white smoke */
+    "  vec3 mc=mix(vec3(0.04,0.12,0.22),vec3(0.48,0.82,0.98),pow(m,0.78));",
+    "  mc=mix(mc,vec3(0.72,0.90,1.0),smoothstep(0.45,0.95,m)*0.55);",
     "  float cav=pow(1.0-smoothstep(0.14,0.50,h),1.2);",
-    "  float edge=smoothstep(0.14,0.62,length(n.xy));",
-    /* cold ambient: the relief is always faintly there */
-    "  col=ac*vec3(0.20,0.42,0.74)*uAmb;",
-    /* mist light between the rocks: pools in the grooves, clings to the cobbles */
+    "  float edge=smoothstep(0.12,0.58,length(n.xy));",
+    "  col=ac*vec3(0.22,0.44,0.76)*uAmb;",
     "  float stone=0.55+0.9*lumA;",
-    "  col+=mc*m*cav*stone*uGlow*1.5;",
-    /* fog lit from below */
+    "  col+=mc*m*cav*stone*uGlow*1.45;",
+    /* soft edge laser — smoke along edges, not solid letter paint */
+    "  float laser=edge*cav*(0.22+0.65*m)*(0.50+0.40*halo);",
+    "  col+=vec3(0.50,0.82,1.0)*laser*uGlow*0.48;",
+    "  col+=vec3(0.78,0.92,1.0)*laser*laser*0.12;",
     "  vec2 gq=(q-uEmb-vec2(0.0,uRing*0.9))/vec2(uRing*2.7,uRing*1.4);",
     "  float under=exp(-dot(gq,gq)*1.4);",
-    "  vec3 fogC=vec3(0.012,0.045,0.095)+vec3(0.02,0.10,0.22)*under*uGlow*(0.35+0.6*m);",
-    "  float fk=clamp(fog*(0.26+0.55*low),0.0,1.0)*0.80;",
-    "  col=col*(1.0-fk*0.55)+fogC*fk;",
-    /* coloured point lights: they wake up when the mist reaches them */
+    "  vec3 fogC=vec3(0.018,0.055,0.105)+vec3(0.04,0.14,0.28)*under*uGlow*(0.35+0.6*m);",
+    "  float fk=clamp(fog*(0.24+0.52*low),0.0,1.0)*0.78;",
+    "  col=col*(1.0-fk*0.52)+fogC*fk;",
+    /* HOME only: light synthetic rock + smoke on the right (reuses existing noise) */
+    "  float homeK=1.0-uAlphaMode;",
+    "  vec2 rp=(q-uEmb)/uRing;",
+    "  float rightArc=smoothstep(0.18,0.55,rp.x)*smoothstep(1.85,0.55,abs(rp.y));",
+    "  float rBand=smoothstep(0.95,1.22,rr)*smoothstep(2.55,1.40,rr);",
+    "  float slab=rBand*rightArc*homeK;",
+    "  float body=smoothstep(0.30,0.75,nz*0.6+f2*0.4);",
+    "  vec3 rockCol=mix(vec3(0.05,0.10,0.18),vec3(0.14,0.28,0.48),body);",
+    "  rockCol=mix(rockCol,vec3(0.20,0.38,0.58),smoothstep(0.45,0.62,nz)*0.4);",
+    "  float edgeFade=smoothstep(0.0,0.22,slab)*smoothstep(1.0,0.50,slab);",
+    "  col=mix(col, rockCol*(0.55+0.45*uAmb), slab*edgeFade*0.90);",
+    "  float smPath=smoothstep(1.05,1.35,rr)*smoothstep(2.30,1.50,rr)*rightArc*homeK;",
+    "  float sm=smPath*smoothstep(0.22,0.68,m*0.5+nz*0.5);",
+    "  col+=mix(vec3(0.08,0.22,0.42),vec3(0.42,0.76,0.96),nz)*sm*uGlow*0.80;",
     "  for(int i=0;i<" + NMK + ";i++){",
     "   vec4 mk=uM[i];",
     "   if(mk.z>0.0&&uMk>0.001){",
@@ -115,8 +137,9 @@
     "    float r=mk.z*uRing;",
     "    vec2 dv=mp-q;float d=length(dv);",
     "    float fl=pow(max(0.0,sin(t*(0.55+0.5*fract(mk.w*3.7))+mk.w*40.0)),6.0);",
+    "    fl=mix(fl,0.85,clamp(uLit,0.0,1.0));",
     "    float near=texture2D(uFld,mk.xy).r;",
-    "    float k=(0.14+0.55*fl+1.1*smoothstep(0.05,0.5,near))*uMk;",
+    "    float k=(0.18+0.50*fl+0.9*smoothstep(0.05,0.5,near))*uMk;",
     "    vec3 c=mkCol(float(i));",
     "    float a=1.0-clamp(d/(r*3.4),0.0,1.0);a*=a;",
     "    vec3 ld=normalize(vec3(dv/(r*2.2),0.7));",
@@ -126,30 +149,19 @@
     "    col+=c*exp(-d/(r*1.5))*0.20*k*(0.5+fog);",
     "   }",
     "  }",
-    /* music: EVERY carved hollow glows with the spectrum band that matches its size.
-       uCls (pre-computed from the height map): R = size class (0 = wide valley ... 1 = hair-thin groove), G = a random phase per hollow.
-       wide hollows follow the bass, mid-size grooves the mids, the TM strokes and the three thin rings the highs;
-       the light is cloudy (same mist noise as the intro) and flows along the groove instead of flashing flat. */
     "  if(uLit>0.003){",
+    /* NO internal TM lighting — only soft mist walking in wide stone grooves (not letter faces) */
     "   vec3 cl=texture2D(uCls,uv).rgb;",
-    "   float b=clamp(cl.r+(cl.g-0.5)*0.10,0.0,1.0);",
-    "   float lv=texture2D(uSp,vec2(0.012+0.40*pow(b,1.15),0.5)).r;",
-    "   lv=clamp(lv*(0.85+1.9*b),0.0,1.4);",
-    "   float bass=texture2D(uSp,vec2(0.02,0.5)).r;",
+    "   float b=clamp(cl.r+(cl.g-0.5)*0.06,0.0,1.0);",
     "   float thin=smoothstep(0.42,0.55,b);",
-    "   float flow=mix(0.60+0.40*sin(t*(1.1+2.2*b)+cl.g*25.0+nz*7.0),0.88+0.12*sin(t*1.7+cl.g*20.0),thin);",
-    "   float cm=pow(1.0-smoothstep(0.14,0.46,h),1.25);",
-    "   cm=mix(cm,1.0-smoothstep(0.06,0.27,h),thin);",
-    "   float zone=1.0-smoothstep(1.6,3.3,rr);",
-    "   float zin=mix(1.0,0.62,smoothstep(1.1,1.9,rr));",
-    "   float cloud=mix(0.70+0.60*nz,0.86+0.28*nz,thin);",
-    "   float lt=uLit*cm*zone*zin*cloud*(0.05+0.72*lv*flow+0.22*uBeat*(1.0-0.7*b)+0.10*bass*(1.0-b));",
-    "   vec3 cc=mix(vec3(0.10,0.26,0.62),vec3(0.30,0.52,0.92),smoothstep(0.0,0.6,b));",
-    "   cc=mix(cc,vec3(0.60,0.80,1.0),thin);",
-    "   float st2=stone;",
-    "   col+=cc*lt*st2*1.0+vec3(0.35,0.58,1.0)*lt*lt*0.16;",
+    "   float lv=texture2D(uSp,vec2(0.02+0.25*b,0.5)).r;",
+    "   float bass=texture2D(uSp,vec2(0.02,0.5)).r;",
+    "   float cm=pow(1.0-smoothstep(0.14,0.48,h),1.2)*(1.0-thin);",
+    "   float zone=1.0-smoothstep(1.5,3.2,rr);",
+    "   float flow=0.75+0.20*sin(t*0.9+cl.g*8.0+nz*3.0);",
+    "   float lt=uLit*cm*zone*(0.04+0.30*lv*flow+0.08*uBeat+0.06*bass);",
+    "   col+=vec3(0.14,0.32,0.62)*lt*stone*0.45;",
     "  }",
-    /* contrast: vignette, filmic curve, crushed blacks */
     "  float vk=mix(1.72,1.80,uAlphaMode);",
     "  float v=smoothstep(1.0,0.22,length((uv-0.5)*vec2(1.0,1.12)*vk));",
     "  v*=smoothstep(0.0,0.14,uv.x)*smoothstep(0.0,0.14,1.0-uv.x)*smoothstep(0.0,0.16,uv.y)*smoothstep(0.0,0.16,1.0-uv.y);",
@@ -162,9 +174,8 @@
     "}",
     "void main(){",
     " vec2 p=vec2(vP.x,1.0-vP.y)*uRes;",
-    /* the medallion is the player: it rises out of its socket (lifted face, side wall, cast shadow, empty socket) */
-    " float s=1.0+uPop*0.04;",
-    " vec2 c1=uEmb+vec2(uTilt.x*uRing*0.012,-uRing*0.05)*uPop;",
+    " float s=1.0+uPop*0.028;",
+    " vec2 c1=uEmb+vec2(uTilt.x*uRing*0.008,-uRing*0.018)*uPop;",
     " float rf=length(p-c1)/(uRing*s);",
     " bool face=uPop>0.002&&rf<1.0;",
     " vec2 ps=face?uEmb+(p-c1)/s:p;",
@@ -172,24 +183,24 @@
     " shade(ps,col,lum);",
     " if(uPop>0.002){",
     "  if(face){",
-    "   float rim=smoothstep(0.93,1.0,rf);",
+    "   float rim=smoothstep(0.94,1.0,rf);",
     "   float top=0.5+0.5*dot(normalize(p-c1+vec2(0.001)),vec2(-0.5,-0.85));",
-    "   col*=1.0+uPop*0.16;",
-    "   col+=vec3(0.30,0.52,0.92)*rim*top*uPop*0.32;lum+=rim*top*uPop*0.32;",
+    "   col*=1.0+uPop*0.06;",
+    "   col+=vec3(0.28,0.50,0.85)*rim*top*uPop*0.12;lum+=rim*top*uPop*0.12;",
     "  }else{",
     "   float r0=length(p-uEmb)/uRing;",
-    "   vec2 sdv=(p-c1-vec2(uRing*0.03,uRing*0.16*uPop))/(uRing*s);",
-    "   float shd=(1.0-smoothstep(0.95,1.55,length(sdv)))*uPop*0.7;",
+    "   vec2 sdv=(p-c1-vec2(uRing*0.02,uRing*0.08*uPop))/(uRing*s);",
+    "   float shd=(1.0-smoothstep(0.97,1.40,length(sdv)))*uPop*0.55;",
     "   col*=1.0-shd;lum*=1.0-shd;",
-    "   float hole=(1.0-smoothstep(0.985,1.0,r0))*uPop;",
-    "   col*=1.0-hole*0.9;lum*=1.0-hole*0.9;",
-    "   for(int i=0;i<8;i++){",
-    "    float k=float(i)/7.0;",
+    "   float hole=(1.0-smoothstep(0.99,1.0,r0))*uPop;",
+    "   col*=1.0-hole*0.85;lum*=1.0-hole*0.85;",
+    "   for(int i=0;i<6;i++){",
+    "    float k=float(i)/5.0;",
     "    vec2 ci=mix(uEmb,c1,k);float ri=uRing*mix(1.0,s,k);",
-    "    float mi=1.0-smoothstep(ri-1.2,ri,length(p-ci));",
+    "    float mi=1.0-smoothstep(ri-1.0,ri,length(p-ci));",
     "    float lit=0.5+0.5*dot(normalize(p-ci+vec2(0.001)),vec2(-0.55,-0.83));",
     "    vec3 wc=vec3(0.10,0.20,0.38)*(0.40+0.9*k)*(0.45+1.1*lit);",
-    "    col=mix(col,wc,mi);lum=mix(lum,dot(wc,vec3(0.299,0.587,0.114))*3.2,mi);",
+    "    col=mix(col,wc,mi*0.85);lum=mix(lum,dot(wc,vec3(0.299,0.587,0.114))*3.0,mi*0.85);",
     "   }",
     "  }",
     " }",
@@ -232,7 +243,7 @@
   } catch (_) { gl = null; }
 
   let prog = null, pprog = null, U = {}, PU = {}, quad = null, pbuf = null, PN = 0;
-  let hintGo = false, spTex = null, popV = 0, popVel = 0, beatV = 0, litV = 0, hintAt = 0, hintDone = false; const spBytes = new Uint8Array(64), spv = new Float32Array(64);   /* medallion-as-player state */
+  let hintGo = false, spTex = null, popV = 0, popVel = 0, beatV = 0, litV = 0, mechV = 0, mechVel = 0, hintAt = 0, hintDone = false; const spBytes = new Uint8Array(64), spv = new Float32Array(64);   /* medallion-as-player state */
   const tex = {};
   const imgs = {};
   const state = { alb: 0, nor: 0, hei: 0, cls: 0 };       /* 0 = pending, 1 = loaded, -1 = gave up */
@@ -260,7 +271,7 @@
   };
   const initGL = () => {
     verify(prog); verify(pprog);
-    ["uAlb","uNor","uHei","uFld","uRes","uZc","uTilt","uEmb","uRect","uZoom","uAmb","uInt","uTime","uAlphaMode","uOpacity","uRing","uMk","uGlow","uFlood","uM","uSp","uCls","uPop","uBeat","uLit"].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
+    ["uAlb","uNor","uHei","uFld","uRes","uZc","uTilt","uEmb","uRect","uZoom","uAmb","uInt","uTime","uAlphaMode","uOpacity","uRing","uMk","uGlow","uFlood","uM","uSp","uCls","uPop","uBeat","uLit","uMech"].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
     ["uRes","uZc","uTilt","uZoom","uTime","uDpr","uAlphaMode"].forEach((n) => { PU[n] = gl.getUniformLocation(pprog, n); });
     quad = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, quad);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
@@ -321,7 +332,7 @@
     }
   };
   const stepField = (dt) => {
-    const decay = Math.exp(-dt / (mode === "intro" ? 3200 : 2400));
+    const decay = Math.exp(-dt / (mode === "intro" ? 4200 : 3000));
     for (let i = 0; i < fld.length; i++) fld[i] *= decay;
     const subs = dt > 28 ? 4 : 2, K = 0.21;
     for (let s = 0; s < subs; s++) {
@@ -352,20 +363,45 @@
       hd = x.getImageData(0, 0, hw, hh).data;
     } catch (_) { hd = null; }
     const R0 = RING_D / 2, list = [];
+    /* fixed accents: purple top-right, green left, blue bottom — then fill the rest */
+    const preferred = [
+      { ang: -0.55, rho: 1.42 }, { ang: -0.35, rho: 1.65 },  /* top-right purple */
+      { ang:  0.15, rho: 1.48 }, { ang:  0.45, rho: 1.72 },  /* mid-right green / amber */
+      { ang:  0.85, rho: 1.50 }, { ang:  1.20, rho: 1.68 },  /* lower-right orange zone */
+      { ang:  2.70, rho: 1.40 }, { ang: -1.10, rho: 1.55 }   /* left + top fill */
+    ];
+    for (const p of preferred) {
+      if (list.length >= NMK) break;
+      const px = EMB_X + Math.cos(p.ang) * p.rho * R0 * 1.12;
+      const py = EMB_Y + Math.sin(p.ang) * p.rho * R0 * 0.82;
+      if (px < IMG_W * 0.06 || px > IMG_W * 0.94 || py < IMG_H * 0.06 || py > IMG_H * 0.94) continue;
+      list.push({ x: px, y: py });
+    }
     for (let tries = 0; tries < 900 && list.length < NMK; tries++) {
-      const ang = rand() * Math.PI * 2, rho = 1.25 + Math.pow(rand(), 0.8) * 1.5;
+      const ang = rand() * Math.PI * 2, rho = 1.18 + Math.pow(rand(), 0.75) * 1.55;
       const px = EMB_X + Math.cos(ang) * rho * R0 * 1.15, py = EMB_Y + Math.sin(ang) * rho * R0 * 0.82;
-      if (px < IMG_W * 0.08 || px > IMG_W * 0.92 || py < IMG_H * 0.08 || py > IMG_H * 0.92) continue;
+      if (px < IMG_W * 0.06 || px > IMG_W * 0.94 || py < IMG_H * 0.06 || py > IMG_H * 0.94) continue;
       const hv = hd ? hd[((Math.floor(py / IMG_H * hh)) * hw + Math.floor(px / IMG_W * hw)) * 4] / 255 : 0.5;
-      if (hv < 0.42) continue;
-      if (list.some((m) => Math.hypot(m.x - px, m.y - py) < R0 * 0.55)) continue;
+      if (hv < 0.38) continue;
+      if (list.some((m) => Math.hypot(m.x - px, m.y - py) < R0 * 0.42)) continue;
       list.push({ x: px, y: py });
     }
     for (let i = 0; i < NMK; i++) {
       const m = list[i];
       markers[i*4] = m ? m.x / IMG_W : 0.5; markers[i*4+1] = m ? m.y / IMG_H : 0.5;
-      markers[i*4+2] = m ? 0.040 + rand() * 0.050 : 0;      /* radius in ring units (0 = off) */
-      markers[i*4+3] = rand();                              /* flash phase */
+      markers[i*4+2] = m ? 0.045 + rand() * 0.055 : 0;
+      markers[i*4+3] = rand();
+    }
+    /* dedicated right-side lamps: purple top, green mid, amber bottom (image space) */
+    const Rlamps = [
+      { ang: -0.42, rho: 1.48, col: 4 },  /* violet */
+      { ang:  0.28, rho: 1.55, col: 1 },  /* green */
+      { ang:  0.95, rho: 1.52, col: 3 }   /* amber */
+    ];
+    for (let i = 0; i < 3; i++) {
+      const L = Rlamps[i], px = EMB_X + Math.cos(L.ang) * L.rho * R0 * 1.12, py = EMB_Y + Math.sin(L.ang) * L.rho * R0 * 0.82;
+      markers[i*4] = px / IMG_W; markers[i*4+1] = py / IMG_H;
+      markers[i*4+2] = 0.085; markers[i*4+3] = L.col * 0.19 + 0.05;
     }
   };
 
@@ -433,18 +469,18 @@
   const pourWanderers = (now, dt) => {
     const t = (now - t0) / 1000;
     const idle = !moved || now - lastMove > 3000;
-    const amt = (idle ? 0.20 : 0.07) * (dt / 1000);               /* per second, so every frame rate looks the same */
+    const amt = (idle ? 0.14 : 0.055) * (dt / 1000);               /* per second, so every frame rate looks the same */
     const R0 = RING_D / 2;
     for (let k = 0; k < 2; k++) {
-      const ang = t * (0.17 + k * 0.06) + k * 3.1, rho = 1.15 + 0.85 * (0.5 + 0.5 * Math.sin(t * 0.13 + k * 2.0));
+      const ang = t * (0.11 + k * 0.04) + k * 3.1, rho = 1.15 + 0.85 * (0.5 + 0.5 * Math.sin(t * 0.09 + k * 2.0));
       const x = EMB_X + Math.cos(ang) * rho * R0 * 1.12, y = EMB_Y + Math.sin(ang) * rho * R0 * 0.82;
       dep(x / IMG_W, y / IMG_H, amt, 8);
     }
     /* inner wanderers: one sweeps the TM, one rides the three thin rings (r = 0.63 / 0.71 / 0.78 of the medallion) */
     {
-      const a1 = t * 0.55, r1 = 0.34 * (0.35 + 0.65 * Math.abs(Math.sin(t * 0.21)));
-      dep((800 + Math.cos(a1) * r1 * R0) / IMG_W, (441 + Math.sin(a1 * 1.3) * r1 * R0 * 0.9) / IMG_H, amt * 1.2, 3.6);
-      const a2 = -t * 0.42 + 1.7, r2 = 0.63 + 0.15 * (0.5 + 0.5 * Math.sin(t * 0.37));
+      const a1 = t * 0.38, r1 = 0.34 * (0.35 + 0.65 * Math.abs(Math.sin(t * 0.15)));
+      dep((800 + Math.cos(a1) * r1 * R0) / IMG_W, (441 + Math.sin(a1 * 1.3) * r1 * R0 * 0.9) / IMG_H, amt * 1.55, 4.2);
+      const a2 = -t * 0.28 + 1.7, r2 = 0.63 + 0.15 * (0.5 + 0.5 * Math.sin(t * 0.24));
       dep((800.3 + Math.cos(a2) * r2 * R0) / IMG_W, (437.8 + Math.sin(a2) * r2 * R0) / IMG_H, amt * 1.1, 3.0);
     }
   };
@@ -484,11 +520,11 @@
     gl.uniform4f(U.uRect, rect[0], rect[1], rect[2], rect[3]);
     gl.uniform1f(U.uZoom, zoomV); gl.uniform1f(U.uAmb, amb); gl.uniform1f(U.uInt, inten);
     gl.uniform1f(U.uTime, sec); gl.uniform1f(U.uAlphaMode, alphaMode); gl.uniform1f(U.uOpacity, opac);
-    gl.uniform1f(U.uRing, R); gl.uniform1f(U.uMk, 0); gl.uniform1f(U.uGlow, glow); gl.uniform1f(U.uFlood, 0);
+    gl.uniform1f(U.uRing, R); gl.uniform1f(U.uMk, mode === "home" ? mk * (0.70 + 0.55 * litV) : mk); gl.uniform1f(U.uGlow, glow); gl.uniform1f(U.uFlood, flood);
     gl.uniform4fv(U.uM, markers);
     gl.activeTexture(gl.TEXTURE4); gl.bindTexture(gl.TEXTURE_2D, spTex);
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 64, 1, gl.LUMINANCE, gl.UNSIGNED_BYTE, spBytes);
-    gl.uniform1i(U.uSp, 4); gl.uniform1f(U.uPop, popV); gl.uniform1f(U.uBeat, beatV); gl.uniform1f(U.uLit, litV);
+    gl.uniform1i(U.uSp, 4); gl.uniform1f(U.uPop, popV); gl.uniform1f(U.uBeat, beatV); gl.uniform1f(U.uLit, litV); gl.uniform1f(U.uMech, mechV);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
     /* depth dust */
@@ -500,7 +536,7 @@
     gl.enableVertexAttribArray(a1); gl.vertexAttribPointer(a1, 1, gl.FLOAT, false, 20, 16);
     gl.uniform2f(PU.uRes, W, H); gl.uniform2f(PU.uZc, zc[0], zc[1]); gl.uniform2f(PU.uTilt, tilt[0], tilt[1]);
     gl.uniform1f(PU.uZoom, zoomV); gl.uniform1f(PU.uTime, sec); gl.uniform1f(PU.uDpr, dpr); gl.uniform1f(PU.uAlphaMode, alphaMode);
-    gl.drawArrays(gl.POINTS, 0, mode === "home" ? ((popV > 0.02 || litV > 0.02) ? 0 : 70) : PN);
+    gl.drawArrays(gl.POINTS, 0, mode === "home" ? ((litV > 0.15) ? Math.min(PN, 120) : 40) : PN);
   };
 
   /* The carved medallion is the player: it follows the music state published by script.js (window.__tmMusic) */
@@ -511,7 +547,27 @@
     const k = reduce ? 400 : (on ? 70 : 55), c = reduce ? 60 : (on ? 10 : 14);   /* a spring: rises with a slight overshoot, sinks back calmly */
     popVel += (k * (target - popV) - c * popVel) * h; popV += popVel * h;
     if (popV < 0) { popV = 0; popVel = 0; }
+    /* mechanical ring separation: heavier spring, slight overshoot, lags pop a touch */
+    const kMech = reduce ? 280 : (on ? 38 : 48), cMech = reduce ? 42 : (on ? 9 : 12);
+    const mTarget = on ? 1 : 0;
+    mechVel += (kMech * (mTarget - mechV) - cMech * mechVel) * h; mechV += mechVel * h;
+    if (mechV < 0) { mechV = 0; mechVel = 0; }
+    if (mechV > 1.0) { mechV = 1.0; }
     litV += ((on ? 1 : 0) - litV) * (1 - Math.exp(-Math.min(dt, 100) / (on ? 450 : 800)));
+    if (on && fldBoot) {
+      const t = now / 1000, R0 = RING_D / 2, amt = 0.06 * (dt / 1000);
+      for (let k = 0; k < 3; k++) {
+        const a = t * (0.22 + k * 0.09) + k * 2.1;
+        const rho = 0.55 + 0.35 * k + 0.08 * Math.sin(t * 0.4 + k);
+        dep((EMB_X + Math.cos(a) * rho * R0) / IMG_W, (EMB_Y + Math.sin(a) * rho * R0 * 0.9) / IMG_H, amt, 4.5);
+      }
+      /* right-side smoke corridor (matches the sketched path) */
+      for (let k = 0; k < 4; k++) {
+        const a = -0.35 + 1.3 * ((t * 0.08 + k * 0.21) % 1);
+        const rho = 1.35 + 0.25 * Math.sin(t * 0.3 + k);
+        dep((EMB_X + Math.cos(a) * rho * R0 * 1.12) / IMG_W, (EMB_Y + Math.sin(a) * rho * R0 * 0.82) / IMG_H, amt * 1.3, 6.0);
+      }
+    }
     const t = now / 1000;
     for (let i = 0; i < 64; i++) {
       let v = 0;
@@ -684,6 +740,7 @@
   const upTimer = setInterval(() => { tryUpload(); if (texDone || flat || !alive) clearInterval(upTimer); }, 40);
   /* after 12 s of nothing we stop waiting: the flat picture is shown instead of a dead gate */
   failsafe = setTimeout(() => { if (!texDone) fallback(); }, 12000);
+  setTimeout(() => { if (!ready && !readyPending) { flat = true; setReady(); } }, 8000);
 
   /* flat fallback (no WebGL / lost context / assets that never arrive) */
   let heroBgEl = null;
@@ -698,6 +755,7 @@
     flat = true;
     stage.classList.add("tm-nogl");
     cv.style.display = "none";
+    if (!ready && !readyPending) setTimeout(setReady, 100);
   }
   if (!gl) fallback();
 
