@@ -106,37 +106,17 @@
     "  float edge=smoothstep(0.12,0.58,length(n.xy));",
     "  col=ac*vec3(0.22,0.44,0.76)*uAmb;",
     "  float stone=0.55+0.9*lumA;",
-    "  col+=mc*m*max(cav,0.25)*stone*uGlow*(1.45+0.9*uFlood);",
+    "  col+=mc*m*cav*stone*uGlow*1.45;",
     /* soft edge laser — smoke along edges, not solid letter paint */
-    "  float laser=edge*max(cav,0.2)*(0.22+0.70*m)*(0.50+0.40*halo);",
-    "  col+=vec3(0.50,0.82,1.0)*laser*uGlow*(0.48+0.35*uFlood);",
-    "  col+=vec3(0.78,0.92,1.0)*laser*laser*(0.12+0.10*uFlood);",
+    "  float laser=edge*cav*(0.22+0.65*m)*(0.50+0.40*halo);",
+    "  col+=vec3(0.50,0.82,1.0)*laser*uGlow*0.48;",
+    "  col+=vec3(0.78,0.92,1.0)*laser*laser*0.12;",
     "  vec2 gq=(q-uEmb-vec2(0.0,uRing*0.9))/vec2(uRing*2.7,uRing*1.4);",
     "  float under=exp(-dot(gq,gq)*1.4);",
     "  vec3 fogC=vec3(0.018,0.055,0.105)+vec3(0.04,0.14,0.28)*under*uGlow*(0.35+0.6*m);",
     "  float fk=clamp(fog*(0.24+0.52*low),0.0,1.0)*0.78;",
     "  col=col*(1.0-fk*0.52)+fogC*fk;",
-    /* HOME only: crystalline cyan rock + gas smoke on the RIGHT */
-    "  float homeK=1.0-uAlphaMode;",
-    "  vec2 rp=(q-uEmb)/uRing;",
-    "  float rightArc=smoothstep(0.02,0.38,rp.x)*smoothstep(2.3,0.30,abs(rp.y));",
-    "  float rBand=smoothstep(0.86,1.05,rr)*smoothstep(2.90,1.20,rr);",
-    "  float slab=clamp(rBand*rightArc*homeK,0.0,1.0);",
-    "  float body=smoothstep(0.20,0.80,nz*0.5+f2*0.5);",
-    "  float crystal=smoothstep(0.55,0.85,nz)*smoothstep(0.35,0.65,f1);",
-    "  vec3 rockCol=mix(vec3(0.04,0.10,0.18),vec3(0.12,0.32,0.48),body);",
-    "  rockCol=mix(rockCol,vec3(0.20,0.72,0.85),crystal*0.75);",
-    "  rockCol=mix(rockCol,vec3(0.45,0.90,1.0),crystal*crystal*0.45);",
-    "  float edgeFade=smoothstep(0.0,0.16,slab)*smoothstep(1.0,0.38,slab);",
-    "  col=mix(col, max(col,rockCol*(0.75+0.55*uAmb)), slab*edgeFade);",
-    "  col+=vec3(0.15,0.55,0.75)*crystal*slab*edgeFade*uGlow*0.55;",
-    /* gas-like smoke puffs along the right corridor */
-    "  float smPath=smoothstep(0.88,1.18,rr)*smoothstep(2.75,1.25,rr)*rightArc*homeK;",
-    "  float puff=smoothstep(0.12,0.70,m)*smoothstep(0.10,0.55,nz);",
-    "  float gas=smPath*(0.35+1.10*puff+0.55*uFlood);",
-    "  vec3 gasC=mix(vec3(0.10,0.32,0.52),vec3(0.48,0.88,1.0),puff);",
-    "  col+=gasC*gas*uGlow*1.70;",
-    "  lum=max(lum, slab*edgeFade*0.50+gas*0.70);",
+
     "  for(int i=0;i<" + NMK + ";i++){",
     "   vec4 mk=uM[i];",
     "   if(mk.z>0.0&&uMk>0.001){",
@@ -174,10 +154,9 @@
     "   float lt=uLit*cm*zone*(0.04+0.30*lv*flow+0.08*uBeat+0.06*bass);",
     "   col+=vec3(0.14,0.32,0.62)*lt*stone*0.45;",
     "  }",
-    "  float vk=mix(1.35,1.80,uAlphaMode);",
-    "  float v=smoothstep(1.0,0.18,length((uv-0.5)*vec2(1.0,1.12)*vk));",
-    "  v*=smoothstep(0.0,0.08,uv.x)*smoothstep(0.0,0.08,1.0-uv.x)*smoothstep(0.0,0.10,uv.y)*smoothstep(0.0,0.10,1.0-uv.y);",
-    "  v=mix(max(v,0.55),v,uAlphaMode);",
+    "  float vk=mix(1.72,1.80,uAlphaMode);",
+    "  float v=smoothstep(1.0,0.22,length((uv-0.5)*vec2(1.0,1.12)*vk));",
+    "  v*=smoothstep(0.0,0.14,uv.x)*smoothstep(0.0,0.14,1.0-uv.x)*smoothstep(0.0,0.16,uv.y)*smoothstep(0.0,0.16,1.0-uv.y);",
     "  col*=v*uInt;",
     "  col=1.0-exp(-col*1.15);",
     "  col=max(col-0.006,0.0);",
@@ -346,7 +325,7 @@
     }
   };
   const stepField = (dt) => {
-    const decay = Math.exp(-dt / (mode === "intro" ? 4200 : (litV > 0.2 ? 5200 : 3400)));
+    const decay = Math.exp(-dt / (mode === "intro" ? 4200 : (litV > 0.2 ? 4500 : 3000)));
     for (let i = 0; i < fld.length; i++) fld[i] *= decay;
     const subs = dt > 28 ? 4 : 2, K = 0.21;
     for (let s = 0; s < subs; s++) {
@@ -493,12 +472,13 @@
   const pourWanderers = (now, dt) => {
     const t = (now - t0) / 1000;
     const idle = !moved || now - lastMove > 3000;
-    const amt = (idle ? 0.14 : 0.055) * (dt / 1000);               /* per second, so every frame rate looks the same */
+    const amt = (idle ? 0.12 : 0.05) * (dt / 1000);
     const R0 = RING_D / 2;
+    /* stay on the stone — rings & face cavities, never outside the medallion */
     for (let k = 0; k < 2; k++) {
-      const ang = t * (0.11 + k * 0.04) + k * 3.1, rho = 1.15 + 0.85 * (0.5 + 0.5 * Math.sin(t * 0.09 + k * 2.0));
-      const x = EMB_X + Math.cos(ang) * rho * R0 * 1.12, y = EMB_Y + Math.sin(ang) * rho * R0 * 0.82;
-      dep(x / IMG_W, y / IMG_H, amt, 8);
+      const ang = t * (0.11 + k * 0.04) + k * 3.1, rho = 0.35 + 0.55 * (0.5 + 0.5 * Math.sin(t * 0.09 + k * 2.0));
+      const x = EMB_X + Math.cos(ang) * rho * R0, y = EMB_Y + Math.sin(ang) * rho * R0 * 0.95;
+      dep(x / IMG_W, y / IMG_H, amt, 7);
     }
     /* inner wanderers: one sweeps the TM, one rides the three thin rings (r = 0.63 / 0.71 / 0.78 of the medallion) */
     {
@@ -578,34 +558,21 @@
     if (mechV < 0) { mechV = 0; mechVel = 0; }
     if (mechV > 1.0) { mechV = 1.0; }
     litV += ((on ? 1 : 0) - litV) * (1 - Math.exp(-Math.min(dt, 100) / (on ? 450 : 800)));
-    if (mode === "home") {
-      /* keep ambient mist alive; surge when music plays so gas reads clearly */
-      if (on) flood = Math.max(flood, 0.55 + 0.25 * beatV);
-      else flood = Math.max(0.12, flood * 0.99);
-    }
-    if (fldBoot && mode === "home") {
+    /* music on: same mist as mouse hover, auto-walked across grooves & cavities only */
+    if (on && fldBoot && mode === "home") {
       const t = now / 1000, R0 = RING_D / 2;
-      const amt = (on ? 0.18 : 0.03) * (dt / 1000);
-      if (on) {
-        /* wide gas spread across the medallion field */
-        for (let k = 0; k < 5; k++) {
-          const a = t * (0.18 + k * 0.07) + k * 1.7;
-          const rho = 0.45 + 0.55 * k / 4 + 0.12 * Math.sin(t * 0.5 + k);
-          dep((EMB_X + Math.cos(a) * rho * R0) / IMG_W, (EMB_Y + Math.sin(a) * rho * R0 * 0.9) / IMG_H, amt * 1.1, 6.0);
-        }
-        /* gas puffs pushing outward on the right */
-        const burst = 0.5 + 0.5 * Math.sin(t * 2.1);
-        for (let k = 0; k < 8; k++) {
-          const a = -0.70 + 1.80 * ((t * 0.16 + k * 0.125 + burst * 0.04) % 1);
-          const rho = 1.05 + 0.55 * Math.sin(t * 0.6 + k * 0.9);
-          dep((EMB_X + Math.cos(a) * rho * R0 * 1.2) / IMG_W, (EMB_Y + Math.sin(a) * rho * R0 * 0.9) / IMG_H, amt * (1.6 + burst * 0.8), 10.0);
-        }
-      } else {
-        for (let k = 0; k < 3; k++) {
-          const a = -0.40 + 1.2 * ((t * 0.03 + k * 0.28) % 1);
-          const rho = 1.30 + 0.2 * Math.sin(t * 0.2 + k);
-          dep((EMB_X + Math.cos(a) * rho * R0 * 1.15) / IMG_W, (EMB_Y + Math.sin(a) * rho * R0 * 0.85) / IMG_H, amt * 0.7, 5.0);
-        }
+      const amt = 0.085 * (dt / 1000);
+      const rad = 7; /* same softness family as pointer pour */
+      for (let k = 0; k < 3; k++) {
+        const a = t * (0.13 + k * 0.045) + k * 2.15;
+        const rho = 0.28 + 0.55 * (0.5 + 0.5 * Math.sin(t * 0.21 + k * 1.4));
+        dep((EMB_X + Math.cos(a) * rho * R0) / IMG_W, (EMB_Y + Math.sin(a) * rho * R0 * 0.92) / IMG_H, amt, rad);
+      }
+      /* trace the three carved rings like a slow mouse stroke */
+      for (let k = 0; k < 3; k++) {
+        const ring = 0.63 + k * 0.08;
+        const a = t * (0.09 + k * 0.03) + k * 1.7;
+        dep((EMB_X + Math.cos(a) * ring * R0) / IMG_W, (EMB_Y + Math.sin(a) * ring * R0) / IMG_H, amt * 0.9, rad);
       }
     }
     const t = now / 1000;
