@@ -41,7 +41,7 @@
   /* artwork geometry: 1600x900 source; the medallion's outer ring is 469 px wide and centred at (802,446) */
   const IMG_W = 1600, IMG_H = 900, RING_D = 469, EMB_X = 802, EMB_Y = 446;
   const SRC = { alb: "images/intro-albedo.jpg?v=6", nor: "images/intro-normal.jpg?v=4", hei: "images/intro-height.jpg?v=6", cls: "images/intro-cavity.png?v=6" };
-  const NMK = 10;
+  const NMK = 12;
   const GW = 192, GH = 108;                      /* mist-field resolution */
 
   gate.classList.add("tm-js");
@@ -72,13 +72,14 @@
     " q-=uTilt*(h0-0.32)*uRect.z*0.0085;",
     /* mechanical ring layers driven by uMech */
     " float rr0=length(q-uEmb)/max(uRing,1.0);",
-    " float outer=smoothstep(0.70,0.82,rr0)*(1.0-smoothstep(1.00,1.14,rr0));",
-    " float mid  =smoothstep(0.46,0.56,rr0)*(1.0-smoothstep(0.74,0.86,rr0));",
-    " float inn  =1.0-smoothstep(0.36,0.50,rr0);",
-    " float mech=uMech;",
-    " q=mix(q,rotAround(q+vec2(0.0,uRing*0.055*mech),uEmb,mech*0.14),outer);",
-    " q=mix(q,rotAround(q+vec2(0.0,-uRing*0.028*mech),uEmb,-mech*0.18),mid);",
-    " q=mix(q,uEmb+(q-uEmb)*(1.0-0.035*mech),inn*mech);",
+    " float outer=smoothstep(0.72,0.84,rr0)*(1.0-smoothstep(1.00,1.12,rr0));",
+    " float mid  =smoothstep(0.50,0.60,rr0)*(1.0-smoothstep(0.76,0.86,rr0));",
+    " float inn  =1.0-smoothstep(0.38,0.52,rr0);",
+    " float mech=uMech*0.55;",
+    /* subtle mechanical layers — keep TM readable, no melt */
+    " q=mix(q,rotAround(q+vec2(0.0,uRing*0.022*mech),uEmb,mech*0.06),outer);",
+    " q=mix(q,rotAround(q+vec2(0.0,-uRing*0.012*mech),uEmb,-mech*0.08),mid);",
+    " q=mix(q,uEmb+(q-uEmb)*(1.0-0.012*mech),inn*mech);",
     " vec2 uv=(q-uRect.xy)/uRect.zw;",
     " col=vec3(0.0);lum=0.0;",
     " if(uv.x>0.0&&uv.x<1.0&&uv.y>0.0&&uv.y<1.0){",
@@ -107,11 +108,11 @@
     "  float edge=smoothstep(0.12,0.58,length(n.xy));",
     "  col=ac*vec3(0.22,0.44,0.76)*uAmb;",
     "  float stone=0.55+0.9*lumA;",
-    "  col+=mc*m*cav*stone*uGlow*1.55;",
-    /* soft edge laser along carved lines */
-    "  float laser=edge*cav*(0.28+0.72*m)*(0.55+0.45*halo);",
-    "  col+=vec3(0.55,0.88,1.0)*laser*uGlow*0.62;",
-    "  col+=vec3(0.85,0.95,1.0)*laser*laser*0.18;",
+    "  col+=mc*m*cav*stone*uGlow*1.45;",
+    /* soft edge laser — smoke along edges, not solid letter paint */
+    "  float laser=edge*cav*(0.22+0.65*m)*(0.50+0.40*halo);",
+    "  col+=vec3(0.50,0.82,1.0)*laser*uGlow*0.48;",
+    "  col+=vec3(0.78,0.92,1.0)*laser*laser*0.12;",
     "  vec2 gq=(q-uEmb-vec2(0.0,uRing*0.9))/vec2(uRing*2.7,uRing*1.4);",
     "  float under=exp(-dot(gq,gq)*1.4);",
     "  vec3 fogC=vec3(0.018,0.055,0.105)+vec3(0.04,0.14,0.28)*under*uGlow*(0.35+0.6*m);",
@@ -148,17 +149,16 @@
     "   float zone=1.0-smoothstep(1.6,3.3,rr);",
     "   float zin=mix(1.0,0.62,smoothstep(1.1,1.9,rr));",
     "   float cloud=mix(0.70+0.60*nz,0.86+0.28*nz,thin);",
-    "   float lt=uLit*cm*zone*zin*cloud*(0.05+0.72*lv*flow+0.22*uBeat*(1.0-0.7*b)+0.10*bass*(1.0-b));",
-    "   vec3 cc=mix(vec3(0.14,0.32,0.68),vec3(0.42,0.72,0.98),smoothstep(0.0,0.6,b));",
-    "   cc=mix(cc,vec3(0.72,0.90,1.0),thin);",
+    /* much softer music light — hollows glow with mist, never solid fill */
+    "   float lt=uLit*cm*zone*zin*cloud*(0.04+0.38*lv*flow+0.12*uBeat*(1.0-0.7*b)+0.06*bass*(1.0-b));",
+    "   vec3 cc=mix(vec3(0.12,0.28,0.58),vec3(0.32,0.58,0.88),smoothstep(0.0,0.6,b));",
+    "   cc=mix(cc,vec3(0.55,0.78,0.95),thin*0.55);",
     "   float st2=stone;",
-    "   col+=cc*lt*st2*1.05+vec3(0.45,0.72,1.0)*lt*lt*0.18;",
-    /* thin edge laser on TM / fine grooves + light letter fill */
-    "   float edgeL=edge*thin*cm*(0.55+0.90*uBeat+0.35*lv);",
-    "   col+=vec3(0.70,0.92,1.0)*edgeL*uLit*0.95;",
-    "   col+=vec3(0.95,0.98,1.0)*edgeL*edgeL*uLit*0.35;",
-    "   float fill=thin*cm*(0.18+0.22*lv)*(0.7+0.3*uBeat);",
-    "   col+=vec3(0.22,0.42,0.72)*fill*uLit*st2;",
+    "   col+=cc*lt*st2*0.55+vec3(0.30,0.52,0.85)*lt*lt*0.08;",
+    /* thin edge laser only on letter/ring edges — no interior fill */
+    "   float edgeL=edge*thin*cm*(0.35+0.45*uBeat+0.20*lv);",
+    "   col+=vec3(0.60,0.88,1.0)*edgeL*uLit*0.42;",
+    "   col+=vec3(0.85,0.95,1.0)*edgeL*edgeL*uLit*0.12;",
     "  }",
     "  float vk=mix(1.72,1.80,uAlphaMode);",
     "  float v=smoothstep(1.0,0.22,length((uv-0.5)*vec2(1.0,1.12)*vk));",
@@ -183,8 +183,8 @@
     "  if(face){",
     "   float rim=smoothstep(0.93,1.0,rf);",
     "   float top=0.5+0.5*dot(normalize(p-c1+vec2(0.001)),vec2(-0.5,-0.85));",
-    "   col*=1.0+uPop*0.20;",
-    "   col+=vec3(0.35,0.58,0.95)*rim*top*uPop*0.38;lum+=rim*top*uPop*0.38;",
+    "   col*=1.0+uPop*0.10;",
+    "   col+=vec3(0.30,0.52,0.88)*rim*top*uPop*0.18;lum+=rim*top*uPop*0.18;",
     "  }else{",
     "   float r0=length(p-uEmb)/uRing;",
     "   vec2 sdv=(p-c1-vec2(uRing*0.03,uRing*0.18*uPop))/(uRing*s);",
@@ -452,7 +452,7 @@
     /* inner wanderers: one sweeps the TM, one rides the three thin rings (r = 0.63 / 0.71 / 0.78 of the medallion) */
     {
       const a1 = t * 0.38, r1 = 0.34 * (0.35 + 0.65 * Math.abs(Math.sin(t * 0.15)));
-      dep((800 + Math.cos(a1) * r1 * R0) / IMG_W, (441 + Math.sin(a1 * 1.3) * r1 * R0 * 0.9) / IMG_H, amt * 1.2, 3.6);
+      dep((800 + Math.cos(a1) * r1 * R0) / IMG_W, (441 + Math.sin(a1 * 1.3) * r1 * R0 * 0.9) / IMG_H, amt * 1.55, 4.2);
       const a2 = -t * 0.28 + 1.7, r2 = 0.63 + 0.15 * (0.5 + 0.5 * Math.sin(t * 0.24));
       dep((800.3 + Math.cos(a2) * r2 * R0) / IMG_W, (437.8 + Math.sin(a2) * r2 * R0) / IMG_H, amt * 1.1, 3.0);
     }
@@ -525,7 +525,7 @@
     const mTarget = on ? 1 : 0;
     mechVel += (kMech * (mTarget - mechV) - cMech * mechVel) * h; mechV += mechVel * h;
     if (mechV < 0) { mechV = 0; mechVel = 0; }
-    if (mechV > 1.12) { mechV = 1.12; }
+    if (mechV > 1.0) { mechV = 1.0; }
     litV += ((on ? 1 : 0) - litV) * (1 - Math.exp(-Math.min(dt, 100) / (on ? 450 : 800)));
     const t = now / 1000;
     for (let i = 0; i < 64; i++) {
