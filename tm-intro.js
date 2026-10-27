@@ -39,7 +39,7 @@
 
   /* artwork geometry: 1600x900 source; the medallion's outer ring is 469 px wide and centred at (802,446) */
   const IMG_W = 1600, IMG_H = 900, RING_D = 469, EMB_X = 802, EMB_Y = 446;
-  const SRC = { alb: "images/intro-albedo.jpg?v=5", nor: "images/intro-normal.jpg?v=4", hei: "images/intro-height.jpg?v=5", cls: "images/intro-cavity.png?v=5" };
+  const SRC = { alb: "images/intro-albedo.jpg?v=6", nor: "images/intro-normal.jpg?v=4", hei: "images/intro-height.jpg?v=6", cls: "images/intro-cavity.png?v=6" };
   const NMK = 10;
   const GW = 192, GH = 108;                      /* mist-field resolution */
 
@@ -139,14 +139,14 @@
     "   float thin=smoothstep(0.42,0.55,b);",
     "   float flow=mix(0.60+0.40*sin(t*(1.1+2.2*b)+cl.g*25.0+nz*7.0),0.88+0.12*sin(t*1.7+cl.g*20.0),thin);",
     "   float cm=pow(1.0-smoothstep(0.14,0.46,h),1.25);",
-    "   cm=mix(cm,1.0-smoothstep(0.17,0.27,h),thin);",
+    "   cm=mix(cm,1.0-smoothstep(0.06,0.27,h),thin);",
     "   float zone=1.0-smoothstep(1.6,3.3,rr);",
     "   float zin=mix(1.0,0.62,smoothstep(1.1,1.9,rr));",
-    "   float cloud=mix(0.70+0.60*nz,1.0,thin);",
+    "   float cloud=mix(0.70+0.60*nz,0.86+0.28*nz,thin);",
     "   float lt=uLit*cm*zone*zin*cloud*(0.05+0.72*lv*flow+0.22*uBeat*(1.0-0.7*b)+0.10*bass*(1.0-b));",
     "   vec3 cc=mix(vec3(0.10,0.26,0.62),vec3(0.30,0.52,0.92),smoothstep(0.0,0.6,b));",
     "   cc=mix(cc,vec3(0.60,0.80,1.0),thin);",
-    "   float st2=mix(stone,0.92+0.2*lumA,thin);",
+    "   float st2=stone;",
     "   col+=cc*lt*st2*1.0+vec3(0.35,0.58,1.0)*lt*lt*0.16;",
     "  }",
     /* contrast: vignette, filmic curve, crushed blacks */
@@ -551,7 +551,7 @@
   const placeHint = () => {
     const el = buildStone();
     if (!el || !host || mode !== "home") return;
-    el.style.left = cx + "px"; el.style.top = (cy + R * 1.04 + 14) + "px";       /* hero coordinates: the hero itself never moves during the entrance */
+    el.style.left = cx + "px"; el.style.top = (cy + R * 0.80 + 10) + "px";       /* hero coordinates: the hero itself never moves during the entrance */
     el.style.setProperty("--ts", clamp(R / 300, 0.72, 1.1).toFixed(2));
   };
   new MutationObserver(() => { if (stoneEl) buildStone(); if (mode === "home" && gl && prog) { layout(); placeHint(); } }).observe(document.documentElement, { attributes: true, attributeFilter: ["lang", "dir"] });
