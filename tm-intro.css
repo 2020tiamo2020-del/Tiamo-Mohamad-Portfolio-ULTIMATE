@@ -177,8 +177,12 @@ html[dir="rtl"] .tm-hero-cv { -webkit-mask-image: radial-gradient(ellipse 60% 66
 /* Arabic gate: the Latin name is built from one <i> per letter; keep it left-to-right so it never reads backwards */
 [dir="rtl"] .tm-intro-name { direction: ltr; unicode-bidi: isolate; }
 
-/* v6 · Home: the rock rings around the player stay visible and melt softly into the page (mask follows the medallion, any language / screen) */
-.tm-hero-cv, html[dir="rtl"] .tm-hero-cv {
+/* v6 · Home mask follows the medallion (LTR right / RTL left) via --tm-cx set by tm-intro.js */
+.tm-hero-cv {
   -webkit-mask-image: radial-gradient(circle at var(--tm-cx, 68%) var(--tm-cy, 50%), #000 calc(var(--tm-r, 220px) * 1.85), rgba(0,0,0,.75) calc(var(--tm-r, 220px) * 2.85), transparent calc(var(--tm-r, 220px) * 3.90));
           mask-image: radial-gradient(circle at var(--tm-cx, 68%) var(--tm-cy, 50%), #000 calc(var(--tm-r, 220px) * 1.85), rgba(0,0,0,.75) calc(var(--tm-r, 220px) * 2.85), transparent calc(var(--tm-r, 220px) * 3.90));
+}
+html[dir="rtl"] .tm-hero-cv {
+  -webkit-mask-image: radial-gradient(circle at var(--tm-cx, 32%) var(--tm-cy, 50%), #000 calc(var(--tm-r, 220px) * 1.85), rgba(0,0,0,.75) calc(var(--tm-r, 220px) * 2.85), transparent calc(var(--tm-r, 220px) * 3.90));
+          mask-image: radial-gradient(circle at var(--tm-cx, 32%) var(--tm-cy, 50%), #000 calc(var(--tm-r, 220px) * 1.85), rgba(0,0,0,.75) calc(var(--tm-r, 220px) * 2.85), transparent calc(var(--tm-r, 220px) * 3.90));
 }

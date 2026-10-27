@@ -106,11 +106,11 @@
     "  float edge=smoothstep(0.12,0.58,length(n.xy));",
     "  col=ac*vec3(0.22,0.44,0.76)*uAmb;",
     "  float stone=0.55+0.9*lumA;",
-    "  col+=mc*m*cav*stone*uGlow*1.45;",
+    "  col+=mc*m*max(cav,0.25)*stone*uGlow*(1.45+0.9*uFlood);",
     /* soft edge laser — smoke along edges, not solid letter paint */
-    "  float laser=edge*cav*(0.22+0.65*m)*(0.50+0.40*halo);",
-    "  col+=vec3(0.50,0.82,1.0)*laser*uGlow*0.48;",
-    "  col+=vec3(0.78,0.92,1.0)*laser*laser*0.12;",
+    "  float laser=edge*max(cav,0.2)*(0.22+0.70*m)*(0.50+0.40*halo);",
+    "  col+=vec3(0.50,0.82,1.0)*laser*uGlow*(0.48+0.35*uFlood);",
+    "  col+=vec3(0.78,0.92,1.0)*laser*laser*(0.12+0.10*uFlood);",
     "  vec2 gq=(q-uEmb-vec2(0.0,uRing*0.9))/vec2(uRing*2.7,uRing*1.4);",
     "  float under=exp(-dot(gq,gq)*1.4);",
     "  vec3 fogC=vec3(0.018,0.055,0.105)+vec3(0.04,0.14,0.28)*under*uGlow*(0.35+0.6*m);",
@@ -131,12 +131,12 @@
     "  col=mix(col, max(col,rockCol*(0.75+0.55*uAmb)), slab*edgeFade);",
     "  col+=vec3(0.15,0.55,0.75)*crystal*slab*edgeFade*uGlow*0.55;",
     /* gas-like smoke puffs along the right corridor */
-    "  float smPath=smoothstep(0.92,1.22,rr)*smoothstep(2.60,1.35,rr)*rightArc*homeK;",
-    "  float puff=smoothstep(0.20,0.75,m)*smoothstep(0.15,0.60,nz);",
-    "  float gas=smPath*(0.25+0.90*puff+0.35*uFlood);",
-    "  vec3 gasC=mix(vec3(0.08,0.30,0.48),vec3(0.40,0.85,1.0),puff);",
-    "  col+=gasC*gas*uGlow*1.35;",
-    "  lum=max(lum, slab*edgeFade*0.50+gas*0.55);",
+    "  float smPath=smoothstep(0.88,1.18,rr)*smoothstep(2.75,1.25,rr)*rightArc*homeK;",
+    "  float puff=smoothstep(0.12,0.70,m)*smoothstep(0.10,0.55,nz);",
+    "  float gas=smPath*(0.35+1.10*puff+0.55*uFlood);",
+    "  vec3 gasC=mix(vec3(0.10,0.32,0.52),vec3(0.48,0.88,1.0),puff);",
+    "  col+=gasC*gas*uGlow*1.70;",
+    "  lum=max(lum, slab*edgeFade*0.50+gas*0.70);",
     "  for(int i=0;i<" + NMK + ";i++){",
     "   vec4 mk=uM[i];",
     "   if(mk.z>0.0&&uMk>0.001){",
@@ -346,7 +346,7 @@
     }
   };
   const stepField = (dt) => {
-    const decay = Math.exp(-dt / (mode === "intro" ? 4200 : 3000));
+    const decay = Math.exp(-dt / (mode === "intro" ? 4200 : (litV > 0.2 ? 5200 : 3400)));
     for (let i = 0; i < fld.length; i++) fld[i] *= decay;
     const subs = dt > 28 ? 4 : 2, K = 0.21;
     for (let s = 0; s < subs; s++) {
@@ -578,6 +578,11 @@
     if (mechV < 0) { mechV = 0; mechVel = 0; }
     if (mechV > 1.0) { mechV = 1.0; }
     litV += ((on ? 1 : 0) - litV) * (1 - Math.exp(-Math.min(dt, 100) / (on ? 450 : 800)));
+    if (mode === "home") {
+      /* keep ambient mist alive; surge when music plays so gas reads clearly */
+      if (on) flood = Math.max(flood, 0.55 + 0.25 * beatV);
+      else flood = Math.max(0.12, flood * 0.99);
+    }
     if (fldBoot && mode === "home") {
       const t = now / 1000, R0 = RING_D / 2;
       const amt = (on ? 0.18 : 0.03) * (dt / 1000);
@@ -688,6 +693,7 @@
     /* the mist field lives only while the scene is on screen */
     if (gl && prog && texDone && fldBoot && (mode === "intro" || homeVisible)) {
       pourPointer(now);
+      pourWanderers(now, dt);
       stepField(dt);
     }
 
