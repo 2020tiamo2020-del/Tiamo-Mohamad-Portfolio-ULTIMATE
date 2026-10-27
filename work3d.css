@@ -1,0 +1,42 @@
+/* 03 / SELECTED WORK - WebGL helix gallery (pairs with work3d.js). Only active when <html class="w3d">. */
+html.w3d #work .gallery-grid{display:none}
+.w3d-slot{position:relative;height:clamp(540px,86vh,880px);margin-top:28px}
+.w3d{position:absolute;inset:0;overflow:hidden;direction:ltr;border-radius:30px;outline:0;cursor:grab;touch-action:pan-y;
+  background:radial-gradient(120% 90% at 50% -10%,#1d1236 0%,#0b0816 55%,#05040a 100%);
+  border:1px solid rgba(255,255,255,.1);box-shadow:0 40px 120px -34px rgba(139,53,255,.5),0 0 0 1px rgba(22,216,255,.04)}
+.w3d:focus-visible{box-shadow:0 0 0 2px #16d8ff}
+.w3d canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.w3d.is-drag{cursor:grabbing}
+.w3d.is-in{position:fixed;inset:0;z-index:95;border-radius:0;border:0;touch-action:none}
+.w3d-top,.w3d-bot{position:absolute;left:0;right:0;display:flex;gap:12px;align-items:center;justify-content:space-between;padding:18px 20px;pointer-events:none;z-index:2}
+.w3d-top{top:0;flex-wrap:wrap}.w3d-bot{bottom:0;padding-bottom:26px}
+.w3d.is-in .w3d-top{padding-top:calc(18px + env(safe-area-inset-top,0px))}
+.w3d-chips{display:flex;flex-wrap:wrap;gap:8px}
+.w3d button{font:inherit;color:#f6f3ff;cursor:pointer;pointer-events:auto}
+.w3d-chip,.w3d-mode,.w3d-act,.w3d-cap{border:1px solid rgba(255,255,255,.16);background:rgba(14,10,26,.55);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-radius:999px}
+.w3d-chip{padding:8px 14px;font-size:12.5px;display:inline-flex;gap:8px;align-items:center;transition:background .3s,border-color .3s,transform .3s}
+.w3d-chip i{font-style:normal;opacity:.55;font-size:11px}
+.w3d-chip:hover{border-color:rgba(22,216,255,.6)}
+.w3d-chip.on{background:linear-gradient(135deg,rgba(139,53,255,.7),rgba(22,216,255,.45));border-color:transparent}
+.w3d-mode{padding:10px 18px;font-size:13px;font-weight:600;transition:transform .3s,box-shadow .3s}
+.w3d-mode:hover,.w3d-act:hover{box-shadow:0 0 24px rgba(22,216,255,.35);transform:translateY(-1px)}
+.w3d-cap{display:flex;gap:12px;align-items:baseline;padding:10px 18px}
+.w3d-n{font-weight:700;letter-spacing:.06em;font-variant-numeric:tabular-nums;font-size:13px}
+.w3d-t{font-size:13px;opacity:.8}
+.w3d-act{padding:11px 20px;font-size:13px;font-weight:600;background:linear-gradient(135deg,rgba(139,53,255,.75),rgba(22,216,255,.5));border-color:transparent}
+.w3d-hint{position:absolute;left:50%;bottom:78px;transform:translateX(-50%);font-size:12px;color:#c9c2dd;opacity:.75;white-space:nowrap;pointer-events:none;z-index:2;text-shadow:0 1px 8px #000}
+.w3d-arrow{position:absolute;top:50%;transform:translateY(-50%);width:46px;height:46px;border-radius:50%;border:1px solid rgba(255,255,255,.16);background:rgba(14,10,26,.5);backdrop-filter:blur(12px);font-size:26px;line-height:1;z-index:2;opacity:0;transition:opacity .3s,box-shadow .3s}
+.w3d-arrow.prev{left:16px}.w3d-arrow.next{right:16px}
+.w3d:hover .w3d-arrow,.w3d.is-in .w3d-arrow{opacity:1}
+.w3d-arrow:hover{box-shadow:0 0 26px rgba(22,216,255,.45)}
+.w3d-load{position:absolute;inset:0;display:none;place-items:center;font-size:14px;color:#c9c2dd;z-index:3;pointer-events:none}
+.w3d.is-loading .w3d-load{display:grid;animation:w3dPulse 1.4s ease-in-out infinite}
+@keyframes w3dPulse{50%{opacity:.45}}
+body.w3d-in{overflow:hidden}
+body.w3d-in .st-chap,body.w3d-in .st-rail{opacity:0;visibility:hidden}
+@media (max-width:760px){
+  .w3d-slot{height:clamp(500px,80vh,700px)}.w3d{border-radius:22px}
+  .w3d-top,.w3d-bot{padding:12px}.w3d-chips{flex-wrap:nowrap;overflow-x:auto;max-width:100%;scrollbar-width:none;pointer-events:auto}
+  .w3d-chips::-webkit-scrollbar{display:none}.w3d-chip{white-space:nowrap;flex:none}
+  .w3d-t{display:none}.w3d-hint{bottom:70px;font-size:11px}.w3d-arrow{display:none}
+}

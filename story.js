@@ -278,7 +278,7 @@
       rail.style.setProperty("--st-prog", clamp(y / max, 0, 1).toFixed(4));
       aura.style.setProperty("--st-y", Math.round(y));
 
-      const pin = !!grid && cards.length > 1 && pinMQ.matches && !reduce;
+      const pin = !document.documentElement.classList.contains("w3d") && !!grid && cards.length > 1 && pinMQ.matches && !reduce; /* w3d = WebGL gallery replaces the pinned stack */
       work && work.classList.toggle("st-pin", pin);
       if (pin) {
         cards.forEach((c, i) => {
