@@ -131,3 +131,48 @@ html:not(.tm-orb-fallback) .hero-visual .floating-tag,
 html:not(.tm-orb-fallback) .hero-visual .tm-hero-gl,
 html:not(.tm-orb-fallback) .tm-rip{visibility:hidden !important}
 html:not(.tm-orb-fallback) #tmOrb{opacity:0 !important;pointer-events:none !important}
+
+/* ==========================================================================
+   v5 · "TAP TO PLAY" in carved, drifting stone letters (built by tm-intro.js, shown while the music is stopped)
+   ========================================================================== */
+html:not(.tm-orb-fallback) .core-hint { display: none !important; }
+.tm-stone {
+  position: absolute; z-index: 6; translate: -50% 0; pointer-events: none; display: flex; gap: .06em; align-items: center; justify-content: center;
+  font: 400 calc(26px * var(--ts, 1)) / 1 "Uncial Antiqua", "Cinzel", Georgia, serif; letter-spacing: .04em; white-space: nowrap;
+  perspective: 620px; opacity: 0; visibility: hidden; filter: blur(6px);
+  transition: opacity .9s ease, filter .9s ease, visibility .9s;
+}
+.tm-stone.show { opacity: 1; visibility: visible; filter: blur(0); }
+.tm-stone b { width: .55em; }
+.tm-stone i {
+  position: relative; display: inline-block; font-style: normal; color: #0b1628; transform-style: preserve-3d;
+  text-shadow: 1px 1px 0 #16294a, 2px 2px 0 #12233f, 3px 3px 0 #0d1a31, 4px 5px 1px #070f1e, 6px 9px 12px rgba(0,0,0,.8), 0 0 18px rgba(70,170,255,.45), 0 0 4px rgba(120,200,255,.35);
+  animation: tmStoneDrift var(--d, 4s) ease-in-out var(--dl, 0s) infinite alternate;
+}
+.tm-stone i::after {
+  content: attr(data-c); position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(105deg, transparent 38%, rgba(150,235,255,.95) 50%, transparent 62%) 160% 0 / 260% 100% no-repeat, linear-gradient(180deg, #e3eeff 0%, #9db8dc 48%, #4a6590 100%);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent;
+  animation: tmStoneLight 5.2s ease-in-out var(--dl, 0s) infinite;
+}
+.tm-stone-ar { font-family: "Reem Kufi", "Cairo", sans-serif; font-weight: 700; font-size: calc(31px * var(--ts, 1)); letter-spacing: 0; }
+@keyframes tmStoneDrift {
+  0%   { transform: translate3d(0, 0, 0) rotateX(0) rotateY(0) rotateZ(0); }
+  50%  { transform: translate3d(0, var(--ty, 2px), var(--tz, 10px)) rotateX(var(--rx, 12deg)) rotateY(var(--ry, -16deg)) rotateZ(var(--rz, 3deg)); }
+  100% { transform: translate3d(0, calc(var(--ty, 2px) * -1), calc(var(--tz, 10px) * -.4)) rotateX(calc(var(--rx, 12deg) * -.7)) rotateY(var(--ry, -16deg)) rotateZ(calc(var(--rz, 3deg) * -1)); }
+}
+@keyframes tmStoneLight { 0%, 30% { background-position: 160% 0, 0 0; } 70%, 100% { background-position: -60% 0, 0 0; } }
+@media (prefers-reduced-motion: reduce) { .tm-stone i, .tm-stone i::after { animation: none; } }
+
+/* Arabic: the medallion sits on the left, the mask follows it; the joined word only sways gently (3D tilt would break the letters) */
+html[dir="rtl"] .tm-hero-cv { -webkit-mask-image: radial-gradient(ellipse 60% 66% at 32% 50%, #000 30%, transparent 100%); mask-image: radial-gradient(ellipse 60% 66% at 32% 50%, #000 30%, transparent 100%); }
+@media (max-width: 900px) { html[dir="rtl"] .tm-hero-cv { -webkit-mask-image: radial-gradient(ellipse 70% 52% at 50% 42%, #000 30%, transparent 100%); mask-image: radial-gradient(ellipse 70% 52% at 50% 42%, #000 30%, transparent 100%); } }
+.tm-stone-ar i { animation-name: tmStoneDriftAr; animation-duration: 5.2s; }
+@keyframes tmStoneDriftAr {
+  0%   { transform: translate3d(0, 0, 0) rotateY(-9deg) rotateZ(-.8deg); }
+  50%  { transform: translate3d(0, -3px, 14px) rotateY(7deg) rotateX(5deg) rotateZ(.8deg); }
+  100% { transform: translate3d(0, 2px, 2px) rotateY(10deg) rotateX(-4deg) rotateZ(-.6deg); }
+}
+
+/* Arabic gate: the Latin name is built from one <i> per letter; keep it left-to-right so it never reads backwards */
+[dir="rtl"] .tm-intro-name { direction: ltr; unicode-bidi: isolate; }

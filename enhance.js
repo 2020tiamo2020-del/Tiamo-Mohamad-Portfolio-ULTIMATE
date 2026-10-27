@@ -1013,7 +1013,7 @@
   const boot = () => {
     initLenis();
     initScrollVitality();
-    initHeroGL();
+    /* initHeroGL(); — the cartoon asteroid field is retired: the carved medallion lights up with the music instead (tm-intro.js) */
     initGalleryTilt();
     initCreationField();
     initAboutParallax();
