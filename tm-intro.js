@@ -63,8 +63,8 @@
     " return mix(mix(hash(i),hash(i+vec2(1.0,0.0)),f.x),mix(hash(i+vec2(0.0,1.0)),hash(i+vec2(1.0,1.0)),f.x),f.y);}",
     "float fbm(vec2 p){float a=0.5,s=0.0;for(int i=0;i<3;i++){s+=a*noise(p);p*=2.03;a*=0.5;}return s;}",
     "vec3 mkCol(float i){float k=mod(i,5.0);",
-    " if(k<0.5)return vec3(0.08,0.95,0.86); if(k<1.5)return vec3(0.38,1.0,0.48); if(k<2.5)return vec3(1.0,0.46,0.78);",
-    " if(k<3.5)return vec3(1.0,0.62,0.22); return vec3(0.62,0.45,1.0);}",
+    " if(k<0.5)return vec3(0.62,0.45,1.0); if(k<1.5)return vec3(0.38,1.0,0.48); if(k<2.5)return vec3(1.0,0.62,0.22);",
+    " if(k<3.5)return vec3(0.08,0.95,0.86); return vec3(1.0,0.46,0.78);}",
     "vec2 rotAround(vec2 p,vec2 c,float a){vec2 d=p-c;float cs=cos(a),sn=sin(a);return c+vec2(d.x*cs-d.y*sn,d.x*sn+d.y*cs);}",
     "void shade(vec2 p,out vec3 col,out float lum){",
     " vec2 q=uZc+(p-uZc)/(1.0+uZoom);",
@@ -116,13 +116,35 @@
     "  vec3 fogC=vec3(0.018,0.055,0.105)+vec3(0.04,0.14,0.28)*under*uGlow*(0.35+0.6*m);",
     "  float fk=clamp(fog*(0.24+0.52*low),0.0,1.0)*0.78;",
     "  col=col*(1.0-fk*0.52)+fogC*fk;",
-    /* HOME only: rocky fill past the ring (esp. right side empty zone) */
+    /* HOME only: SYNTHETIC rock slab on the right + smoke drifting in front of it */
     "  float homeK=1.0-uAlphaMode;",
-    "  float outerRock=smoothstep(0.88,1.08,rr)*smoothstep(3.1,1.35,rr)*homeK;",
-    "  float rightBias=smoothstep(0.35,0.75,(q.x-uEmb.x)/uRing+0.5);",
-    "  float orMist=(m*0.55+0.28*nz+0.12*uFlood)*uGlow;",
-    "  vec3 orCol=ac*vec3(0.10,0.24,0.46)*(0.28+0.72*orMist)+mc*orMist*0.42;",
-    "  col=mix(col, max(col,orCol), outerRock*(0.55+0.35*rightBias));",
+    "  if(homeK>0.01){",
+    "   vec2 rp=(q-uEmb)/uRing;",
+    "   float ang=atan(rp.y,rp.x);",
+    "   float rightArc=smoothstep(0.15,0.55,ang)*smoothstep(1.55,1.05,ang)+smoothstep(-0.15,-0.55,ang)*smoothstep(-1.35,-0.85,ang);",
+    "   rightArc=max(rightArc, smoothstep(0.20,0.55,rp.x)*smoothstep(1.9,0.7,abs(rp.y)));",
+    "   float rBand=smoothstep(0.95,1.20,rr)*smoothstep(2.6,1.45,rr);",
+    "   float slab=rBand*rightArc*homeK;",
+    "   float rockN=fbm(q*0.011+vec2(3.1,1.7));",
+    "   float rockN2=fbm(q*0.028+vec2(-1.4,4.2));",
+    "   float cracks=smoothstep(0.42,0.58,rockN)*smoothstep(0.60,0.40,rockN2);",
+    "   float body=smoothstep(0.28,0.72,rockN*0.65+rockN2*0.35);",
+    "   vec3 rockDeep=vec3(0.04,0.08,0.16);",
+    "   vec3 rockMid=vec3(0.10,0.20,0.36);",
+    "   vec3 rockHi=vec3(0.18,0.34,0.55);",
+    "   vec3 rockCol=mix(rockDeep,rockMid,body);",
+    "   rockCol=mix(rockCol,rockHi,cracks*0.55);",
+    "   float edgeFade=smoothstep(0.0,0.25,slab)*smoothstep(1.0,0.55,slab);",
+    "   col=mix(col, rockCol*(0.55+0.45*uAmb), slab*edgeFade*0.92);",
+    "   lum=max(lum, dot(rockCol,vec3(0.299,0.587,0.114))*slab*edgeFade);",
+    /* smoke drifting in front of the right slab (the cyan path) */
+    "   float smPath=smoothstep(1.05,1.35,rr)*smoothstep(2.35,1.55,rr)*rightArc;",
+    "   float smWave=fbm(q*0.007+vec2(t*0.045,-t*0.02));",
+    "   float sm=smPath*smoothstep(0.25,0.70,smWave*0.55+m*0.55+0.15);",
+    "   vec3 smC=mix(vec3(0.08,0.22,0.42),vec3(0.45,0.78,0.98),smWave);",
+    "   col+=smC*sm*uGlow*homeK*0.85;",
+    "   lum+=sm*0.35*homeK;",
+    "  }",
     "  for(int i=0;i<" + NMK + ";i++){",
     "   vec4 mk=uM[i];",
     "   if(mk.z>0.0&&uMk>0.001){",
@@ -130,8 +152,9 @@
     "    float r=mk.z*uRing;",
     "    vec2 dv=mp-q;float d=length(dv);",
     "    float fl=pow(max(0.0,sin(t*(0.55+0.5*fract(mk.w*3.7))+mk.w*40.0)),6.0);",
+    "    fl=mix(fl,0.85,clamp(uLit,0.0,1.0));",
     "    float near=texture2D(uFld,mk.xy).r;",
-    "    float k=(0.14+0.55*fl+1.1*smoothstep(0.05,0.5,near))*uMk;",
+    "    float k=(0.18+0.50*fl+0.9*smoothstep(0.05,0.5,near))*uMk;",
     "    vec3 c=mkCol(float(i));",
     "    float a=1.0-clamp(d/(r*3.4),0.0,1.0);a*=a;",
     "    vec3 ld=normalize(vec3(dv/(r*2.2),0.7));",
@@ -384,6 +407,17 @@
       markers[i*4+2] = m ? 0.045 + rand() * 0.055 : 0;
       markers[i*4+3] = rand();
     }
+    /* dedicated right-side lamps: purple top, green mid, amber bottom (image space) */
+    const Rlamps = [
+      { ang: -0.42, rho: 1.48, col: 4 },  /* violet */
+      { ang:  0.28, rho: 1.55, col: 1 },  /* green */
+      { ang:  0.95, rho: 1.52, col: 3 }   /* amber */
+    ];
+    for (let i = 0; i < 3; i++) {
+      const L = Rlamps[i], px = EMB_X + Math.cos(L.ang) * L.rho * R0 * 1.12, py = EMB_Y + Math.sin(L.ang) * L.rho * R0 * 0.82;
+      markers[i*4] = px / IMG_W; markers[i*4+1] = py / IMG_H;
+      markers[i*4+2] = 0.085; markers[i*4+3] = L.col * 0.19 + 0.05;
+    }
   };
 
   /* ------------------------------------------------------------ geometry */
@@ -501,7 +535,7 @@
     gl.uniform4f(U.uRect, rect[0], rect[1], rect[2], rect[3]);
     gl.uniform1f(U.uZoom, zoomV); gl.uniform1f(U.uAmb, amb); gl.uniform1f(U.uInt, inten);
     gl.uniform1f(U.uTime, sec); gl.uniform1f(U.uAlphaMode, alphaMode); gl.uniform1f(U.uOpacity, opac);
-    gl.uniform1f(U.uRing, R); gl.uniform1f(U.uMk, mode === "home" ? mk * (0.25 + 0.95 * litV) : mk); gl.uniform1f(U.uGlow, glow); gl.uniform1f(U.uFlood, flood);
+    gl.uniform1f(U.uRing, R); gl.uniform1f(U.uMk, mode === "home" ? mk * (0.70 + 0.55 * litV) : mk); gl.uniform1f(U.uGlow, glow); gl.uniform1f(U.uFlood, flood);
     gl.uniform4fv(U.uM, markers);
     gl.activeTexture(gl.TEXTURE4); gl.bindTexture(gl.TEXTURE_2D, spTex);
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 64, 1, gl.LUMINANCE, gl.UNSIGNED_BYTE, spBytes);
@@ -536,11 +570,17 @@
     if (mechV > 1.0) { mechV = 1.0; }
     litV += ((on ? 1 : 0) - litV) * (1 - Math.exp(-Math.min(dt, 100) / (on ? 450 : 800)));
     if (on && fldBoot) {
-      const t = now / 1000, R0 = RING_D / 2, amt = 0.045 * (dt / 1000);
+      const t = now / 1000, R0 = RING_D / 2, amt = 0.06 * (dt / 1000);
       for (let k = 0; k < 3; k++) {
         const a = t * (0.22 + k * 0.09) + k * 2.1;
         const rho = 0.55 + 0.35 * k + 0.08 * Math.sin(t * 0.4 + k);
         dep((EMB_X + Math.cos(a) * rho * R0) / IMG_W, (EMB_Y + Math.sin(a) * rho * R0 * 0.9) / IMG_H, amt, 4.5);
+      }
+      /* right-side smoke corridor (matches the sketched path) */
+      for (let k = 0; k < 4; k++) {
+        const a = -0.35 + 1.3 * ((t * 0.08 + k * 0.21) % 1);
+        const rho = 1.35 + 0.25 * Math.sin(t * 0.3 + k);
+        dep((EMB_X + Math.cos(a) * rho * R0 * 1.12) / IMG_W, (EMB_Y + Math.sin(a) * rho * R0 * 0.82) / IMG_H, amt * 1.3, 6.0);
       }
     }
     const t = now / 1000;
