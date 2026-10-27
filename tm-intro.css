@@ -179,6 +179,6 @@ html[dir="rtl"] .tm-hero-cv { -webkit-mask-image: radial-gradient(ellipse 60% 66
 
 /* v6 · Home: the rock rings around the player stay visible and melt softly into the page (mask follows the medallion, any language / screen) */
 .tm-hero-cv, html[dir="rtl"] .tm-hero-cv {
-  -webkit-mask-image: radial-gradient(circle at var(--tm-cx, 68%) var(--tm-cy, 50%), #000 calc(var(--tm-r, 220px) * 1.50), rgba(0,0,0,.62) calc(var(--tm-r, 220px) * 2.30), transparent calc(var(--tm-r, 220px) * 3.30));
-          mask-image: radial-gradient(circle at var(--tm-cx, 68%) var(--tm-cy, 50%), #000 calc(var(--tm-r, 220px) * 1.50), rgba(0,0,0,.62) calc(var(--tm-r, 220px) * 2.30), transparent calc(var(--tm-r, 220px) * 3.30));
+  -webkit-mask-image: radial-gradient(circle at var(--tm-cx, 68%) var(--tm-cy, 50%), #000 calc(var(--tm-r, 220px) * 1.35), rgba(0,0,0,.55) calc(var(--tm-r, 220px) * 2.0), transparent calc(var(--tm-r, 220px) * 2.9));
+          mask-image: radial-gradient(circle at var(--tm-cx, 68%) var(--tm-cy, 50%), #000 calc(var(--tm-r, 220px) * 1.35), rgba(0,0,0,.55) calc(var(--tm-r, 220px) * 2.0), transparent calc(var(--tm-r, 220px) * 2.9));
 }
