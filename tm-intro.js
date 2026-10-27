@@ -116,20 +116,21 @@
     "  vec3 fogC=vec3(0.018,0.055,0.105)+vec3(0.04,0.14,0.28)*under*uGlow*(0.35+0.6*m);",
     "  float fk=clamp(fog*(0.24+0.52*low),0.0,1.0)*0.78;",
     "  col=col*(1.0-fk*0.52)+fogC*fk;",
-    /* HOME only: light synthetic rock + smoke on the right (reuses existing noise) */
+    /* HOME only: visible rock slab + smoke on the RIGHT of the medallion */
     "  float homeK=1.0-uAlphaMode;",
     "  vec2 rp=(q-uEmb)/uRing;",
-    "  float rightArc=smoothstep(0.18,0.55,rp.x)*smoothstep(1.85,0.55,abs(rp.y));",
-    "  float rBand=smoothstep(0.95,1.22,rr)*smoothstep(2.55,1.40,rr);",
-    "  float slab=rBand*rightArc*homeK;",
-    "  float body=smoothstep(0.30,0.75,nz*0.6+f2*0.4);",
-    "  vec3 rockCol=mix(vec3(0.05,0.10,0.18),vec3(0.14,0.28,0.48),body);",
-    "  rockCol=mix(rockCol,vec3(0.20,0.38,0.58),smoothstep(0.45,0.62,nz)*0.4);",
-    "  float edgeFade=smoothstep(0.0,0.22,slab)*smoothstep(1.0,0.50,slab);",
-    "  col=mix(col, rockCol*(0.55+0.45*uAmb), slab*edgeFade*0.90);",
-    "  float smPath=smoothstep(1.05,1.35,rr)*smoothstep(2.30,1.50,rr)*rightArc*homeK;",
-    "  float sm=smPath*smoothstep(0.22,0.68,m*0.5+nz*0.5);",
-    "  col+=mix(vec3(0.08,0.22,0.42),vec3(0.42,0.76,0.96),nz)*sm*uGlow*0.80;",
+    "  float rightArc=smoothstep(0.05,0.40,rp.x)*smoothstep(2.2,0.35,abs(rp.y));",
+    "  float rBand=smoothstep(0.88,1.08,rr)*smoothstep(2.80,1.25,rr);",
+    "  float slab=clamp(rBand*rightArc*homeK,0.0,1.0);",
+    "  float body=smoothstep(0.22,0.78,nz*0.55+f2*0.45);",
+    "  vec3 rockCol=mix(vec3(0.06,0.12,0.22),vec3(0.18,0.34,0.55),body);",
+    "  rockCol=mix(rockCol,vec3(0.28,0.48,0.72),smoothstep(0.40,0.65,nz)*0.55);",
+    "  float edgeFade=smoothstep(0.0,0.18,slab)*smoothstep(1.0,0.40,slab);",
+    "  col=mix(col, max(col,rockCol*(0.70+0.50*uAmb)), slab*edgeFade);",
+    "  float smPath=smoothstep(0.95,1.25,rr)*smoothstep(2.50,1.40,rr)*rightArc*homeK;",
+    "  float sm=smPath*(0.35+0.65*smoothstep(0.15,0.70,m*0.45+nz*0.55+uFlood*0.25));",
+    "  col+=mix(vec3(0.10,0.28,0.50),vec3(0.50,0.82,1.0),nz)*sm*uGlow*1.15;",
+    "  lum=max(lum, slab*edgeFade*0.45+sm*0.40);",
     "  for(int i=0;i<" + NMK + ";i++){",
     "   vec4 mk=uM[i];",
     "   if(mk.z>0.0&&uMk>0.001){",
@@ -137,16 +138,17 @@
     "    float r=mk.z*uRing;",
     "    vec2 dv=mp-q;float d=length(dv);",
     "    float fl=pow(max(0.0,sin(t*(0.55+0.5*fract(mk.w*3.7))+mk.w*40.0)),6.0);",
-    "    fl=mix(fl,0.85,clamp(uLit,0.0,1.0));",
+    "    fl=mix(fl,0.90,clamp(uLit,0.0,1.0));",
     "    float near=texture2D(uFld,mk.xy).r;",
-    "    float k=(0.18+0.50*fl+0.9*smoothstep(0.05,0.5,near))*uMk;",
+    "    float k=(0.35+0.55*fl+0.8*smoothstep(0.05,0.5,near))*uMk;",
     "    vec3 c=mkCol(float(i));",
-    "    float a=1.0-clamp(d/(r*3.4),0.0,1.0);a*=a;",
+    "    float a=1.0-clamp(d/(r*4.2),0.0,1.0);a*=a;",
     "    vec3 ld=normalize(vec3(dv/(r*2.2),0.7));",
     "    float dif=max(dot(n,ld),0.0);",
-    "    col+=c*ac*(0.9+2.6*dif)*a*k*1.9;",
-    "    col+=c*exp(-d*d/(r*r*0.05))*k*1.5;",
-    "    col+=c*exp(-d/(r*1.5))*0.20*k*(0.5+fog);",
+    "    col+=c*(0.55+0.45*ac)*(1.0+2.8*dif)*a*k*2.8;",
+    "    col+=c*exp(-d*d/(r*r*0.08))*k*2.4;",
+    "    col+=c*exp(-d/(r*1.8))*0.35*k*(0.6+fog);",
+    "    lum=max(lum, k*a*0.8);",
     "   }",
     "  }",
     "  if(uLit>0.003){",
@@ -162,9 +164,10 @@
     "   float lt=uLit*cm*zone*(0.04+0.30*lv*flow+0.08*uBeat+0.06*bass);",
     "   col+=vec3(0.14,0.32,0.62)*lt*stone*0.45;",
     "  }",
-    "  float vk=mix(1.72,1.80,uAlphaMode);",
-    "  float v=smoothstep(1.0,0.22,length((uv-0.5)*vec2(1.0,1.12)*vk));",
-    "  v*=smoothstep(0.0,0.14,uv.x)*smoothstep(0.0,0.14,1.0-uv.x)*smoothstep(0.0,0.16,uv.y)*smoothstep(0.0,0.16,1.0-uv.y);",
+    "  float vk=mix(1.35,1.80,uAlphaMode);",
+    "  float v=smoothstep(1.0,0.18,length((uv-0.5)*vec2(1.0,1.12)*vk));",
+    "  v*=smoothstep(0.0,0.08,uv.x)*smoothstep(0.0,0.08,1.0-uv.x)*smoothstep(0.0,0.10,uv.y)*smoothstep(0.0,0.10,1.0-uv.y);",
+    "  v=mix(max(v,0.55),v,uAlphaMode);",
     "  col*=v*uInt;",
     "  col=1.0-exp(-col*1.15);",
     "  col=max(col-0.006,0.0);",
@@ -394,14 +397,14 @@
     }
     /* dedicated right-side lamps: purple top, green mid, amber bottom (image space) */
     const Rlamps = [
-      { ang: -0.42, rho: 1.48, col: 4 },  /* violet */
-      { ang:  0.28, rho: 1.55, col: 1 },  /* green */
-      { ang:  0.95, rho: 1.52, col: 3 }   /* amber */
+      { ang: -0.55, rho: 1.35 },  /* violet top-right */
+      { ang:  0.25, rho: 1.42 },  /* green mid-right */
+      { ang:  1.05, rho: 1.38 }   /* amber lower-right */
     ];
     for (let i = 0; i < 3; i++) {
-      const L = Rlamps[i], px = EMB_X + Math.cos(L.ang) * L.rho * R0 * 1.12, py = EMB_Y + Math.sin(L.ang) * L.rho * R0 * 0.82;
+      const L = Rlamps[i], px = EMB_X + Math.cos(L.ang) * L.rho * R0 * 1.15, py = EMB_Y + Math.sin(L.ang) * L.rho * R0 * 0.85;
       markers[i*4] = px / IMG_W; markers[i*4+1] = py / IMG_H;
-      markers[i*4+2] = 0.085; markers[i*4+3] = L.col * 0.19 + 0.05;
+      markers[i*4+2] = 0.12; markers[i*4+3] = 0.1 + i * 0.2;
     }
   };
 
@@ -520,7 +523,7 @@
     gl.uniform4f(U.uRect, rect[0], rect[1], rect[2], rect[3]);
     gl.uniform1f(U.uZoom, zoomV); gl.uniform1f(U.uAmb, amb); gl.uniform1f(U.uInt, inten);
     gl.uniform1f(U.uTime, sec); gl.uniform1f(U.uAlphaMode, alphaMode); gl.uniform1f(U.uOpacity, opac);
-    gl.uniform1f(U.uRing, R); gl.uniform1f(U.uMk, mode === "home" ? mk * (0.70 + 0.55 * litV) : mk); gl.uniform1f(U.uGlow, glow); gl.uniform1f(U.uFlood, flood);
+    gl.uniform1f(U.uRing, R); gl.uniform1f(U.uMk, mode === "home" ? Math.max(0.85, mk) * (0.90 + 0.70 * litV) : mk); gl.uniform1f(U.uGlow, glow); gl.uniform1f(U.uFlood, flood);
     gl.uniform4fv(U.uM, markers);
     gl.activeTexture(gl.TEXTURE4); gl.bindTexture(gl.TEXTURE_2D, spTex);
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 64, 1, gl.LUMINANCE, gl.UNSIGNED_BYTE, spBytes);
@@ -554,18 +557,21 @@
     if (mechV < 0) { mechV = 0; mechVel = 0; }
     if (mechV > 1.0) { mechV = 1.0; }
     litV += ((on ? 1 : 0) - litV) * (1 - Math.exp(-Math.min(dt, 100) / (on ? 450 : 800)));
-    if (on && fldBoot) {
-      const t = now / 1000, R0 = RING_D / 2, amt = 0.06 * (dt / 1000);
-      for (let k = 0; k < 3; k++) {
-        const a = t * (0.22 + k * 0.09) + k * 2.1;
-        const rho = 0.55 + 0.35 * k + 0.08 * Math.sin(t * 0.4 + k);
-        dep((EMB_X + Math.cos(a) * rho * R0) / IMG_W, (EMB_Y + Math.sin(a) * rho * R0 * 0.9) / IMG_H, amt, 4.5);
+    if (fldBoot && mode === "home") {
+      const t = now / 1000, R0 = RING_D / 2;
+      const amt = (on ? 0.10 : 0.03) * (dt / 1000);
+      if (on) {
+        for (let k = 0; k < 3; k++) {
+          const a = t * (0.22 + k * 0.09) + k * 2.1;
+          const rho = 0.55 + 0.35 * k + 0.08 * Math.sin(t * 0.4 + k);
+          dep((EMB_X + Math.cos(a) * rho * R0) / IMG_W, (EMB_Y + Math.sin(a) * rho * R0 * 0.9) / IMG_H, amt, 4.5);
+        }
       }
-      /* right-side smoke corridor (matches the sketched path) */
-      for (let k = 0; k < 4; k++) {
-        const a = -0.35 + 1.3 * ((t * 0.08 + k * 0.21) % 1);
-        const rho = 1.35 + 0.25 * Math.sin(t * 0.3 + k);
-        dep((EMB_X + Math.cos(a) * rho * R0 * 1.12) / IMG_W, (EMB_Y + Math.sin(a) * rho * R0 * 0.82) / IMG_H, amt * 1.3, 6.0);
+      /* right-side smoke corridor — always a trickle on home, strong when playing */
+      for (let k = 0; k < 5; k++) {
+        const a = -0.55 + 1.55 * ((t * (on ? 0.11 : 0.04) + k * 0.19) % 1);
+        const rho = 1.25 + 0.35 * Math.sin(t * 0.35 + k * 1.3);
+        dep((EMB_X + Math.cos(a) * rho * R0 * 1.15) / IMG_W, (EMB_Y + Math.sin(a) * rho * R0 * 0.85) / IMG_H, amt * (on ? 1.6 : 0.7), 7.0);
       }
     }
     const t = now / 1000;
@@ -680,8 +686,8 @@
       opac = 0.92 * easeOut(t / 1700);
       amb = lerp(0.70, 0.62, easeOut(t / 2600));
       glow = lerp(1.0, 0.80, easeOut(t / 2600));
-      mk = lerp(1.2, 0.75, easeOut(t / 3200));
-      flood = lerp(0.5, 0.12, easeOut(t / 3600));
+      mk = lerp(1.2, 1.0, easeOut(t / 3200));
+      flood = lerp(0.5, 0.22, easeOut(t / 3600));
       if (t > 4000) handT = 0;
     }
     if (mode === "home") stepMusic(now, dt);
