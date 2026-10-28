@@ -232,7 +232,7 @@ html[dir="rtl"] .tm-hero-cv { -webkit-mask-image: radial-gradient(ellipse 60% 66
 .tm-home-mech .tm-layer {
   position: absolute;
   inset: 0;
-  background-size: contain;
+  background-size: 100% 100%;   /* fill the exact medallion box */
   background-repeat: no-repeat;
   background-position: center;
   border-radius: 50%;

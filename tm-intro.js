@@ -424,8 +424,10 @@
   const placeMech = () => {
     const el = ensureMech();
     if (!el || mode !== "home") return;
-    /* exact match to the carved medallion diameter (no oversize) */
-    const size = (R * 2).toFixed(1) + "px";
+    /* Match the exact on-screen diameter of the carved medallion in home-bg.
+       home-bg scale S = (R*2)/BG.d  →  medallion diameter on screen = R*2. */
+    const diam = R * 2;
+    const size = diam.toFixed(1) + "px";
     el.style.width = size;
     el.style.height = size;
     el.style.left = (cx - R).toFixed(1) + "px";
