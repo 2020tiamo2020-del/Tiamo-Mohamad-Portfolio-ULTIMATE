@@ -228,13 +228,17 @@ html[dir="rtl"] .tm-hero-cv { -webkit-mask-image: radial-gradient(ellipse 60% 66
   border-radius: 50%;
   will-change: transform;
   backface-visibility: hidden;
+  overflow: visible;
 }
+/* TM disc: never rotates, always on top — T tips must not be clipped */
 .tm-home-mech .tm-disc {
   background-image: url("images/tm-layers/tm_core.png");
-  z-index: 4;
+  z-index: 10;
   transform: translateZ(0);
+  border-radius: 0;           /* no circular clip on the letter tips */
   filter: drop-shadow(0 14px 22px rgba(0,0,0,.62));
   transition: transform 1.05s cubic-bezier(.22,1.25,.36,1), filter 0.9s ease;
+  pointer-events: none;
 }
 .tm-home-mech.is-open .tm-disc {
   transform: translateZ(56px) scale(1.03);
