@@ -395,6 +395,72 @@
     const L = cx - BG.ex * S, T = cy - BG.ey * S;
     homeImg.style.setProperty("--hx0", (-L).toFixed(1) + "px"); homeImg.style.setProperty("--hx1", (W - L).toFixed(1) + "px");
     homeImg.style.setProperty("--hy0", (-T).toFixed(1) + "px"); homeImg.style.setProperty("--hy1", (H - T).toFixed(1) + "px");
+    placeMech();
+  };
+
+  /* ---- Home mechanical medallion (layered rings + rising TM) ---- */
+  let homeMech = null, mechPlayed = false;
+  const ensureMech = () => {
+    if (homeMech && homeMech.isConnected) return homeMech;
+    const hero = host || document.querySelector(".hero");
+    if (!hero) return null;
+    let el = hero.querySelector(".tm-home-mech");
+    if (!el) {
+      el = document.createElement("div");
+      el.className = "tm-home-mech";
+      el.id = "tmHomeMech";
+      el.setAttribute("aria-hidden", "true");
+      el.innerHTML = '<div class="tm-home-mech-inner">' +
+        '<div class="tm-layer ring-outer"></div>' +
+        '<div class="tm-layer ring-b" id="tmHomeRingB"></div>' +
+        '<div class="tm-layer ring-a" id="tmHomeRingA"></div>' +
+        '<div class="tm-layer tm-disc" id="tmHomeDisc"></div>' +
+        '</div>';
+      hero.appendChild(el);
+    }
+    homeMech = el;
+    return el;
+  };
+  const placeMech = () => {
+    const el = ensureMech();
+    if (!el || mode !== "home") return;
+    const size = (R * 2 * 1.08).toFixed(1) + "px";   /* slight oversize so rings cover the stone ones */
+    el.style.width = size;
+    el.style.height = size;
+    el.style.left = (cx - R * 1.08).toFixed(1) + "px";
+    el.style.top  = (cy - R * 1.08).toFixed(1) + "px";
+  };
+  const runHomeMech = () => {
+    if (mechPlayed || reduce) return;
+    const el = ensureMech();
+    if (!el) return;
+    mechPlayed = true;
+    placeMech();
+    el.classList.add("is-on");
+    const ringA = el.querySelector(".ring-a");
+    const ringB = el.querySelector(".ring-b");
+    const inner = el.querySelector(".tm-home-mech-inner");
+    let step = 0;
+    const TICKS = 7;
+    const STEP_DEG = 16;
+    const TICK_MS = 130;
+    const tick = () => {
+      step++;
+      const a = step * STEP_DEG;
+      const b = -step * (STEP_DEG * 0.94);
+      if (ringA) ringA.style.transform = "translateZ(5px) rotateZ(" + a + "deg)";
+      if (ringB) ringB.style.transform = "translateZ(2px) rotateZ(" + b + "deg)";
+      if (inner) {
+        const pulse = (step % 2 === 0) ? 1.4 : -1.4;
+        inner.style.transform = "rotateX(" + (16 + pulse) + "deg) rotateY(" + (-6 + pulse * 0.5) + "deg)";
+      }
+      if (step < TICKS) setTimeout(tick, TICK_MS);
+      else setTimeout(() => {
+        el.classList.add("is-open");
+        if (inner) inner.style.transform = "rotateX(7deg) rotateY(-3deg)";
+      }, 90);
+    };
+    setTimeout(tick, 380);   /* let the home picture start settling first */
   };
   const layout = () => {
     if (mode === "intro") {
@@ -674,8 +740,6 @@
       btn.disabled = false;
       try { btn.focus({ preventScroll: true }); } catch (_) {}
       window.dispatchEvent(new CustomEvent("tm:ready"));
-      const mech = document.getElementById("tmMech");
-      if (mech) mech.classList.add("is-on");
     }, reduce ? 0 : 750);
   };
   const early = window.__tmImgs || {};
@@ -748,46 +812,6 @@
     if (entering || !ready) return;
     entering = true; enterT = performance.now();
     window.__tmGoing = true;
-
-    /* ---- Mechanical unlock: opposite tick rings then TM disc rises ---- */
-    (function runMechUnlock() {
-      const mech = document.getElementById("tmMech");
-      const ringA = document.getElementById("tmRingA");
-      const ringB = document.getElementById("tmRingB");
-      const disc  = document.getElementById("tmDisc");
-      if (!mech || !ringA || !ringB || reduce) return;
-
-      mech.classList.add("is-on");
-      let step = 0;
-      const TICKS = 6;          // number of mechanical steps
-      const STEP_DEG = 18;      // degrees per tick
-      const TICK_MS = 140;      // time between ticks
-
-      const tick = () => {
-        step++;
-        const a = step * STEP_DEG;
-        const b = -step * STEP_DEG * 0.92;   // slightly different ratio feels mechanical
-        ringA.style.transform = `translateZ(6px) rotateZ(${a}deg)`;
-        ringB.style.transform = `translateZ(2px) rotateZ(${b}deg)`;
-        // subtle 3D tilt pulse on the whole
-        const inner = mech.querySelector(".tm-mech-inner");
-        if (inner) {
-          const pulse = (step % 2 === 0) ? 1.5 : -1.5;
-          inner.style.transform = `rotateX(${18 + pulse}deg) rotateY(${-8 + pulse * 0.6}deg)`;
-        }
-        if (step < TICKS) {
-          setTimeout(tick, TICK_MS);
-        } else {
-          // final open: rise the disc
-          setTimeout(() => {
-            mech.classList.add("is-open");
-            if (inner) inner.style.transform = "rotateX(8deg) rotateY(-4deg)";
-          }, 80);
-        }
-      };
-      // small delay so the layer is visible, then start ticking
-      setTimeout(tick, 220);
-    })();
     if (window.__tmMark) window.__tmMark();
     gate.classList.add("tm-go");
     document.body.classList.add("tm-zoom-lock", "tm-pre-h", "tm-pre-r");
@@ -821,6 +845,7 @@
         homeImg.setAttribute("aria-hidden", "true"); homeImg.draggable = false; homeImg.src = "images/home-bg.webp?v=2";
         heroEl.insertBefore(homeImg, heroEl.firstChild);
         entering = false; layout();
+        runHomeMech();
         /* the camera "lands" on it: the picture settles from a close-up and melts in */
         if (!reduce && homeImg.animate) homeImg.animate([{ opacity: 0, transform: "scale(1.32)" }, { opacity: 1, transform: "scale(1)" }], { duration: 3200, easing: "cubic-bezier(.16,1,.3,1)", fill: "backwards" });
         if ("ResizeObserver" in window) { let t = 0; new ResizeObserver(() => { clearTimeout(t); t = setTimeout(() => { if (mode === "home") layout(); }, 100); }).observe(heroEl); }

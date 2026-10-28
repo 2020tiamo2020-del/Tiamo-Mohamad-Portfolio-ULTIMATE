@@ -199,33 +199,33 @@ html[dir="rtl"] .tm-hero-cv { -webkit-mask-image: radial-gradient(ellipse 60% 66
 .tm-stone { display: none !important; }
 
 /* ==========================================================================
-   Mechanical 3D TM Medallion — rings tick opposite, then disc rises
+   Home Mechanical Medallion — rings tick opposite then TM disc rises
+   Works for both LTR (EN) and RTL (AR). Positioned by tm-intro.js layout().
    ========================================================================== */
-.tm-mech {
+.tm-home-mech {
   position: absolute;
-  left: 50%; top: 42%;
-  width: min(52vmin, 380px);
-  height: min(52vmin, 380px);
-  transform: translate(-50%, -50%);
-  perspective: 900px;
-  z-index: 3;
+  z-index: 2;
   pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.6s ease;
-}
-.tm-mech.is-on { opacity: 1; }
-.tm-mech-inner {
-  position: relative;
-  width: 100%; height: 100%;
   transform-style: preserve-3d;
-  transform: rotateX(18deg) rotateY(-8deg);
-  transition: transform 1.2s cubic-bezier(.2,.8,.2,1);
+  perspective: 900px;
+  opacity: 0;
+  transition: opacity 0.9s ease;
+  will-change: transform, opacity;
 }
-.tm-mech.is-open .tm-mech-inner {
-  transform: rotateX(8deg) rotateY(-4deg);
+.tm-home-mech.is-on { opacity: 1; }
+.tm-home-mech-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transform: rotateX(16deg) rotateY(-6deg);
+  transition: transform 1.1s cubic-bezier(.2,.8,.2,1);
+}
+.tm-home-mech.is-open .tm-home-mech-inner {
+  transform: rotateX(7deg) rotateY(-3deg);
 }
 
-.tm-layer {
+.tm-home-mech .tm-layer {
   position: absolute;
   inset: 0;
   background-size: contain;
@@ -236,54 +236,51 @@ html[dir="rtl"] .tm-hero-cv { -webkit-mask-image: radial-gradient(ellipse 60% 66
   backface-visibility: hidden;
 }
 
-/* central TM disc */
-.tm-layer.tm-disc {
+.tm-home-mech .tm-disc {
   background-image: url("images/tm-layers/tm_core.png");
   z-index: 4;
-  transform: translateZ(0px);
-  filter: drop-shadow(0 12px 18px rgba(0,0,0,.55));
-  transition: transform 0.85s cubic-bezier(.34,1.4,.64,1), filter 0.6s ease;
+  transform: translateZ(0);
+  filter: drop-shadow(0 10px 16px rgba(0,0,0,.5));
+  transition: transform 0.9s cubic-bezier(.34,1.35,.64,1), filter 0.7s ease;
 }
-.tm-mech.is-open .tm-layer.tm-disc {
-  transform: translateZ(48px);
-  filter: drop-shadow(0 22px 28px rgba(0,0,0,.65));
+.tm-home-mech.is-open .tm-disc {
+  transform: translateZ(42px);
+  filter: drop-shadow(0 20px 26px rgba(0,0,0,.62));
 }
 
-/* thin rings — opposite rotation */
-.tm-layer.ring-a {
+.tm-home-mech .ring-a {
   background-image: url("images/tm-layers/ring_a.png");
   z-index: 3;
-  transform: translateZ(6px) rotateZ(0deg);
+  transform: translateZ(5px) rotateZ(0deg);
 }
-.tm-layer.ring-b {
+.tm-home-mech .ring-b {
   background-image: url("images/tm-layers/ring_b.png");
   z-index: 2;
   transform: translateZ(2px) rotateZ(0deg);
 }
-.tm-layer.ring-outer {
+.tm-home-mech .ring-outer {
   background-image: url("images/tm-layers/ring_outer.png");
   z-index: 1;
-  transform: translateZ(-4px);
-  opacity: 0.85;
+  transform: translateZ(-3px);
+  opacity: 0.9;
 }
 
-/* subtle glow under the rising disc */
-.tm-mech::after {
+.tm-home-mech::after {
   content: "";
   position: absolute;
   left: 50%; top: 50%;
-  width: 55%; height: 55%;
-  transform: translate(-50%, -50%) translateZ(-20px);
+  width: 52%; height: 52%;
+  transform: translate(-50%, -50%) translateZ(-18px);
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(80,140,255,.25) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(70,130,255,.22) 0%, transparent 70%);
   opacity: 0;
-  transition: opacity 0.8s ease;
+  transition: opacity 0.9s ease;
   pointer-events: none;
 }
-.tm-mech.is-open::after { opacity: 1; }
+.tm-home-mech.is-open::after { opacity: 1; }
 
-/* reduced motion */
 @media (prefers-reduced-motion: reduce) {
-  .tm-layer.tm-disc,
-  .tm-mech-inner { transition: none !important; }
+  .tm-home-mech .tm-disc,
+  .tm-home-mech-inner { transition: none !important; }
+  .tm-home-mech { opacity: 1; }
 }
