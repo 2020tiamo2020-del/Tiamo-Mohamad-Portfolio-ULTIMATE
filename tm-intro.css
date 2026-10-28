@@ -182,3 +182,18 @@ html[dir="rtl"] .tm-hero-cv { -webkit-mask-image: radial-gradient(ellipse 60% 66
   -webkit-mask-image: radial-gradient(circle at var(--tm-cx, 68%) var(--tm-cy, 50%), #000 calc(var(--tm-r, 220px) * 1.35), rgba(0,0,0,.55) calc(var(--tm-r, 220px) * 2.0), transparent calc(var(--tm-r, 220px) * 2.9));
           mask-image: radial-gradient(circle at var(--tm-cx, 68%) var(--tm-cy, 50%), #000 calc(var(--tm-r, 220px) * 1.35), rgba(0,0,0,.55) calc(var(--tm-r, 220px) * 2.0), transparent calc(var(--tm-r, 220px) * 2.9));
 }
+
+/* v7 · Home background: the carved-stone picture (baked onto the page tone, so its blacks ARE the page colour);
+   it fades out on all sides with a soft elliptical mask that follows the medallion (set from tm-intro.js) */
+.tm-home-bg {
+  position: absolute; z-index: -1; max-width: none; pointer-events: none; user-select: none; display: block;
+  -webkit-mask-image: radial-gradient(ellipse var(--rx, 700px) var(--ry, 430px) at var(--mx, 50%) var(--my, 50%), #000 0, #000 46%, rgba(0,0,0,.6) 72%, transparent 100%),
+    linear-gradient(to right, transparent var(--hx0, 0px), #000 calc(var(--hx0, 0px) + 170px), #000 calc(var(--hx1, 100%) - 230px), transparent var(--hx1, 100%)),
+    linear-gradient(to bottom, transparent var(--hy0, 0px), #000 calc(var(--hy0, 0px) + 150px), #000 calc(var(--hy1, 100%) - 190px), transparent var(--hy1, 100%));
+  -webkit-mask-composite: source-in, source-in;
+          mask-image: radial-gradient(ellipse var(--rx, 700px) var(--ry, 430px) at var(--mx, 50%) var(--my, 50%), #000 0, #000 46%, rgba(0,0,0,.6) 72%, transparent 100%),
+    linear-gradient(to right, transparent var(--hx0, 0px), #000 calc(var(--hx0, 0px) + 170px), #000 calc(var(--hx1, 100%) - 230px), transparent var(--hx1, 100%)),
+    linear-gradient(to bottom, transparent var(--hy0, 0px), #000 calc(var(--hy0, 0px) + 150px), #000 calc(var(--hy1, 100%) - 190px), transparent var(--hy1, 100%));
+          mask-composite: intersect;
+}
+.tm-stone { display: none !important; }

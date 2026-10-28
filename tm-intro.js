@@ -380,6 +380,22 @@
   let rect = [0, 0, 1, 1], zc = [0, 0], R = 160, cx = 0, cy = 0;
   let host = null;                                                 /* the hero element once we live there */
 
+  /* ---- Home background: the new carved-stone picture takes the old logo's place (same centre + size as the old medallion) ---- */
+  const BG = { w: 1672, h: 941, ex: 838, ey: 466, d: 490 };       /* picture size, medallion centre, medallion ring diameter (px) */
+  let homeImg = null;
+  const placeHomeImg = () => {
+    if (!homeImg) return;
+    const S = (R * 2) / BG.d;
+    homeImg.style.width = (BG.w * S).toFixed(1) + "px"; homeImg.style.height = (BG.h * S).toFixed(1) + "px";
+    homeImg.style.left = (cx - BG.ex * S).toFixed(1) + "px"; homeImg.style.top = (cy - BG.ey * S).toFixed(1) + "px";
+    homeImg.style.setProperty("--mx", (BG.ex * S).toFixed(1) + "px"); homeImg.style.setProperty("--my", (BG.ey * S).toFixed(1) + "px");
+    homeImg.style.setProperty("--rx", (R * 3.1).toFixed(1) + "px"); homeImg.style.setProperty("--ry", (R * 1.9).toFixed(1) + "px");
+    homeImg.style.transformOrigin = (BG.ex * S).toFixed(1) + "px " + (BG.ey * S).toFixed(1) + "px";
+    /* the hero's own edges, in picture coordinates: the picture melts away before it can be cut */
+    const L = cx - BG.ex * S, T = cy - BG.ey * S;
+    homeImg.style.setProperty("--hx0", (-L).toFixed(1) + "px"); homeImg.style.setProperty("--hx1", (W - L).toFixed(1) + "px");
+    homeImg.style.setProperty("--hy0", (-T).toFixed(1) + "px"); homeImg.style.setProperty("--hy1", (H - T).toFixed(1) + "px");
+  };
   const layout = () => {
     if (mode === "intro") {
       W = innerWidth; H = innerHeight;
@@ -404,7 +420,8 @@
       rect = [cx - EMB_X * S, cy - EMB_Y * S, IMG_W * S, IMG_H * S];
     }
     zc = [cx, cy];
-    if (mode === "home") { cv.style.setProperty("--tm-cx", cx.toFixed(1) + "px"); cv.style.setProperty("--tm-cy", cy.toFixed(1) + "px"); cv.style.setProperty("--tm-r", R.toFixed(1) + "px"); if (stoneEl) placeHint(); }
+    if (mode === "home") placeHomeImg();
+    if (mode === "home" && !homeImg) { cv.style.setProperty("--tm-cx", cx.toFixed(1) + "px"); cv.style.setProperty("--tm-cy", cy.toFixed(1) + "px"); cv.style.setProperty("--tm-r", R.toFixed(1) + "px"); if (stoneEl) placeHint(); }
     cv.width = Math.max(2, Math.round(W * dpr)); cv.height = Math.max(2, Math.round(H * dpr));
   };
 
@@ -534,6 +551,7 @@
   /* "TAP TO PLAY": carved stone letters that drift strangely in place, under the medallion. Visible while the music is stopped. */
   let stoneEl = null, stoneLang = "";
   const buildStone = () => {
+    if (homeImg) return null;                                    /* the player is paused for now: no label */
     const hv = host || document.querySelector(".hero"); if (!hv) return null;
     if (!stoneEl) { stoneEl = document.createElement("div"); stoneEl.className = "tm-stone"; stoneEl.setAttribute("aria-hidden", "true"); hv.appendChild(stoneEl); }
     const ar = isAr(), key = ar ? "ar" : "en";
@@ -634,6 +652,7 @@
       flood = lerp(0.5, 0.12, easeOut(t / 3600));
       if (t > 4000) handT = 0;
     }
+    if (mode === "home" && homeImg) return;                     /* Home shows a picture: no WebGL work at all */
     if (mode === "home") stepMusic(now, dt);
     if (mode === "home" && !homeVisible) return;
     if (!gl || !prog || !texDone) return;
@@ -754,28 +773,16 @@
       stage.remove();
       document.body.classList.remove("tm-zoom-lock");
       if (window.__tmFire) window.__tmFire("handoff");
-      if (useGL && heroEl) {
+      if (heroEl) {
         host = heroEl; mode = "home";
-        cv.className = "tm-hero-cv"; cv.style.display = "";
-        heroEl.insertBefore(cv, heroEl.firstChild);
-        alphaMode = 0; opac = 0; zoomV = ZOOM_MAX; inten = 1.1; amb = 0.70; glow = 1; mk = 1.2; flood = 0.5;
-        moved = false; lpx = -1; entering = false;
-        layout();
-        heroEl.addEventListener("click", (e) => {            /* a click on the medallion (blank background only) = play / pause */
-          const t = e.target;
-          if (mode !== "home" || !(t === heroEl || t === cv || (t.closest && t.closest(".hero-visual") && !t.closest("a,button,input,textarea,select,[role=button],[tabindex]")))) return;
-          const r = heroEl.getBoundingClientRect();
-          if (Math.hypot(e.clientX - r.left - cx, e.clientY - r.top - cy) > R * 1.1) return;
-          const o = document.getElementById("tmOrb"); if (o) o.click();
-        });
-        handT = performance.now();
-        if ("IntersectionObserver" in window) new IntersectionObserver((es) => { homeVisible = es[0].isIntersecting; }, { threshold: 0 }).observe(heroEl);
-        if ("ResizeObserver" in window) { let t = 0; new ResizeObserver(() => { clearTimeout(t); t = setTimeout(() => { if (mode === "home" && gl && prog) { layout(); placeHint(); } }, 100); }).observe(heroEl); }
-      } else {
-        document.documentElement.classList.add("tm-orb-fallback");   /* no WebGL: the old orb stays as the player */
-        alive = false; cancelAnimationFrame(raf);
-        heroBgEl = ensureFallbackBg();
-        if (heroBgEl) { heroBgEl.style.opacity = "0"; const a = heroBgEl.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 1800, fill: "forwards" }); a.finished.then(() => { heroBgEl.style.opacity = ""; try { a.cancel(); } catch (_) {} }, () => {}); }
+        homeImg = document.createElement("img"); homeImg.className = "tm-home-bg"; homeImg.alt = ""; homeImg.decoding = "async";
+        homeImg.setAttribute("aria-hidden", "true"); homeImg.draggable = false; homeImg.src = "images/home-bg.webp?v=2";
+        heroEl.insertBefore(homeImg, heroEl.firstChild);
+        entering = false; layout();
+        /* the camera "lands" on it: the picture settles from a close-up and melts in */
+        if (!reduce && homeImg.animate) homeImg.animate([{ opacity: 0, transform: "scale(1.32)" }, { opacity: 1, transform: "scale(1)" }], { duration: 3200, easing: "cubic-bezier(.16,1,.3,1)", fill: "backwards" });
+        if ("ResizeObserver" in window) { let t = 0; new ResizeObserver(() => { clearTimeout(t); t = setTimeout(() => { if (mode === "home") layout(); }, 100); }).observe(heroEl); }
+        new MutationObserver(() => { if (mode === "home") layout(); }).observe(document.documentElement, { attributes: true, attributeFilter: ["lang", "dir"] });
       }
       clearTimeout(failsafe);
     }, fadeDelay + fadeDur + 60);
