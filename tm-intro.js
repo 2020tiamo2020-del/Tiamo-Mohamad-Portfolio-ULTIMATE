@@ -431,62 +431,67 @@
     mechPlayed = true;
     placeMech();
 
+    const disc = el.querySelector(".tm-disc");
     const ringA = el.querySelector(".ring-a");
     const ringB = el.querySelector(".ring-b");
-    const disc  = el.querySelector(".tm-disc");
-    const inner = el.querySelector(".tm-home-mech-inner");
+    const ringO = el.querySelector(".ring-outer");
 
-    const resetLayers = () => {
+    /* Hide spinning rings — Home uses rise only */
+    if (ringA) ringA.style.display = "none";
+    if (ringB) ringB.style.display = "none";
+    if (ringO) ringO.style.display = "none";
+
+    /* Disc stays invisible most of the time (clean home-bg shows).
+       On hover: briefly show + rise, then settle back and hide. */
+    const resetDisc = () => {
       el.classList.remove("is-open");
-      if (ringA) { ringA.style.transition = "none"; ringA.style.transform = "translateZ(9px) rotateZ(0deg)"; }
-      if (ringB) { ringB.style.transition = "none"; ringB.style.transform = "translateZ(4px) rotateZ(0deg)"; }
-      if (disc)  { disc.style.transition = "none"; disc.style.transform = "translateZ(12px) scale(1)"; disc.style.zIndex = "20"; }
-      if (inner) { inner.style.transition = "none"; inner.style.transform = "none"; }
+      if (disc) {
+        disc.style.transition = "none";
+        disc.style.transform = "translateZ(0) scale(1)";
+      }
       void el.offsetWidth;
     };
 
-    const playSequence = (isReplay) => {
+    const playRise = () => {
       if (el._mechBusy) return;
       el._mechBusy = true;
       el.style.opacity = "1";
-      resetLayers();
+      resetDisc();
 
-      /* Disc (T+M) never rotates — T tips always stay intact above the spinning rings */
-      if (disc) {
-        disc.style.transform = "translateZ(12px) scale(1)";
-        disc.style.zIndex = "10";
-      }
-
-      let step = 0;
-      const TICKS = 5, STEP_DEG = 22, TICK_MS = 210;
-      const tick = () => {
-        step++;
-        const a = step * STEP_DEG, b = -step * (STEP_DEG * 0.88);
-        if (ringA) { ringA.style.transition = "transform 0.18s cubic-bezier(.45,0,.2,1)"; ringA.style.transform = "translateZ(9px) rotateZ(" + a + "deg)"; }
-        if (ringB) { ringB.style.transition = "transform 0.18s cubic-bezier(.45,0,.2,1)"; ringB.style.transform = "translateZ(4px) rotateZ(" + b + "deg)"; }
-        /* rings only — disc stays fixed (no rotate) so T tips never shear or clip */
-        if (step < TICKS) setTimeout(tick, TICK_MS);
-        else setTimeout(() => {
-          el.classList.add("is-open");
-          if (inner) { inner.style.transition = "none"; inner.style.transform = "none"; }
+      setTimeout(() => {
+        el.classList.add("is-open");
+        if (disc) {
+          disc.style.transition = "transform 0.85s cubic-bezier(.22,1.2,.36,1), filter 0.7s ease";
+          disc.style.transform = "translateZ(48px) scale(1.04)";
+        }
+        /* hold up, then lower and fade out */
+        setTimeout(() => {
+          el.classList.remove("is-open");
           if (disc) {
-            disc.style.transition = "transform 1.05s cubic-bezier(.22,1.25,.36,1), filter 0.9s ease";
-            disc.style.transform = "translateZ(56px) scale(1.03)";  /* rise only, no rotate */
+            disc.style.transition = "transform 0.7s cubic-bezier(.4,0,.2,1), filter 0.6s ease";
+            disc.style.transform = "translateZ(0) scale(1)";
           }
           setTimeout(() => {
-            el.style.transition = "opacity 0.7s ease";
+            el.style.transition = "opacity 0.45s ease";
             el.style.opacity = "0";
-            setTimeout(() => { el.classList.remove("is-open"); el._mechBusy = false; el.classList.add("is-ready"); }, 720);
-          }, 1150);
-        }, 120);
-      };
-      setTimeout(tick, isReplay ? 30 : 480);
+            setTimeout(() => {
+              el._mechBusy = false;
+              el.classList.add("is-ready");
+            }, 480);
+          }, 720);
+        }, 900);
+      }, 40);
     };
 
-    playSequence(false);
-    const replay = () => { if (el.classList.contains("is-ready") && !el._mechBusy) playSequence(true); };
-    el.addEventListener("mouseenter", replay);
-    el.addEventListener("focus", replay);
+    /* No entrance spin — just mark ready so hover works */
+    el.classList.add("is-ready");
+    el.style.opacity = "0";
+
+    const onHover = () => {
+      if (el.classList.contains("is-ready") && !el._mechBusy) playRise();
+    };
+    el.addEventListener("mouseenter", onHover);
+    el.addEventListener("focus", onHover);
     el.tabIndex = 0;
   };
 
