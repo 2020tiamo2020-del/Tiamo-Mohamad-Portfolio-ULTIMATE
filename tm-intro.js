@@ -451,6 +451,12 @@
       el.style.opacity = "1";
       resetLayers();
 
+      /* Disc (T+M) never rotates — T tips always stay intact above the spinning rings */
+      if (disc) {
+        disc.style.transform = "translateZ(0) scale(1)";
+        disc.style.zIndex = "10";
+      }
+
       let step = 0;
       const TICKS = 5, STEP_DEG = 22, TICK_MS = 210;
       const tick = () => {
@@ -458,13 +464,15 @@
         const a = step * STEP_DEG, b = -step * (STEP_DEG * 0.88);
         if (ringA) { ringA.style.transition = "transform 0.18s cubic-bezier(.45,0,.2,1)"; ringA.style.transform = "translateZ(9px) rotateZ(" + a + "deg)"; }
         if (ringB) { ringB.style.transition = "transform 0.18s cubic-bezier(.45,0,.2,1)"; ringB.style.transform = "translateZ(4px) rotateZ(" + b + "deg)"; }
-        /* no tilt — rings only rotate on Z, disc rises on Z */
+        /* rings only — disc stays fixed (no rotate) so T tips never shear or clip */
         if (step < TICKS) setTimeout(tick, TICK_MS);
         else setTimeout(() => {
           el.classList.add("is-open");
           if (inner) { inner.style.transition = "none"; inner.style.transform = "none"; }
-          if (disc) disc.style.transition = "transform 1.05s cubic-bezier(.22,1.25,.36,1), filter 0.9s ease";
-          // fade out so clean home-bg remains (no double image)
+          if (disc) {
+            disc.style.transition = "transform 1.05s cubic-bezier(.22,1.25,.36,1), filter 0.9s ease";
+            disc.style.transform = "translateZ(56px) scale(1.03)";  /* rise only, no rotate */
+          }
           setTimeout(() => {
             el.style.transition = "opacity 0.7s ease";
             el.style.opacity = "0";
