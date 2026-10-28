@@ -218,11 +218,7 @@ html[dir="rtl"] .tm-hero-cv { -webkit-mask-image: radial-gradient(ellipse 60% 66
   position: relative;
   width: 100%; height: 100%;
   transform-style: preserve-3d;
-  transform: rotateX(18deg) rotateY(-7deg);
-  transition: transform 1.25s cubic-bezier(.2,.85,.2,1);
-}
-.tm-home-mech.is-open .tm-home-mech-inner {
-  transform: rotateX(6deg) rotateY(-2deg);
+  transform: none;
 }
 .tm-home-mech .tm-layer {
   position: absolute; inset: 0;

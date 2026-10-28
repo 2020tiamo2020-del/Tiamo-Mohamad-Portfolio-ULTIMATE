@@ -441,7 +441,7 @@
       if (ringA) { ringA.style.transition = "none"; ringA.style.transform = "translateZ(9px) rotateZ(0deg)"; }
       if (ringB) { ringB.style.transition = "none"; ringB.style.transform = "translateZ(4px) rotateZ(0deg)"; }
       if (disc)  { disc.style.transition = "none"; disc.style.transform = "translateZ(0) scale(1)"; }
-      if (inner) { inner.style.transition = "none"; inner.style.transform = "rotateX(18deg) rotateY(-7deg)"; }
+      if (inner) { inner.style.transition = "none"; inner.style.transform = "none"; }
       void el.offsetWidth;
     };
 
@@ -458,15 +458,11 @@
         const a = step * STEP_DEG, b = -step * (STEP_DEG * 0.88);
         if (ringA) { ringA.style.transition = "transform 0.18s cubic-bezier(.45,0,.2,1)"; ringA.style.transform = "translateZ(9px) rotateZ(" + a + "deg)"; }
         if (ringB) { ringB.style.transition = "transform 0.18s cubic-bezier(.45,0,.2,1)"; ringB.style.transform = "translateZ(4px) rotateZ(" + b + "deg)"; }
-        if (inner) {
-          const pulse = (step % 2 === 0) ? 2.2 : -1.8;
-          inner.style.transition = "transform 0.2s cubic-bezier(.4,0,.2,1)";
-          inner.style.transform = "rotateX(" + (18 + pulse) + "deg) rotateY(" + (-7 + pulse * 0.4) + "deg)";
-        }
+        /* no tilt — rings only rotate on Z, disc rises on Z */
         if (step < TICKS) setTimeout(tick, TICK_MS);
         else setTimeout(() => {
           el.classList.add("is-open");
-          if (inner) { inner.style.transition = "transform 1.1s cubic-bezier(.22,1.15,.36,1)"; inner.style.transform = "rotateX(6deg) rotateY(-2deg)"; }
+          if (inner) { inner.style.transition = "none"; inner.style.transform = "none"; }
           if (disc) disc.style.transition = "transform 1.05s cubic-bezier(.22,1.25,.36,1), filter 0.9s ease";
           // fade out so clean home-bg remains (no double image)
           setTimeout(() => {
