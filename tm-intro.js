@@ -424,11 +424,12 @@
   const placeMech = () => {
     const el = ensureMech();
     if (!el || mode !== "home") return;
-    const size = (R * 2 * 1.08).toFixed(1) + "px";   /* slight oversize so rings cover the stone ones */
+    /* exact match to the carved medallion diameter (no oversize) */
+    const size = (R * 2).toFixed(1) + "px";
     el.style.width = size;
     el.style.height = size;
-    el.style.left = (cx - R * 1.08).toFixed(1) + "px";
-    el.style.top  = (cy - R * 1.08).toFixed(1) + "px";
+    el.style.left = (cx - R).toFixed(1) + "px";
+    el.style.top  = (cy - R).toFixed(1) + "px";
   };
   const runHomeMech = () => {
     if (mechPlayed || reduce) return;
@@ -439,28 +440,44 @@
     el.classList.add("is-on");
     const ringA = el.querySelector(".ring-a");
     const ringB = el.querySelector(".ring-b");
+    const disc  = el.querySelector(".tm-disc");
     const inner = el.querySelector(".tm-home-mech-inner");
     let step = 0;
-    const TICKS = 7;
-    const STEP_DEG = 16;
-    const TICK_MS = 130;
+    /* heavier, slower, more imposing mechanical steps */
+    const TICKS = 5;
+    const STEP_DEG = 22;          /* bigger angular steps = more weight */
+    const TICK_MS = 210;          /* slower = more gravity / power */
     const tick = () => {
       step++;
       const a = step * STEP_DEG;
-      const b = -step * (STEP_DEG * 0.94);
-      if (ringA) ringA.style.transform = "translateZ(5px) rotateZ(" + a + "deg)";
-      if (ringB) ringB.style.transform = "translateZ(2px) rotateZ(" + b + "deg)";
+      const b = -step * (STEP_DEG * 0.88);
+      if (ringA) ringA.style.transition = "transform 0.18s cubic-bezier(.45,0,.2,1)";
+      if (ringB) ringB.style.transition = "transform 0.18s cubic-bezier(.45,0,.2,1)";
+      if (ringA) ringA.style.transform = "translateZ(8px) rotateZ(" + a + "deg)";
+      if (ringB) ringB.style.transform = "translateZ(3px) rotateZ(" + b + "deg)";
       if (inner) {
-        const pulse = (step % 2 === 0) ? 1.4 : -1.4;
-        inner.style.transform = "rotateX(" + (16 + pulse) + "deg) rotateY(" + (-6 + pulse * 0.5) + "deg)";
+        /* slight heavy tilt pulse on each tick */
+        const pulse = (step % 2 === 0) ? 2.2 : -1.8;
+        inner.style.transition = "transform 0.2s cubic-bezier(.4,0,.2,1)";
+        inner.style.transform = "rotateX(" + (18 + pulse) + "deg) rotateY(" + (-7 + pulse * 0.4) + "deg)";
       }
-      if (step < TICKS) setTimeout(tick, TICK_MS);
-      else setTimeout(() => {
-        el.classList.add("is-open");
-        if (inner) inner.style.transform = "rotateX(7deg) rotateY(-3deg)";
-      }, 90);
+      if (step < TICKS) {
+        setTimeout(tick, TICK_MS);
+      } else {
+        /* final powerful rise of the TM disc */
+        setTimeout(() => {
+          el.classList.add("is-open");
+          if (inner) {
+            inner.style.transition = "transform 1.1s cubic-bezier(.22,1.15,.36,1)";
+            inner.style.transform = "rotateX(6deg) rotateY(-2deg)";
+          }
+          if (disc) {
+            disc.style.transition = "transform 1.05s cubic-bezier(.22,1.25,.36,1), filter 0.9s ease";
+          }
+        }, 120);
+      }
     };
-    setTimeout(tick, 380);   /* let the home picture start settling first */
+    setTimeout(tick, 520);   /* wait for home picture to begin settling */
   };
   const layout = () => {
     if (mode === "intro") {
