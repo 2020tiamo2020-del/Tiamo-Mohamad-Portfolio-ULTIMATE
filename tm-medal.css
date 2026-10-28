@@ -1,0 +1,16 @@
+/* TM MEDAL — mechanical lock: two thin rings tick in opposite directions, then the TM disc rises (and closes in reverse) */
+.tm-medal{position:absolute;left:0;top:0;width:1672px;height:941px;z-index:-1;pointer-events:none;display:none;
+  transform-origin:0 0;perspective:1500px;perspective-origin:838px 440px;contain:layout style}
+.tm-medal.on{display:block}
+.tm-medal *{pointer-events:none}
+.tm-stack{position:absolute;inset:0;transform-style:preserve-3d;transform:rotateX(var(--tx,0deg)) rotateY(var(--ty,0deg));transform-origin:838px 448px;will-change:transform}
+.tm-mr{position:absolute;transform-style:preserve-3d;will-change:transform}
+.tm-mr img{position:absolute;inset:0;width:100%;height:100%;display:block;will-change:transform}
+.tm-mr.hot img{filter:drop-shadow(0 2px 3px rgba(2,3,12,.7))}
+.tm-md{position:absolute;transform-style:preserve-3d;will-change:transform}
+.tm-md .top{position:absolute;inset:0;transform-style:preserve-3d}
+.tm-md .top img{position:absolute;display:block}
+.tm-md .wall{position:absolute;border-radius:50%;background:radial-gradient(ellipse at 50% 35%,#323c63 0%,#1b2240 60%,#0d1226 100%)}
+.tm-md .shadow{position:absolute;border-radius:50%;background:radial-gradient(ellipse,rgba(2,3,12,.85) 30%,rgba(2,3,12,0) 72%);filter:blur(7px)}
+.tm-md .rim{position:absolute;border-radius:50%;box-shadow:0 0 22px 4px rgba(90,170,255,.55),inset 0 0 16px rgba(120,200,255,.35);opacity:var(--glow,0)}
+.tm-md .tglow{position:absolute;display:block;filter:blur(4px) brightness(1.5) saturate(1.4);mix-blend-mode:screen;opacity:var(--glow,0)}
