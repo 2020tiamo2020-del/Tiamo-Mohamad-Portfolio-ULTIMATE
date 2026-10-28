@@ -4,21 +4,6 @@
 const sec = document.getElementById("creation"); if (!sec) return;
 const wall = sec.querySelector(".cr-wall"), more = sec.querySelector(".cr-more"), numEl = sec.querySelector(".cr-count b");
 const MAX = 300, GAP = 8, EXTS = ["jpg", "jpeg", "png", "webp"], FIRST = 20;
-/* LOAD-SAFETY (v2): this section must never compete with the intro for the network.
-   - discovery starts only after the visitor has pressed Enter (or the gate is gone), never during the intro
-   - it probes 6 numbers at a time (was 32 x 4 extensions = ~150 requests in one burst, which GitHub Pages answers with 503 / HTTP2 resets)
-   - the extension that worked last is tried first, and the result is cached for 6 h so a revisit only checks the next 2 numbers
-   - the pictures themselves are requested only when the section is near the screen (the old observer used the wall as root, so ~25 full-size images loaded at page start) */
-const BATCH = 6, CK = "tm-cr-cache-v2", TTL = 6 * 3600 * 1000;
-let hintExt = null;
-const afterGate = fn => {
-  const free = () => !document.body.classList.contains("gate-locked");
-  const go = () => setTimeout(fn, 900);
-  if (free()) { go(); return; }
-  let n = 0; const t = setInterval(() => { if (free() || ++n > 240) { clearInterval(t); go(); } }, 500);
-};
-const loadCache = () => { try { if (/[?&]rescan/.test(location.search)) return null; const c = JSON.parse(localStorage.getItem(CK) || "null"); if (c && Date.now() - c.t < TTL && Array.isArray(c.items) && c.items.length) return c.items; } catch (e) {} return null; };
-const saveCache = () => { try { localStorage.setItem(CK, JSON.stringify({ t: Date.now(), items: items.map(i => ({ n: i.n, u: i.u, r: i.r })) })); } catch (e) {} };
 const items = []; let colCount = 0, shown = 0, started = false, finished = false, built = false, rebuilding = false;
 
 /* glass frame + hint are created here so index.html stays untouched */
@@ -74,10 +59,9 @@ const peek = async u => {
   } catch (e) { return null; }
 };
 const find = async n => {            // try extensions sequentially (jpg first) to minimize network requests
-  const order = hintExt ? [hintExt, ...EXTS.filter(x => x !== hintExt)] : EXTS;
-  for (const x of order) {
+  for (const x of EXTS) {
     const r = await peek("images/l" + n + "." + x);
-    if (r && r.r) { hintExt = x; return r; }
+    if (r && r.r) return r;
   }
   return null;
 };
@@ -90,14 +74,12 @@ const lazy = "IntersectionObserver" in window ? new IntersectionObserver(es => e
   const im = new Image(); im.onload = () => { t.firstChild.style.backgroundImage = "url('" + t.dataset.u + "')"; t.classList.add("ld"); }; im.onerror = () => t.classList.add("ld"); im.src = t.dataset.u;
 }), { root: wall, rootMargin: "400px 0px" }) : null;
 
-let secNear = !("IntersectionObserver" in window); const pending = [];
-if (!secNear) { const sio = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) { secNear = true; pending.splice(0).forEach(t => t.isConnected && lazy.observe(t)); sio.disconnect(); } }, { rootMargin: "1100px 0px" }); sio.observe(sec); }
 const tile = (it, copy) => {
   const t = document.createElement("div"); t.className = "cr-tile"; t.dataset.u = it.u; t.dataset.k = it.k;
   if (copy) t.setAttribute("aria-hidden", "true"); else { t.setAttribute("role", "img"); t.setAttribute("aria-label", "AI artwork " + it.n); }
   t.innerHTML = '<div class="cr-img" style="padding-bottom:' + it.r * 100 + '%"></div><span class="cr-num">' + String(it.n).padStart(2, "0") + '</span><div class="cr-guard"></div>';
   t.addEventListener("click", () => open(it.k));
-  lazy ? (secNear ? lazy.observe(t) : pending.push(t)) : (t.firstChild.style.backgroundImage = "url('" + it.u + "')", t.classList.add("ld"));
+  lazy ? lazy.observe(t) : (t.firstChild.style.backgroundImage = "url('" + it.u + "')", t.classList.add("ld"));
   return t;
 };
 
@@ -130,37 +112,30 @@ const setCount = () => { if (!numEl) return; const to = items.length, from = sho
 /* discover images 32 at a time, keep numeric order */
 const run = async () => {
   if (started) return; started = true; more.classList.add("busy");
-  let next = 1, miss = 0, done = false, firstShown = false, gap = GAP;
-  const cached = loadCache();
-  if (cached) {
-    cached.forEach(c => items.push({ n: c.n, u: c.u, r: c.r, k: items.length }));
-    next = cached[cached.length - 1].n + 1; gap = 2; setCount();
-    if (items.length >= FIRST) { firstShown = true; rebuild(); }
-  }
-  const cachedCount = cached ? cached.length : -1;
+  let next = 1, miss = 0, done = false, firstShown = false;
   while (!done) {
-    const nums = []; for (let i = 0, sz = Math.min(BATCH, Math.max(1, gap - miss)); i < sz && next + i <= MAX; i++) nums.push(next + i);
+    const nums = []; for (let i = 0; i < 32 && next + i <= MAX; i++) nums.push(next + i);
     if (!nums.length) break;
     const found = await Promise.all(nums.map(find));
     for (let i = 0; i < nums.length; i++) {
       if (found[i]) { miss = 0; items.push({ n: nums[i], u: found[i].u, r: found[i].r, k: items.length }); }
-      else if (++miss >= gap) { done = true; break; }
+      else if (++miss >= GAP) { done = true; break; }
     }
     next += nums.length; setCount();
     if (!firstShown && items.length >= FIRST) { firstShown = true; rebuild(); }
   }
   finished = true; more.classList.remove("busy");
   if (!items.length) { sec.classList.add("cr-none"); return; }
-  setCount(); saveCache();
-  if (!firstShown || (cachedCount < 0 ? items.length > FIRST : items.length !== cachedCount)) { const wait = () => (rebuilding ? setTimeout(wait, 200) : rebuild()); wait(); }
+  setCount();
+  if (!firstShown || items.length > FIRST) { const wait = () => (rebuilding ? setTimeout(wait, 200) : rebuild()); wait(); }
 };
 if ("IntersectionObserver" in window) {
-  new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) afterGate(run); }, { rootMargin: "2600px 0px" }).observe(more);
+  new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) run(); }, { rootMargin: "2600px 0px" }).observe(more);
   /* do not wait for the visitor to arrive: start right after the page has loaded */
-  addEventListener("load", () => setTimeout(() => afterGate(run), 700));
+  addEventListener("load", () => setTimeout(run, 700));
   /* pause the drifting when the section is off screen */
   new IntersectionObserver(es => es.forEach(e => wall.classList.toggle("off", !e.isIntersecting)), { threshold: 0 }).observe(glass);
-} else afterGate(run);
+} else run();
 
 /* touch: hold the wall while a finger is on it */
 let tm = 0;
