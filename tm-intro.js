@@ -439,28 +439,35 @@
     if (!el) return;
     mechPlayed = true;
     placeMech();
-    el.classList.add("is-on");
+
     const ringA = el.querySelector(".ring-a");
     const ringB = el.querySelector(".ring-b");
     const disc  = el.querySelector(".tm-disc");
     const inner = el.querySelector(".tm-home-mech-inner");
 
-    const playSequence = (isReplay) => {
-      if (el._mechBusy) return;
-      el._mechBusy = true;
-      // reset to closed state
+    const resetLayers = () => {
       el.classList.remove("is-open");
       if (ringA) { ringA.style.transition = "none"; ringA.style.transform = "translateZ(9px) rotateZ(0deg)"; }
       if (ringB) { ringB.style.transition = "none"; ringB.style.transform = "translateZ(4px) rotateZ(0deg)"; }
-      if (disc)  { disc.style.transition = "none"; disc.style.transform = "translateZ(0)"; }
+      if (disc)  { disc.style.transition = "none"; disc.style.transform = "translateZ(0) scale(1)"; }
       if (inner) { inner.style.transition = "none"; inner.style.transform = "rotateX(18deg) rotateY(-7deg)"; }
-      // force reflow
       void el.offsetWidth;
+    };
+
+    const playSequence = (isReplay) => {
+      if (el._mechBusy) return;
+      el._mechBusy = true;
+
+      // show the layered version
+      el.classList.add("is-on");
+      el.style.opacity = "1";
+      resetLayers();
 
       let step = 0;
       const TICKS = 5;
       const STEP_DEG = 22;
       const TICK_MS = 210;
+
       const tick = () => {
         step++;
         const a = step * STEP_DEG;
@@ -481,6 +488,7 @@
         if (step < TICKS) {
           setTimeout(tick, TICK_MS);
         } else {
+          // rise
           setTimeout(() => {
             el.classList.add("is-open");
             if (inner) {
@@ -490,25 +498,32 @@
             if (disc) {
               disc.style.transition = "transform 1.05s cubic-bezier(.22,1.25,.36,1), filter 0.9s ease";
             }
-            // after settle, allow hover again
+            // after rise settles → fade out layered version so clean home-bg shows (no double image / eye strain)
             setTimeout(() => {
-              el._mechBusy = false;
-              el.classList.add("is-ready");
-            }, 1100);
+              el.style.transition = "opacity 0.7s ease";
+              el.style.opacity = "0";
+              setTimeout(() => {
+                el.classList.remove("is-on", "is-open");
+                el._mechBusy = false;
+                el.classList.add("is-ready");
+              }, 720);
+            }, 1150);
           }, 120);
         }
       };
-      setTimeout(tick, isReplay ? 40 : 520);
+      setTimeout(tick, isReplay ? 30 : 480);
     };
 
-    // first play (entrance)
+    // first entrance
     playSequence(false);
 
-    // hover / focus replay after first settle
-    const replay = () => { if (el.classList.contains("is-ready") && !el._mechBusy) playSequence(true); };
+    // hover / focus → replay then hide again
+    const replay = () => {
+      if (el.classList.contains("is-ready") && !el._mechBusy) playSequence(true);
+    };
     el.addEventListener("mouseenter", replay);
     el.addEventListener("focus", replay);
-    el.tabIndex = 0;   // keyboard accessible
+    el.tabIndex = 0;
   };
   const layout = () => {
     if (mode === "intro") {
