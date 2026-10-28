@@ -544,7 +544,16 @@
 </head>
 <body>
 <div id="enterGate" class="enter-gate tm-intro" role="dialog" aria-modal="true" aria-label="Enter portfolio">
-  <div class="tm-intro-stage" id="tmIntroStage" aria-hidden="true"><canvas id="tmIntroCv"></canvas></div>
+  <div class="tm-intro-stage" id="tmIntroStage" aria-hidden="true"><canvas id="tmIntroCv"></canvas>
+    <div class="tm-mech" id="tmMech" aria-hidden="true">
+      <div class="tm-mech-inner">
+        <div class="tm-layer ring-outer"></div>
+        <div class="tm-layer ring-b" id="tmRingB"></div>
+        <div class="tm-layer ring-a" id="tmRingA"></div>
+        <div class="tm-layer tm-disc" id="tmDisc"></div>
+      </div>
+    </div>
+  </div>
   <div class="tm-intro-ui">
     <span class="tm-intro-name" id="tmName">TIAMO MOHAMAD</span>
     <span class="tm-intro-tag"><i></i><em data-en="Creative digital portfolio" data-ar="معرض أعمال رقمي إبداعي">Creative digital portfolio</em><i></i></span>

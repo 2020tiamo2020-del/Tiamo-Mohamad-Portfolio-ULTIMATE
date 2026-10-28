@@ -197,3 +197,93 @@ html[dir="rtl"] .tm-hero-cv { -webkit-mask-image: radial-gradient(ellipse 60% 66
           mask-composite: intersect;
 }
 .tm-stone { display: none !important; }
+
+/* ==========================================================================
+   Mechanical 3D TM Medallion — rings tick opposite, then disc rises
+   ========================================================================== */
+.tm-mech {
+  position: absolute;
+  left: 50%; top: 42%;
+  width: min(52vmin, 380px);
+  height: min(52vmin, 380px);
+  transform: translate(-50%, -50%);
+  perspective: 900px;
+  z-index: 3;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+.tm-mech.is-on { opacity: 1; }
+.tm-mech-inner {
+  position: relative;
+  width: 100%; height: 100%;
+  transform-style: preserve-3d;
+  transform: rotateX(18deg) rotateY(-8deg);
+  transition: transform 1.2s cubic-bezier(.2,.8,.2,1);
+}
+.tm-mech.is-open .tm-mech-inner {
+  transform: rotateX(8deg) rotateY(-4deg);
+}
+
+.tm-layer {
+  position: absolute;
+  inset: 0;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  border-radius: 50%;
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+/* central TM disc */
+.tm-layer.tm-disc {
+  background-image: url("images/tm-layers/tm_core.png");
+  z-index: 4;
+  transform: translateZ(0px);
+  filter: drop-shadow(0 12px 18px rgba(0,0,0,.55));
+  transition: transform 0.85s cubic-bezier(.34,1.4,.64,1), filter 0.6s ease;
+}
+.tm-mech.is-open .tm-layer.tm-disc {
+  transform: translateZ(48px);
+  filter: drop-shadow(0 22px 28px rgba(0,0,0,.65));
+}
+
+/* thin rings — opposite rotation */
+.tm-layer.ring-a {
+  background-image: url("images/tm-layers/ring_a.png");
+  z-index: 3;
+  transform: translateZ(6px) rotateZ(0deg);
+}
+.tm-layer.ring-b {
+  background-image: url("images/tm-layers/ring_b.png");
+  z-index: 2;
+  transform: translateZ(2px) rotateZ(0deg);
+}
+.tm-layer.ring-outer {
+  background-image: url("images/tm-layers/ring_outer.png");
+  z-index: 1;
+  transform: translateZ(-4px);
+  opacity: 0.85;
+}
+
+/* subtle glow under the rising disc */
+.tm-mech::after {
+  content: "";
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 55%; height: 55%;
+  transform: translate(-50%, -50%) translateZ(-20px);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(80,140,255,.25) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.8s ease;
+  pointer-events: none;
+}
+.tm-mech.is-open::after { opacity: 1; }
+
+/* reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .tm-layer.tm-disc,
+  .tm-mech-inner { transition: none !important; }
+}

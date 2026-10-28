@@ -674,6 +674,8 @@
       btn.disabled = false;
       try { btn.focus({ preventScroll: true }); } catch (_) {}
       window.dispatchEvent(new CustomEvent("tm:ready"));
+      const mech = document.getElementById("tmMech");
+      if (mech) mech.classList.add("is-on");
     }, reduce ? 0 : 750);
   };
   const early = window.__tmImgs || {};
@@ -746,6 +748,46 @@
     if (entering || !ready) return;
     entering = true; enterT = performance.now();
     window.__tmGoing = true;
+
+    /* ---- Mechanical unlock: opposite tick rings then TM disc rises ---- */
+    (function runMechUnlock() {
+      const mech = document.getElementById("tmMech");
+      const ringA = document.getElementById("tmRingA");
+      const ringB = document.getElementById("tmRingB");
+      const disc  = document.getElementById("tmDisc");
+      if (!mech || !ringA || !ringB || reduce) return;
+
+      mech.classList.add("is-on");
+      let step = 0;
+      const TICKS = 6;          // number of mechanical steps
+      const STEP_DEG = 18;      // degrees per tick
+      const TICK_MS = 140;      // time between ticks
+
+      const tick = () => {
+        step++;
+        const a = step * STEP_DEG;
+        const b = -step * STEP_DEG * 0.92;   // slightly different ratio feels mechanical
+        ringA.style.transform = `translateZ(6px) rotateZ(${a}deg)`;
+        ringB.style.transform = `translateZ(2px) rotateZ(${b}deg)`;
+        // subtle 3D tilt pulse on the whole
+        const inner = mech.querySelector(".tm-mech-inner");
+        if (inner) {
+          const pulse = (step % 2 === 0) ? 1.5 : -1.5;
+          inner.style.transform = `rotateX(${18 + pulse}deg) rotateY(${-8 + pulse * 0.6}deg)`;
+        }
+        if (step < TICKS) {
+          setTimeout(tick, TICK_MS);
+        } else {
+          // final open: rise the disc
+          setTimeout(() => {
+            mech.classList.add("is-open");
+            if (inner) inner.style.transform = "rotateX(8deg) rotateY(-4deg)";
+          }, 80);
+        }
+      };
+      // small delay so the layer is visible, then start ticking
+      setTimeout(tick, 220);
+    })();
     if (window.__tmMark) window.__tmMark();
     gate.classList.add("tm-go");
     document.body.classList.add("tm-zoom-lock", "tm-pre-h", "tm-pre-r");
