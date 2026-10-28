@@ -197,3 +197,85 @@ html[dir="rtl"] .tm-hero-cv { -webkit-mask-image: radial-gradient(ellipse 60% 66
           mask-composite: intersect;
 }
 .tm-stone { display: none !important; }
+
+/* ==========================================================================
+   Home Mechanical Medallion — show only during animation, then hide
+   Exact size match. No impact on intro loading.
+   ========================================================================== */
+.tm-home-mech {
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+  transform-style: preserve-3d;
+  perspective: 1100px;
+  opacity: 0;
+  transition: opacity 0.7s ease;
+  will-change: transform, opacity;
+  cursor: pointer;
+}
+.tm-home-mech.is-ready { pointer-events: auto; }
+.tm-home-mech-inner {
+  position: relative;
+  width: 100%; height: 100%;
+  transform-style: preserve-3d;
+  transform: none;
+}
+.tm-home-mech .tm-layer {
+  position: absolute; inset: 0;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  background-position: center;
+  border-radius: 50%;
+  will-change: transform;
+  backface-visibility: hidden;
+  overflow: visible;
+}
+/* TM disc: never rotates, always on top — T tips must not be clipped */
+.tm-home-mech .tm-disc {
+  background-image: url("images/tm-layers/tm_core.png");
+  z-index: 20 !important;
+  transform: translateZ(12px);
+  border-radius: 0 !important;
+  overflow: visible !important;
+  filter: drop-shadow(0 14px 22px rgba(0,0,0,.62));
+  transition: transform 1.05s cubic-bezier(.22,1.25,.36,1), filter 0.9s ease;
+  pointer-events: none;
+}
+.tm-home-mech.is-open .tm-disc {
+  transform: translateZ(56px) scale(1.03);
+  filter: drop-shadow(0 28px 36px rgba(0,0,0,.72));
+}
+.tm-home-mech .ring-a {
+  z-index: 3;
+  transform: translateZ(9px) rotateZ(0deg);
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,.4));
+}
+.tm-home-mech .ring-b {
+  z-index: 2;
+  transform: translateZ(4px) rotateZ(0deg);
+  filter: drop-shadow(0 3px 6px rgba(0,0,0,.35));
+}
+.tm-home-mech .ring-outer {
+  z-index: 1;
+  transform: translateZ(-6px);
+  opacity: 0.92;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,.3));
+}
+.tm-home-mech::after {
+  content: "";
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 58%; height: 58%;
+  transform: translate(-50%, -50%) translateZ(-24px);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(60,120,255,.28) 0%, rgba(40,80,180,.08) 45%, transparent 70%);
+  opacity: 0;
+  transition: opacity 1.1s ease;
+  pointer-events: none;
+}
+.tm-home-mech.is-open::after { opacity: 1; }
+.hero-copy { position: relative; z-index: 6; }
+@media (prefers-reduced-motion: reduce) {
+  .tm-home-mech .tm-disc,
+  .tm-home-mech-inner { transition: none !important; }
+}
