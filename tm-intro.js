@@ -395,11 +395,11 @@
     const L = cx - BG.ex * S, T = cy - BG.ey * S;
     homeImg.style.setProperty("--hx0", (-L).toFixed(1) + "px"); homeImg.style.setProperty("--hx1", (W - L).toFixed(1) + "px");
     homeImg.style.setProperty("--hy0", (-T).toFixed(1) + "px"); homeImg.style.setProperty("--hy1", (H - T).toFixed(1) + "px");
-    placeMech();
+    if (typeof placeMech === "function") placeMech();
   };
 
-  /* ---- Home mechanical medallion (lightweight, only after handoff) ---- */
-  let homeMech = null, mechPlayed = false;
+  /* Home: rise-on-hover only (no rotation). Intro untouched. */
+  let homeMech = null, mechReady = false;
   const ensureMech = () => {
     if (homeMech && homeMech.isConnected) return homeMech;
     const hero = host || document.querySelector(".hero");
@@ -409,7 +409,7 @@
       el = document.createElement("div");
       el.className = "tm-home-mech";
       el.setAttribute("aria-hidden", "true");
-      el.innerHTML = '<div class="tm-home-mech-inner"><div class="tm-layer ring-outer"></div><div class="tm-layer ring-b"></div><div class="tm-layer ring-a"></div><div class="tm-layer tm-disc"></div></div>';
+      el.innerHTML = '<div class="tm-home-mech-inner"><div class="tm-layer tm-disc"></div></div>';
       hero.appendChild(el);
     }
     homeMech = el;
@@ -425,73 +425,44 @@
     el.style.top = (cy - R).toFixed(1) + "px";
   };
   const runHomeMech = () => {
-    if (mechPlayed || reduce) return;
+    if (mechReady || reduce) return;
     const el = ensureMech();
     if (!el) return;
-    mechPlayed = true;
+    mechReady = true;
     placeMech();
-
     const disc = el.querySelector(".tm-disc");
-    const ringA = el.querySelector(".ring-a");
-    const ringB = el.querySelector(".ring-b");
-    const ringO = el.querySelector(".ring-outer");
-
-    /* Hide spinning rings — Home uses rise only */
-    if (ringA) ringA.style.display = "none";
-    if (ringB) ringB.style.display = "none";
-    if (ringO) ringO.style.display = "none";
-
-    /* Disc stays invisible most of the time (clean home-bg shows).
-       On hover: briefly show + rise, then settle back and hide. */
-    const resetDisc = () => {
-      el.classList.remove("is-open");
-      if (disc) {
-        disc.style.transition = "none";
-        disc.style.transform = "translateZ(0) scale(1)";
-      }
-      void el.offsetWidth;
-    };
-
-    const playRise = () => {
-      if (el._mechBusy) return;
-      el._mechBusy = true;
-      el.style.opacity = "1";
-      resetDisc();
-
-      setTimeout(() => {
-        el.classList.add("is-open");
-        if (disc) {
-          disc.style.transition = "transform 0.85s cubic-bezier(.22,1.2,.36,1), filter 0.7s ease";
-          disc.style.transform = "translateZ(48px) scale(1.04)";
-        }
-        /* hold up, then lower and fade out */
-        setTimeout(() => {
-          el.classList.remove("is-open");
-          if (disc) {
-            disc.style.transition = "transform 0.7s cubic-bezier(.4,0,.2,1), filter 0.6s ease";
-            disc.style.transform = "translateZ(0) scale(1)";
-          }
-          setTimeout(() => {
-            el.style.transition = "opacity 0.45s ease";
-            el.style.opacity = "0";
-            setTimeout(() => {
-              el._mechBusy = false;
-              el.classList.add("is-ready");
-            }, 480);
-          }, 720);
-        }, 900);
-      }, 40);
-    };
-
-    /* No entrance spin — just mark ready so hover works */
     el.classList.add("is-ready");
     el.style.opacity = "0";
 
-    const onHover = () => {
-      if (el.classList.contains("is-ready") && !el._mechBusy) playRise();
+    const playRise = () => {
+      if (el._busy) return;
+      el._busy = true;
+      el.style.opacity = "1";
+      el.classList.remove("is-open");
+      if (disc) { disc.style.transition = "none"; disc.style.transform = "translateZ(0) scale(1)"; }
+      void el.offsetWidth;
+      requestAnimationFrame(() => {
+        el.classList.add("is-open");
+        if (disc) {
+          disc.style.transition = "transform 0.85s cubic-bezier(.22,1.2,.36,1)";
+          disc.style.transform = "translateZ(48px) scale(1.04)";
+        }
+        setTimeout(() => {
+          el.classList.remove("is-open");
+          if (disc) {
+            disc.style.transition = "transform 0.7s cubic-bezier(.4,0,.2,1)";
+            disc.style.transform = "translateZ(0) scale(1)";
+          }
+          setTimeout(() => {
+            el.style.transition = "opacity 0.4s ease";
+            el.style.opacity = "0";
+            setTimeout(() => { el._busy = false; }, 420);
+          }, 700);
+        }, 900);
+      });
     };
-    el.addEventListener("mouseenter", onHover);
-    el.addEventListener("focus", onHover);
+    el.addEventListener("mouseenter", playRise);
+    el.addEventListener("focus", playRise);
     el.tabIndex = 0;
   };
 
