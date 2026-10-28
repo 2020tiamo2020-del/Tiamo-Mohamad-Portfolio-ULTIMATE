@@ -1,5 +1,5 @@
 /* ==========================================================================
-   TM INTRO v4 — carved-stone relief, lit by drifting blue mist
+   TM INTRO v5 — carved-stone relief, lit by drifting blue mist (TM + the three thin rings are now hollow too)
    The artwork is never repainted: it is the albedo of a real-time relief (normal + height maps derived from it).
    Loading -> Enter with sound -> the camera pushes into the medallion -> the same 3D relief settles, transparent and
    still reactive, behind Home only.
@@ -39,7 +39,7 @@
 
   /* artwork geometry: 1600x900 source; the medallion's outer ring is 469 px wide and centred at (802,446) */
   const IMG_W = 1600, IMG_H = 900, RING_D = 469, EMB_X = 802, EMB_Y = 446;
-  const SRC = { alb: "images/intro-albedo.jpg?v=4", nor: "images/intro-normal.jpg?v=4", hei: "images/intro-height.jpg?v=4" };
+  const SRC = { alb: "images/intro-albedo.jpg?v=6", nor: "images/intro-normal.jpg?v=4", hei: "images/intro-height.jpg?v=6", cls: "images/intro-cavity.png?v=6" };
   const NMK = 10;
   const GW = 192, GH = 108;                      /* mist-field resolution */
 
@@ -52,7 +52,7 @@
   const FS = [
     "#ifdef GL_FRAGMENT_PRECISION_HIGH", "precision highp float;", "#else", "precision mediump float;", "#endif",
     "varying vec2 vP;",
-    "uniform sampler2D uAlb,uNor,uHei,uFld,uSp;",
+    "uniform sampler2D uAlb,uNor,uHei,uFld,uSp,uCls;",
     "uniform vec2 uRes,uZc,uTilt,uEmb;",
     "uniform vec4 uRect;",
     "uniform float uZoom,uAmb,uInt,uTime,uAlphaMode,uOpacity,uRing,uMk,uGlow,uFlood,uPop,uBeat,uLit;",
@@ -65,7 +65,6 @@
     "vec3 mkCol(float i){float k=mod(i,5.0);",
     " if(k<0.5)return vec3(0.08,0.95,0.86); if(k<1.5)return vec3(0.38,1.0,0.48); if(k<2.5)return vec3(1.0,0.46,0.78);",
     " if(k<3.5)return vec3(1.0,0.62,0.22); return vec3(0.62,0.45,1.0);}",
-    "float rg(float r,float c,float w){float d=(r-c)/w;return exp(-d*d);}",
     "void shade(vec2 p,out vec3 col,out float lum){",
     /* pass 1: height at uniform zoom, so nearer (taller) stone magnifies more = real dolly parallax */
     " vec2 q=uZc+(p-uZc)/(1.0+uZoom);",                       /* the camera push is a pure, even zoom: the relief never swims or stretches */
@@ -94,26 +93,14 @@
     "  float m=smoothstep(0.07,0.55,fr+(nz-0.5)*0.46*smoothstep(0.0,0.35,fr));",
     "  m=max(m,uFlood*smoothstep(0.22,0.80,nz+0.20*(1.0-clamp(rr*0.25,0.0,1.0))));",
     "  float halo=smoothstep(0.0,0.45,fr);",
+    "  vec3 mc=mix(vec3(0.015,0.05,0.20),vec3(0.17,0.34,0.62),pow(m,0.85));",
+    "  float cav=pow(1.0-smoothstep(0.14,0.50,h),1.2);",
+    "  float edge=smoothstep(0.14,0.62,length(n.xy));",
     /* cold ambient: the relief is always faintly there */
     "  col=ac*vec3(0.20,0.42,0.74)*uAmb;",
     /* mist light between the rocks: pools in the grooves, clings to the cobbles */
     "  float stone=0.55+0.9*lumA;",
-    /* the hollows: thin carved channels (the TM, cracks), broad low ground, and the three thin circles of the medallion */
-    "  float cavAll=0.0,wideH=0.0,glyphM=0.0,w1=0.0,w2=0.0,w3=0.0,sm=0.0;",
-    "  if(m>0.004||uLit>0.003){",
-    "   vec2 o1=vec2(0.012,0.0213);",
-    "   float hb=0.125*(texture2D(uHei,uv+vec2(o1.x,0.0)).r+texture2D(uHei,uv-vec2(o1.x,0.0)).r+texture2D(uHei,uv+vec2(0.0,o1.y)).r+texture2D(uHei,uv-vec2(0.0,o1.y)).r+texture2D(uHei,uv+o1*0.7071).r+texture2D(uHei,uv-o1*0.7071).r+texture2D(uHei,uv+vec2(o1.x,-o1.y)*0.7071).r+texture2D(uHei,uv+vec2(-o1.x,o1.y)*0.7071).r);",
-    "   float lowH=pow(1.0-smoothstep(0.14,0.50,h),1.2);",
-    "   float narrow=smoothstep(0.02,0.22,hb-h);",
-    "   float dk=0.35+0.65*(1.0-smoothstep(0.16,0.42,lumA));",
-    "   w1=rg(rr,0.671,0.016)*dk;w2=rg(rr,0.737,0.016)*dk;w3=rg(rr,0.793,0.016)*dk;",
-    "   glyphM=(1.0-smoothstep(0.50,0.60,rr))*narrow;",
-    "   wideH=(1.0-smoothstep(0.36,0.58,hb))*(1.0-smoothstep(1.02,1.26,rr));",
-    "   cavAll=clamp(max(max(lowH*0.9,narrow*0.85),max(w1,max(w2,w3))),0.0,1.0);",
-    "   sm=0.55+0.9*fbm(q*0.016+vec2(-t*0.06,t*0.04));",
-    "  }",
-    "  vec3 mc=mix(vec3(0.03,0.10,0.28),vec3(0.30,0.48,0.80),smoothstep(0.30,1.1,m*sm));",
-    "  col+=mc*m*sm*cavAll*stone*uGlow*1.35;",
+    "  col+=mc*m*cav*stone*uGlow*1.5;",
     /* fog lit from below */
     "  vec2 gq=(q-uEmb-vec2(0.0,uRing*0.9))/vec2(uRing*2.7,uRing*1.4);",
     "  float under=exp(-dot(gq,gq)*1.4);",
@@ -139,21 +126,28 @@
     "    col+=c*exp(-d/(r*1.5))*0.20*k*(0.5+fog);",
     "   }",
     "  }",
-    /* music: every hollow glows by its own size: thin circles with the highs, broad hollows with the bass, the TM with the beat */
+    /* music: EVERY carved hollow glows with the spectrum band that matches its size.
+       uCls (pre-computed from the height map): R = size class (0 = wide valley ... 1 = hair-thin groove), G = a random phase per hollow.
+       wide hollows follow the bass, mid-size grooves the mids, the TM strokes and the three thin rings the highs;
+       the light is cloudy (same mist noise as the intro) and flows along the groove instead of flashing flat. */
     "  if(uLit>0.003){",
-    "   vec2 dm=q-uEmb;float an=atan(dm.y,dm.x+0.0001);",
-    "   float cu=fract(an/6.2831853+0.25);",
-    "   float mcen=1.0-abs(1.0-2.0*cu);",
-    "   float band=texture2D(uSp,vec2(mcen*0.30+0.01,0.5)).r*(0.8+0.9*mcen);",
+    "   vec3 cl=texture2D(uCls,uv).rgb;",
+    "   float b=clamp(cl.r+(cl.g-0.5)*0.10,0.0,1.0);",
+    "   float lv=texture2D(uSp,vec2(0.012+0.40*pow(b,1.15),0.5)).r;",
+    "   lv=clamp(lv*(0.85+1.9*b),0.0,1.4);",
     "   float bass=texture2D(uSp,vec2(0.02,0.5)).r;",
-    "   float mid=texture2D(uSp,vec2(0.07+0.06*mcen,0.5)).r;",
-    "   float hi=texture2D(uSp,vec2(0.16+0.10*mcen,0.5)).r;",
-    "   float dR=w1*(0.30+1.2*hi)+w2*(0.30+1.1*mid)+w3*(0.30+1.0*(0.5*mid+0.5*bass));",
-    "   float dT=glyphM*(0.15+0.75*bass+0.75*uBeat);",
-    "   float dB=wideH*(0.12+0.75*band+0.55*bass);",
-    "   float drv=clamp(max(dB,max(dT,dR)),0.0,1.1)*uLit;",
-    "   vec3 lc=mix(vec3(0.03,0.10,0.28),vec3(0.34,0.54,0.88),smoothstep(0.25,1.1,drv*sm));",
-    "   col+=lc*drv*sm*stone*1.2;",
+    "   float thin=smoothstep(0.42,0.55,b);",
+    "   float flow=mix(0.60+0.40*sin(t*(1.1+2.2*b)+cl.g*25.0+nz*7.0),0.88+0.12*sin(t*1.7+cl.g*20.0),thin);",
+    "   float cm=pow(1.0-smoothstep(0.14,0.46,h),1.25);",
+    "   cm=mix(cm,1.0-smoothstep(0.06,0.27,h),thin);",
+    "   float zone=1.0-smoothstep(1.6,3.3,rr);",
+    "   float zin=mix(1.0,0.62,smoothstep(1.1,1.9,rr));",
+    "   float cloud=mix(0.70+0.60*nz,0.86+0.28*nz,thin);",
+    "   float lt=uLit*cm*zone*zin*cloud*(0.05+0.72*lv*flow+0.22*uBeat*(1.0-0.7*b)+0.10*bass*(1.0-b));",
+    "   vec3 cc=mix(vec3(0.10,0.26,0.62),vec3(0.30,0.52,0.92),smoothstep(0.0,0.6,b));",
+    "   cc=mix(cc,vec3(0.60,0.80,1.0),thin);",
+    "   float st2=stone;",
+    "   col+=cc*lt*st2*1.0+vec3(0.35,0.58,1.0)*lt*lt*0.16;",
     "  }",
     /* contrast: vignette, filmic curve, crushed blacks */
     "  float vk=mix(1.72,1.80,uAlphaMode);",
@@ -169,8 +163,8 @@
     "void main(){",
     " vec2 p=vec2(vP.x,1.0-vP.y)*uRes;",
     /* the medallion is the player: it rises out of its socket (lifted face, side wall, cast shadow, empty socket) */
-    " float s=1.0+uPop*0.085;",
-    " vec2 c1=uEmb+vec2(uTilt.x*uRing*0.02,-uRing*0.11)*uPop;",
+    " float s=1.0+uPop*0.04;",
+    " vec2 c1=uEmb+vec2(uTilt.x*uRing*0.012,-uRing*0.05)*uPop;",
     " float rf=length(p-c1)/(uRing*s);",
     " bool face=uPop>0.002&&rf<1.0;",
     " vec2 ps=face?uEmb+(p-c1)/s:p;",
@@ -238,10 +232,10 @@
   } catch (_) { gl = null; }
 
   let prog = null, pprog = null, U = {}, PU = {}, quad = null, pbuf = null, PN = 0;
-  let spTex = null, popV = 0, popVel = 0, beatV = 0, litV = 0, hintAt = 0, hintDone = false; const spBytes = new Uint8Array(64), spv = new Float32Array(64);   /* medallion-as-player state */
+  let hintGo = false, spTex = null, popV = 0, popVel = 0, beatV = 0, litV = 0, hintAt = 0, hintDone = false; const spBytes = new Uint8Array(64), spv = new Float32Array(64);   /* medallion-as-player state */
   const tex = {};
   const imgs = {};
-  const state = { alb: 0, nor: 0, hei: 0 };       /* 0 = pending, 1 = loaded, -1 = gave up */
+  const state = { alb: 0, nor: 0, hei: 0, cls: 0 };       /* 0 = pending, 1 = loaded, -1 = gave up */
   const markers = new Float32Array(NMK * 4);
 
   /* shaders compile in the background when the browser supports KHR_parallel_shader_compile, so the counter keeps moving */
@@ -266,7 +260,7 @@
   };
   const initGL = () => {
     verify(prog); verify(pprog);
-    ["uAlb","uNor","uHei","uFld","uRes","uZc","uTilt","uEmb","uRect","uZoom","uAmb","uInt","uTime","uAlphaMode","uOpacity","uRing","uMk","uGlow","uFlood","uM","uSp","uPop","uBeat","uLit"].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
+    ["uAlb","uNor","uHei","uFld","uRes","uZc","uTilt","uEmb","uRect","uZoom","uAmb","uInt","uTime","uAlphaMode","uOpacity","uRing","uMk","uGlow","uFlood","uM","uSp","uCls","uPop","uBeat","uLit"].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
     ["uRes","uZc","uTilt","uZoom","uTime","uDpr","uAlphaMode"].forEach((n) => { PU[n] = gl.getUniformLocation(pprog, n); });
     quad = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, quad);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
@@ -399,11 +393,12 @@
       const wide = innerWidth > 900;
       const target = clamp(Math.min(H * 0.62, W * (wide ? 0.50 : 0.80)), 220, 640);
       const S = target / RING_D; R = target / 2;
-      const rtl = document.documentElement.dir === "rtl" || document.documentElement.lang === "ar";
+      const rtl = document.documentElement.dir === "rtl" || isAr();      /* Arabic: text on the right, the medallion on the left */
       cx = wide ? W * (rtl ? 0.32 : 0.68) : W * 0.5; cy = wide ? H * 0.5 : H * 0.42;
       rect = [cx - EMB_X * S, cy - EMB_Y * S, IMG_W * S, IMG_H * S];
     }
     zc = [cx, cy];
+    if (mode === "home") { cv.style.setProperty("--tm-cx", cx.toFixed(1) + "px"); cv.style.setProperty("--tm-cy", cy.toFixed(1) + "px"); cv.style.setProperty("--tm-r", R.toFixed(1) + "px"); if (stoneEl) placeHint(); }
     cv.width = Math.max(2, Math.round(W * dpr)); cv.height = Math.max(2, Math.round(H * dpr));
   };
 
@@ -445,6 +440,13 @@
       const x = EMB_X + Math.cos(ang) * rho * R0 * 1.12, y = EMB_Y + Math.sin(ang) * rho * R0 * 0.82;
       dep(x / IMG_W, y / IMG_H, amt, 8);
     }
+    /* inner wanderers: one sweeps the TM, one rides the three thin rings (r = 0.63 / 0.71 / 0.78 of the medallion) */
+    {
+      const a1 = t * 0.55, r1 = 0.34 * (0.35 + 0.65 * Math.abs(Math.sin(t * 0.21)));
+      dep((800 + Math.cos(a1) * r1 * R0) / IMG_W, (441 + Math.sin(a1 * 1.3) * r1 * R0 * 0.9) / IMG_H, amt * 1.2, 3.6);
+      const a2 = -t * 0.42 + 1.7, r2 = 0.63 + 0.15 * (0.5 + 0.5 * Math.sin(t * 0.37));
+      dep((800.3 + Math.cos(a2) * r2 * R0) / IMG_W, (437.8 + Math.sin(a2) * r2 * R0) / IMG_H, amt * 1.1, 3.0);
+    }
   };
   /* the push: a ring of light opens outward from the medallion */
   const pourEntry = (now, dt) => {
@@ -477,7 +479,7 @@
     gl.useProgram(prog);
     gl.bindBuffer(gl.ARRAY_BUFFER, quad);
     const loc = gl.getAttribLocation(prog, "aPos"); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-    gl.uniform1i(U.uAlb, 0); gl.uniform1i(U.uNor, 1); gl.uniform1i(U.uHei, 2); gl.uniform1i(U.uFld, 3);
+    gl.uniform1i(U.uAlb, 0); gl.uniform1i(U.uNor, 1); gl.uniform1i(U.uHei, 2); gl.uniform1i(U.uFld, 3); gl.uniform1i(U.uCls, 5);
     gl.uniform2f(U.uRes, W, H); gl.uniform2f(U.uZc, zc[0], zc[1]); gl.uniform2f(U.uTilt, tilt[0], tilt[1]); gl.uniform2f(U.uEmb, cx, cy);
     gl.uniform4f(U.uRect, rect[0], rect[1], rect[2], rect[3]);
     gl.uniform1f(U.uZoom, zoomV); gl.uniform1f(U.uAmb, amb); gl.uniform1f(U.uInt, inten);
@@ -520,30 +522,39 @@
     const b = on ? (M.data ? (M.beat || 0) : Math.pow(Math.max(0, Math.sin(t * Math.PI / 0.64)), 6)) : 0;
     beatV += (b - beatV) * 0.35;
     if (host) { const want = hov ? "pointer" : ""; if (host.style.cursor !== want) host.style.cursor = want; }
-    if (mode === "home" && !hintDone) { if (!hintAt) hintAt = now; else if (now - hintAt > 1200) { hintDone = true; setupHint(); placeHint(); } }
+    if (stoneEl) stoneEl.classList.toggle("show", !on && hintDone);
+    if (mode === "home" && !hintDone && hintGo) { hintDone = true; placeHint(); }       /* the stone label arrives last, after the role words */
   };
-  const setupHint = () => {                         /* "ENTER THE SOUND": carved stone lettering under the medallion */
-    const hn = document.querySelector(".core-hint");
-    if (!hn) return;
-    if (!document.getElementById("tmCtaFont")) {
-      const l = document.createElement("link"); l.id = "tmCtaFont"; l.rel = "stylesheet";
-      l.href = "https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Reem+Kufi:wght@600;700&display=swap";
-      document.head.appendChild(l);
+  /* "TAP TO PLAY": carved stone letters that drift strangely in place, under the medallion. Visible while the music is stopped. */
+  let stoneEl = null, stoneLang = "";
+  const buildStone = () => {
+    const hv = host || document.querySelector(".hero"); if (!hv) return null;
+    if (!stoneEl) { stoneEl = document.createElement("div"); stoneEl.className = "tm-stone"; stoneEl.setAttribute("aria-hidden", "true"); hv.appendChild(stoneEl); }
+    const ar = isAr(), key = ar ? "ar" : "en";
+    if (stoneLang !== key) {
+      stoneLang = key; stoneEl.classList.toggle("tm-stone-ar", ar); stoneEl.textContent = "";
+      const txt = ar ? "اضغط للتشغيل" : "TAP TO PLAY";
+      const mk = (c, k, n) => {
+        const i = document.createElement("i"); i.textContent = c; i.setAttribute("data-c", c);
+        const r = (a) => ((Math.sin((k + 1) * a) * 43758.5453) % 1 + 1) % 1;
+        i.style.setProperty("--d", (3.2 + r(12.9) * 3.4).toFixed(2) + "s"); i.style.setProperty("--dl", (-r(78.2) * 6).toFixed(2) + "s");
+        i.style.setProperty("--rx", ((r(3.1) - 0.5) * 34).toFixed(1) + "deg"); i.style.setProperty("--ry", ((r(5.7) - 0.5) * 46).toFixed(1) + "deg");
+        i.style.setProperty("--rz", ((r(9.3) - 0.5) * 12).toFixed(1) + "deg"); i.style.setProperty("--tz", (6 + r(2.2) * 16).toFixed(0) + "px");
+        i.style.setProperty("--ty", ((r(7.7) - 0.5) * 7).toFixed(1) + "px");
+        return i;
+      };
+      if (ar) stoneEl.appendChild(mk(txt, 3));                /* Arabic stays one joined word */
+      else Array.from(txt).forEach((c, k) => { if (c === " ") { const sp = document.createElement("b"); stoneEl.appendChild(sp); } else stoneEl.appendChild(mk(c, k)); });
     }
-    hn.dataset.en = "ENTER THE SOUND"; hn.dataset.ar = "ادخل إلى الصوت";
-    const ar = document.documentElement.lang === "ar" || document.documentElement.dir === "rtl";
-    hn.textContent = ar ? hn.dataset.ar : hn.dataset.en;
-    hn.classList.add("tm-stone-cta");
-    hn.classList.add("tm-keep");                   /* always there while the music is off */
+    return stoneEl;
   };
-  const placeHint = () => {                         /* the "tap to play" hint sits under the medallion */
-    const hn = document.querySelector(".core-hint");
-    if (!hn || !host) return;
-    const op = hn.offsetParent || document.body;       /* left/top are relative to its positioned parent; layout offsets ignore the entrance transforms */
-    const off = (el) => { let x = 0, y = 0; for (let e = el; e; e = e.offsetParent) { x += e.offsetLeft; y += e.offsetTop; } return [x, y]; };
-    const a = off(host), o = off(op);
-    hn.style.right = "auto"; hn.style.left = (a[0] + cx - o[0]) + "px"; hn.style.top = (a[1] + cy + R * 1.06 + 12 - o[1]) + "px";
+  const placeHint = () => {
+    const el = buildStone();
+    if (!el || !host || mode !== "home") return;
+    el.style.left = cx + "px"; el.style.top = (cy + R * 0.80 + 10) + "px";       /* hero coordinates: the hero itself never moves during the entrance */
+    el.style.setProperty("--ts", clamp(R / 300, 0.72, 1.1).toFixed(2));
   };
+  new MutationObserver(() => { if (stoneEl) buildStone(); if (mode === "home" && gl && prog) { layout(); placeHint(); } }).observe(document.documentElement, { attributes: true, attributeFilter: ["lang", "dir"] });
 
   const MIN_LOAD = reduce ? 200 : 1100;    /* the counter always has time to breathe, but never longer than this */
   const MSG = [
@@ -573,7 +584,7 @@
 
     /* loading counter: REAL progress (three maps + GL set-up); the logo is guaranteed to be there when it hits 100 */
     if (!ready) {
-      const real = (state.alb ? 25 : 0) + (state.nor ? 25 : 0) + (state.hei ? 25 : 0) + (texDone || flat ? 25 : 0);
+      const real = (state.alb ? 20 : 0) + (state.nor ? 20 : 0) + (state.hei ? 20 : 0) + (state.cls ? 20 : 0) + (texDone || flat ? 20 : 0);
       const cap = clamp(((now - t0) / MIN_LOAD) * 100, 0, 100);
       const target = Math.min(real, cap);
       shown += (target - shown) * (1 - Math.exp(-dt / 90));
@@ -610,8 +621,8 @@
     if (mode === "home" && handT) {
       const t = now - handT;
       zoomV = ZOOM_MAX * (1 - easeOut5(t / 3800));
-      opac = 0.62 * easeOut(t / 1700);
-      amb = lerp(0.70, 0.52, easeOut(t / 2600));
+      opac = 0.92 * easeOut(t / 1700);
+      amb = lerp(0.70, 0.62, easeOut(t / 2600));
       glow = lerp(1.0, 0.80, easeOut(t / 2600));
       mk = lerp(1.2, 0.75, easeOut(t / 3200));
       flood = lerp(0.5, 0.12, easeOut(t / 3600));
@@ -653,8 +664,10 @@
     if (tries > 0 || !im.src) im.src = SRC[k] + (tries ? "&r=" + tries + "_" + (Date.now() % 100000) : "");
     if (im.complete) { if (im.naturalWidth) ok(); else if (tries > 0 || early[k]) bad(); }
   };
-  ["alb", "nor", "hei"].forEach((k) => grab(k, 0));
+  ["alb", "nor", "hei", "cls"].forEach((k) => grab(k, 0));
 
+  /* stand-in for the hollow-size map: every hollow behaves as a mid-size one */
+  const flatCls = () => { const c = document.createElement("canvas"); c.width = c.height = 2; const x = c.getContext("2d"); x.fillStyle = "rgb(120,128,0)"; x.fillRect(0, 0, 2, 2); return c; };
   let started = false;
   const tryUpload = () => {
     if (texDone || flat || !gl) return;
@@ -662,9 +675,10 @@
     if (!started) { started = true; try { startGL(); } catch (e) { console.warn("[tm-intro] GL start failed", e); gl = null; fallback(); return; } }
     if (state.alb === -1 || state.nor === -1 || state.hei === -1) { fallback(); return; }
     if (!(imgs.alb.naturalWidth && imgs.nor.naturalWidth && imgs.hei.naturalWidth)) return;
+    if (state.cls === 0) return;                         /* the hollow-size map is still on its way */
     if (!done(prog) || !done(pprog)) return;
     /* step 2: maps + shaders are both here */
-    try { initGL(); upload("alb", 0); upload("nor", 1); upload("hei", 2); buildField(); pickMarkers(); texDone = true; layout(); }
+    try { initGL(); upload("alb", 0); upload("nor", 1); upload("hei", 2); if (state.cls !== 1 || !imgs.cls.naturalWidth) imgs.cls = flatCls(); upload("cls", 5); buildField(); pickMarkers(); texDone = true; layout(); }
     catch (e) { console.warn("[tm-intro] GL init failed", e); gl = null; prog = null; fallback(); }
   };
   const upTimer = setInterval(() => { tryUpload(); if (texDone || flat || !alive) clearInterval(upTimer); }, 40);
@@ -740,7 +754,6 @@
         alphaMode = 0; opac = 0; zoomV = ZOOM_MAX; inten = 1.1; amb = 0.70; glow = 1; mk = 1.2; flood = 0.5;
         moved = false; lpx = -1; entering = false;
         layout();
-        new MutationObserver(() => { if (mode === "home" && gl && prog) { layout(); placeHint(); } }).observe(document.documentElement, { attributes: true, attributeFilter: ["dir", "lang"] });
         heroEl.addEventListener("click", (e) => {            /* a click on the medallion (blank background only) = play / pause */
           const t = e.target;
           if (mode !== "home" || !(t === heroEl || t === cv || (t.closest && t.closest(".hero-visual") && !t.closest("a,button,input,textarea,select,[role=button],[tabindex]")))) return;
@@ -772,6 +785,7 @@
       try { if (typeof window.__restaggerHero === "function") window.__restaggerHero(); } catch (_) {}
       setTimeout(dropPh, 60);
     });
+    at("rail", () => setTimeout(() => { hintGo = true; }, 700));
     /* 4 · side rail + floating buttons arrive last (the toast and its sound are timed by script.js with the same clock) */
     at("rail", () => {
       document.body.classList.remove("tm-pre-r");
