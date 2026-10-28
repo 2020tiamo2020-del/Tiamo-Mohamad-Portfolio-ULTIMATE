@@ -440,7 +440,7 @@
       el.classList.remove("is-open");
       if (ringA) { ringA.style.transition = "none"; ringA.style.transform = "translateZ(9px) rotateZ(0deg)"; }
       if (ringB) { ringB.style.transition = "none"; ringB.style.transform = "translateZ(4px) rotateZ(0deg)"; }
-      if (disc)  { disc.style.transition = "none"; disc.style.transform = "translateZ(0) scale(1)"; }
+      if (disc)  { disc.style.transition = "none"; disc.style.transform = "translateZ(12px) scale(1)"; disc.style.zIndex = "20"; }
       if (inner) { inner.style.transition = "none"; inner.style.transform = "none"; }
       void el.offsetWidth;
     };
@@ -453,7 +453,7 @@
 
       /* Disc (T+M) never rotates — T tips always stay intact above the spinning rings */
       if (disc) {
-        disc.style.transform = "translateZ(0) scale(1)";
+        disc.style.transform = "translateZ(12px) scale(1)";
         disc.style.zIndex = "10";
       }
 

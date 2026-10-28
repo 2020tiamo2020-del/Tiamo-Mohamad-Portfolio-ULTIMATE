@@ -233,9 +233,10 @@ html[dir="rtl"] .tm-hero-cv { -webkit-mask-image: radial-gradient(ellipse 60% 66
 /* TM disc: never rotates, always on top — T tips must not be clipped */
 .tm-home-mech .tm-disc {
   background-image: url("images/tm-layers/tm_core.png");
-  z-index: 10;
-  transform: translateZ(0);
-  border-radius: 0;           /* no circular clip on the letter tips */
+  z-index: 20 !important;
+  transform: translateZ(12px);
+  border-radius: 0 !important;
+  overflow: visible !important;
   filter: drop-shadow(0 14px 22px rgba(0,0,0,.62));
   transition: transform 1.05s cubic-bezier(.22,1.25,.36,1), filter 0.9s ease;
   pointer-events: none;
@@ -245,19 +246,16 @@ html[dir="rtl"] .tm-hero-cv { -webkit-mask-image: radial-gradient(ellipse 60% 66
   filter: drop-shadow(0 28px 36px rgba(0,0,0,.72));
 }
 .tm-home-mech .ring-a {
-  background-image: url("images/tm-layers/ring_a.png");
   z-index: 3;
   transform: translateZ(9px) rotateZ(0deg);
   filter: drop-shadow(0 4px 8px rgba(0,0,0,.4));
 }
 .tm-home-mech .ring-b {
-  background-image: url("images/tm-layers/ring_b.png");
   z-index: 2;
   transform: translateZ(4px) rotateZ(0deg);
   filter: drop-shadow(0 3px 6px rgba(0,0,0,.35));
 }
 .tm-home-mech .ring-outer {
-  background-image: url("images/tm-layers/ring_outer.png");
   z-index: 1;
   transform: translateZ(-6px);
   opacity: 0.92;
