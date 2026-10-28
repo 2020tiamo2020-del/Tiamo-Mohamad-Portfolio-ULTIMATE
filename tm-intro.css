@@ -187,20 +187,20 @@ html[dir="rtl"] .tm-hero-cv { -webkit-mask-image: radial-gradient(ellipse 60% 66
    it fades out on all sides with a soft elliptical mask that follows the medallion (set from tm-intro.js) */
 .tm-home-bg {
   position: absolute; z-index: -1; max-width: none; pointer-events: none; user-select: none; display: block;
-  -webkit-mask-image: radial-gradient(ellipse var(--rx, 700px) var(--ry, 430px) at var(--mx, 50%) var(--my, 50%), #000 0, #000 42%, rgba(0,0,0,.55) 68%, transparent 100%),
-    linear-gradient(to right, transparent var(--hx0, 0px), #000 calc(var(--hx0, 0px) + 220px), #000 calc(var(--hx1, 100%) - 230px), transparent var(--hx1, 100%)),
+  -webkit-mask-image: radial-gradient(ellipse var(--rx, 700px) var(--ry, 430px) at var(--mx, 50%) var(--my, 50%), #000 0, #000 46%, rgba(0,0,0,.6) 72%, transparent 100%),
+    linear-gradient(to right, transparent var(--hx0, 0px), #000 calc(var(--hx0, 0px) + 170px), #000 calc(var(--hx1, 100%) - 230px), transparent var(--hx1, 100%)),
     linear-gradient(to bottom, transparent var(--hy0, 0px), #000 calc(var(--hy0, 0px) + 150px), #000 calc(var(--hy1, 100%) - 190px), transparent var(--hy1, 100%));
   -webkit-mask-composite: source-in, source-in;
-          mask-image: radial-gradient(ellipse var(--rx, 700px) var(--ry, 430px) at var(--mx, 50%) var(--my, 50%), #000 0, #000 42%, rgba(0,0,0,.55) 68%, transparent 100%),
-    linear-gradient(to right, transparent var(--hx0, 0px), #000 calc(var(--hx0, 0px) + 220px), #000 calc(var(--hx1, 100%) - 230px), transparent var(--hx1, 100%)),
+          mask-image: radial-gradient(ellipse var(--rx, 700px) var(--ry, 430px) at var(--mx, 50%) var(--my, 50%), #000 0, #000 46%, rgba(0,0,0,.6) 72%, transparent 100%),
+    linear-gradient(to right, transparent var(--hx0, 0px), #000 calc(var(--hx0, 0px) + 170px), #000 calc(var(--hx1, 100%) - 230px), transparent var(--hx1, 100%)),
     linear-gradient(to bottom, transparent var(--hy0, 0px), #000 calc(var(--hy0, 0px) + 150px), #000 calc(var(--hy1, 100%) - 190px), transparent var(--hy1, 100%));
           mask-composite: intersect;
 }
 .tm-stone { display: none !important; }
 
 /* ==========================================================================
-   Home Mechanical Medallion — heavy, balanced, deep 3D presence
-   Exact size match to the carved stone medallion. Works LTR + RTL.
+   Home Mechanical Medallion — show only during animation, then hide
+   Exact size match. No impact on intro loading.
    ========================================================================== */
 .tm-home-mech {
   position: absolute;
@@ -213,14 +213,10 @@ html[dir="rtl"] .tm-hero-cv { -webkit-mask-image: radial-gradient(ellipse 60% 66
   will-change: transform, opacity;
   cursor: pointer;
 }
-/* is-on only used as a state flag; actual opacity controlled in JS for clean fade-out */
-.tm-home-mech.is-ready {
-  pointer-events: auto;          /* invisible hit-area after settle */
-}
+.tm-home-mech.is-ready { pointer-events: auto; }
 .tm-home-mech-inner {
   position: relative;
-  width: 100%;
-  height: 100%;
+  width: 100%; height: 100%;
   transform-style: preserve-3d;
   transform: rotateX(18deg) rotateY(-7deg);
   transition: transform 1.25s cubic-bezier(.2,.85,.2,1);
@@ -228,19 +224,15 @@ html[dir="rtl"] .tm-hero-cv { -webkit-mask-image: radial-gradient(ellipse 60% 66
 .tm-home-mech.is-open .tm-home-mech-inner {
   transform: rotateX(6deg) rotateY(-2deg);
 }
-
 .tm-home-mech .tm-layer {
-  position: absolute;
-  inset: 0;
-  background-size: 100% 100%;   /* fill the exact medallion box */
+  position: absolute; inset: 0;
+  background-size: 100% 100%;
   background-repeat: no-repeat;
   background-position: center;
   border-radius: 50%;
   will-change: transform;
   backface-visibility: hidden;
 }
-
-/* central TM disc — thick, heavy rise */
 .tm-home-mech .tm-disc {
   background-image: url("images/tm-layers/tm_core.png");
   z-index: 4;
@@ -252,8 +244,6 @@ html[dir="rtl"] .tm-hero-cv { -webkit-mask-image: radial-gradient(ellipse 60% 66
   transform: translateZ(56px) scale(1.03);
   filter: drop-shadow(0 28px 36px rgba(0,0,0,.72));
 }
-
-/* thin rings — deeper separation for thickness */
 .tm-home-mech .ring-a {
   background-image: url("images/tm-layers/ring_a.png");
   z-index: 3;
@@ -273,8 +263,6 @@ html[dir="rtl"] .tm-hero-cv { -webkit-mask-image: radial-gradient(ellipse 60% 66
   opacity: 0.92;
   filter: drop-shadow(0 2px 4px rgba(0,0,0,.3));
 }
-
-/* deep glow under the rising disc */
 .tm-home-mech::after {
   content: "";
   position: absolute;
@@ -288,19 +276,8 @@ html[dir="rtl"] .tm-hero-cv { -webkit-mask-image: radial-gradient(ellipse 60% 66
   pointer-events: none;
 }
 .tm-home-mech.is-open::after { opacity: 1; }
-
+.hero-copy { position: relative; z-index: 6; }
 @media (prefers-reduced-motion: reduce) {
   .tm-home-mech .tm-disc,
   .tm-home-mech-inner { transition: none !important; }
-  .tm-home-mech { opacity: 1; }
-}
-
-
-/* Keep hero text always above the medallion / mechanical layers */
-.hero-copy {
-  position: relative;
-  z-index: 6;
-}
-.tm-home-bg {
-  z-index: 0 !important;   /* behind text, but above page bg */
 }

@@ -398,7 +398,7 @@
     placeMech();
   };
 
-  /* ---- Home mechanical medallion (layered rings + rising TM) ---- */
+  /* ---- Home mechanical medallion (lightweight, only after handoff) ---- */
   let homeMech = null, mechPlayed = false;
   const ensureMech = () => {
     if (homeMech && homeMech.isConnected) return homeMech;
@@ -408,14 +408,8 @@
     if (!el) {
       el = document.createElement("div");
       el.className = "tm-home-mech";
-      el.id = "tmHomeMech";
       el.setAttribute("aria-hidden", "true");
-      el.innerHTML = '<div class="tm-home-mech-inner">' +
-        '<div class="tm-layer ring-outer"></div>' +
-        '<div class="tm-layer ring-b" id="tmHomeRingB"></div>' +
-        '<div class="tm-layer ring-a" id="tmHomeRingA"></div>' +
-        '<div class="tm-layer tm-disc" id="tmHomeDisc"></div>' +
-        '</div>';
+      el.innerHTML = '<div class="tm-home-mech-inner"><div class="tm-layer ring-outer"></div><div class="tm-layer ring-b"></div><div class="tm-layer ring-a"></div><div class="tm-layer tm-disc"></div></div>';
       hero.appendChild(el);
     }
     homeMech = el;
@@ -424,14 +418,11 @@
   const placeMech = () => {
     const el = ensureMech();
     if (!el || mode !== "home") return;
-    /* Match the exact on-screen diameter of the carved medallion in home-bg.
-       home-bg scale S = (R*2)/BG.d  →  medallion diameter on screen = R*2. */
     const diam = R * 2;
-    const size = diam.toFixed(1) + "px";
-    el.style.width = size;
-    el.style.height = size;
+    el.style.width = diam.toFixed(1) + "px";
+    el.style.height = diam.toFixed(1) + "px";
     el.style.left = (cx - R).toFixed(1) + "px";
-    el.style.top  = (cy - R).toFixed(1) + "px";
+    el.style.top = (cy - R).toFixed(1) + "px";
   };
   const runHomeMech = () => {
     if (mechPlayed || reduce) return;
@@ -457,74 +448,44 @@
     const playSequence = (isReplay) => {
       if (el._mechBusy) return;
       el._mechBusy = true;
-
-      // show the layered version
-      el.classList.add("is-on");
       el.style.opacity = "1";
       resetLayers();
 
       let step = 0;
-      const TICKS = 5;
-      const STEP_DEG = 22;
-      const TICK_MS = 210;
-
+      const TICKS = 5, STEP_DEG = 22, TICK_MS = 210;
       const tick = () => {
         step++;
-        const a = step * STEP_DEG;
-        const b = -step * (STEP_DEG * 0.88);
-        if (ringA) {
-          ringA.style.transition = "transform 0.18s cubic-bezier(.45,0,.2,1)";
-          ringA.style.transform = "translateZ(9px) rotateZ(" + a + "deg)";
-        }
-        if (ringB) {
-          ringB.style.transition = "transform 0.18s cubic-bezier(.45,0,.2,1)";
-          ringB.style.transform = "translateZ(4px) rotateZ(" + b + "deg)";
-        }
+        const a = step * STEP_DEG, b = -step * (STEP_DEG * 0.88);
+        if (ringA) { ringA.style.transition = "transform 0.18s cubic-bezier(.45,0,.2,1)"; ringA.style.transform = "translateZ(9px) rotateZ(" + a + "deg)"; }
+        if (ringB) { ringB.style.transition = "transform 0.18s cubic-bezier(.45,0,.2,1)"; ringB.style.transform = "translateZ(4px) rotateZ(" + b + "deg)"; }
         if (inner) {
           const pulse = (step % 2 === 0) ? 2.2 : -1.8;
           inner.style.transition = "transform 0.2s cubic-bezier(.4,0,.2,1)";
           inner.style.transform = "rotateX(" + (18 + pulse) + "deg) rotateY(" + (-7 + pulse * 0.4) + "deg)";
         }
-        if (step < TICKS) {
-          setTimeout(tick, TICK_MS);
-        } else {
-          // rise
+        if (step < TICKS) setTimeout(tick, TICK_MS);
+        else setTimeout(() => {
+          el.classList.add("is-open");
+          if (inner) { inner.style.transition = "transform 1.1s cubic-bezier(.22,1.15,.36,1)"; inner.style.transform = "rotateX(6deg) rotateY(-2deg)"; }
+          if (disc) disc.style.transition = "transform 1.05s cubic-bezier(.22,1.25,.36,1), filter 0.9s ease";
+          // fade out so clean home-bg remains (no double image)
           setTimeout(() => {
-            el.classList.add("is-open");
-            if (inner) {
-              inner.style.transition = "transform 1.1s cubic-bezier(.22,1.15,.36,1)";
-              inner.style.transform = "rotateX(6deg) rotateY(-2deg)";
-            }
-            if (disc) {
-              disc.style.transition = "transform 1.05s cubic-bezier(.22,1.25,.36,1), filter 0.9s ease";
-            }
-            // after rise settles → fade out layered version so clean home-bg shows (no double image / eye strain)
-            setTimeout(() => {
-              el.style.transition = "opacity 0.7s ease";
-              el.style.opacity = "0";
-              setTimeout(() => {
-                el.classList.remove("is-on", "is-open");
-                el._mechBusy = false;
-                el.classList.add("is-ready");
-              }, 720);
-            }, 1150);
-          }, 120);
-        }
+            el.style.transition = "opacity 0.7s ease";
+            el.style.opacity = "0";
+            setTimeout(() => { el.classList.remove("is-open"); el._mechBusy = false; el.classList.add("is-ready"); }, 720);
+          }, 1150);
+        }, 120);
       };
       setTimeout(tick, isReplay ? 30 : 480);
     };
 
-    // first entrance
     playSequence(false);
-
-    // hover / focus → replay then hide again
-    const replay = () => {
-      if (el.classList.contains("is-ready") && !el._mechBusy) playSequence(true);
-    };
+    const replay = () => { if (el.classList.contains("is-ready") && !el._mechBusy) playSequence(true); };
     el.addEventListener("mouseenter", replay);
     el.addEventListener("focus", replay);
     el.tabIndex = 0;
   };
+
   const layout = () => {
     if (mode === "intro") {
       W = innerWidth; H = innerHeight;
