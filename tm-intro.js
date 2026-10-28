@@ -395,11 +395,11 @@
     const L = cx - BG.ex * S, T = cy - BG.ey * S;
     homeImg.style.setProperty("--hx0", (-L).toFixed(1) + "px"); homeImg.style.setProperty("--hx1", (W - L).toFixed(1) + "px");
     homeImg.style.setProperty("--hy0", (-T).toFixed(1) + "px"); homeImg.style.setProperty("--hy1", (H - T).toFixed(1) + "px");
-    if (typeof placeMech === "function") placeMech();
+    placeMech();
   };
 
-  /* Home: rise-on-hover only (no rotation). Intro untouched. */
-  let homeMech = null, mechReady = false;
+  /* ---- Home mechanical medallion (lightweight, only after handoff) ---- */
+  let homeMech = null, mechPlayed = false;
   const ensureMech = () => {
     if (homeMech && homeMech.isConnected) return homeMech;
     const hero = host || document.querySelector(".hero");
@@ -409,7 +409,7 @@
       el = document.createElement("div");
       el.className = "tm-home-mech";
       el.setAttribute("aria-hidden", "true");
-      el.innerHTML = '<div class="tm-home-mech-inner"><div class="tm-layer tm-disc"></div></div>';
+      el.innerHTML = '<div class="tm-home-mech-inner"><div class="tm-layer ring-outer"></div><div class="tm-layer ring-b"></div><div class="tm-layer ring-a"></div><div class="tm-layer tm-disc"></div></div>';
       hero.appendChild(el);
     }
     homeMech = el;
@@ -425,44 +425,68 @@
     el.style.top = (cy - R).toFixed(1) + "px";
   };
   const runHomeMech = () => {
-    if (mechReady || reduce) return;
+    if (mechPlayed || reduce) return;
     const el = ensureMech();
     if (!el) return;
-    mechReady = true;
+    mechPlayed = true;
     placeMech();
-    const disc = el.querySelector(".tm-disc");
-    el.classList.add("is-ready");
-    el.style.opacity = "0";
 
-    const playRise = () => {
-      if (el._busy) return;
-      el._busy = true;
-      el.style.opacity = "1";
+    const ringA = el.querySelector(".ring-a");
+    const ringB = el.querySelector(".ring-b");
+    const disc  = el.querySelector(".tm-disc");
+    const inner = el.querySelector(".tm-home-mech-inner");
+
+    const resetLayers = () => {
       el.classList.remove("is-open");
-      if (disc) { disc.style.transition = "none"; disc.style.transform = "translateZ(0) scale(1)"; }
+      if (ringA) { ringA.style.transition = "none"; ringA.style.transform = "translateZ(9px) rotateZ(0deg)"; }
+      if (ringB) { ringB.style.transition = "none"; ringB.style.transform = "translateZ(4px) rotateZ(0deg)"; }
+      if (disc)  { disc.style.transition = "none"; disc.style.transform = "translateZ(12px) scale(1)"; disc.style.zIndex = "20"; }
+      if (inner) { inner.style.transition = "none"; inner.style.transform = "none"; }
       void el.offsetWidth;
-      requestAnimationFrame(() => {
-        el.classList.add("is-open");
-        if (disc) {
-          disc.style.transition = "transform 0.85s cubic-bezier(.22,1.2,.36,1)";
-          disc.style.transform = "translateZ(48px) scale(1.04)";
-        }
-        setTimeout(() => {
-          el.classList.remove("is-open");
+    };
+
+    const playSequence = (isReplay) => {
+      if (el._mechBusy) return;
+      el._mechBusy = true;
+      el.style.opacity = "1";
+      resetLayers();
+
+      /* Disc (T+M) never rotates — T tips always stay intact above the spinning rings */
+      if (disc) {
+        disc.style.transform = "translateZ(12px) scale(1)";
+        disc.style.zIndex = "10";
+      }
+
+      let step = 0;
+      const TICKS = 5, STEP_DEG = 22, TICK_MS = 210;
+      const tick = () => {
+        step++;
+        const a = step * STEP_DEG, b = -step * (STEP_DEG * 0.88);
+        if (ringA) { ringA.style.transition = "transform 0.18s cubic-bezier(.45,0,.2,1)"; ringA.style.transform = "translateZ(9px) rotateZ(" + a + "deg)"; }
+        if (ringB) { ringB.style.transition = "transform 0.18s cubic-bezier(.45,0,.2,1)"; ringB.style.transform = "translateZ(4px) rotateZ(" + b + "deg)"; }
+        /* rings only — disc stays fixed (no rotate) so T tips never shear or clip */
+        if (step < TICKS) setTimeout(tick, TICK_MS);
+        else setTimeout(() => {
+          el.classList.add("is-open");
+          if (inner) { inner.style.transition = "none"; inner.style.transform = "none"; }
           if (disc) {
-            disc.style.transition = "transform 0.7s cubic-bezier(.4,0,.2,1)";
-            disc.style.transform = "translateZ(0) scale(1)";
+            disc.style.transition = "transform 1.05s cubic-bezier(.22,1.25,.36,1), filter 0.9s ease";
+            disc.style.transform = "translateZ(56px) scale(1.03)";  /* rise only, no rotate */
           }
           setTimeout(() => {
-            el.style.transition = "opacity 0.4s ease";
+            el.style.transition = "opacity 0.7s ease";
             el.style.opacity = "0";
-            setTimeout(() => { el._busy = false; }, 420);
-          }, 700);
-        }, 900);
-      });
+            setTimeout(() => { el.classList.remove("is-open"); el._mechBusy = false; el.classList.add("is-ready"); }, 720);
+          }, 1150);
+        }, 120);
+      };
+      setTimeout(tick, isReplay ? 30 : 480);
     };
-    el.addEventListener("mouseenter", playRise);
-    el.addEventListener("focus", playRise);
+
+    playSequence(false);
+    const replay = () => { if (el.classList.contains("is-ready") && !el._mechBusy) playSequence(true); };
+    el.addEventListener("mouseenter", replay);
+    el.addEventListener("focus", replay);
     el.tabIndex = 0;
   };
 
