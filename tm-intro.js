@@ -399,7 +399,7 @@
     const L = cx - BG.ex * S, T = cy - BG.ey * S;
     homeImg.style.setProperty("--hx0", (-L).toFixed(1) + "px"); homeImg.style.setProperty("--hx1", (W - L).toFixed(1) + "px");
     homeImg.style.setProperty("--hy0", (-T).toFixed(1) + "px"); homeImg.style.setProperty("--hy1", (H - T).toFixed(1) + "px");
-    placePlayer(S);
+    placePlayer(S); placeDust();
   };
 
   /* ---------------------------------------------------------------- the player: a mechanical lock built from the picture itself
@@ -412,8 +412,9 @@
     pl = { root, track: mk("tmx-track", root) };
     pl.wB = mk("tmx-ring tmx-ring-b", root); pl.ringB = mk("tmx-ring-img", pl.wB); pl.litB = mk("tmx-ring-lit", pl.wB);
     pl.wC = mk("tmx-ring tmx-ring-c", root); pl.ringC = mk("tmx-ring-img", pl.wC); pl.litC = mk("tmx-ring-lit", pl.wC);
-    pl.hole = mk("tm-hole", root); pl.g = mk("tm-core-g", root);
-    pl.sh = mk("tm-core-sh", pl.g); pl.core = mk("tm-pl-l", pl.g); pl.rim = mk("tm-core-rim", pl.g);
+    pl.hole = mk("tm-pl-l tmx-hole", root); pl.g = mk("tm-core-g", root);
+    pl.sh = mk("tm-core-sh", pl.g); pl.core = mk("tm-pl-l", pl.g); pl.laser = mk("tmx-laser", pl.g); pl.rim = mk("tm-core-rim", pl.g);
+    pl.lr1 = mk("tmx-lring", root); pl.lr2 = mk("tmx-lring", root);          /* thin laser lines on the two ring edges */
   };
   const placePlayer = (S) => {
     if (!pl) return;
@@ -434,10 +435,59 @@
     pl.g.style.left = pl.g.style.top = "0px"; pl.g.style.width = homeImg.style.width; pl.g.style.height = homeImg.style.height;
     pl.g.style.transformOrigin = (G[0].x * S).toFixed(1) + "px " + (G[0].y * S).toFixed(1) + "px";
     const hr = G[0].r * S + 2;
-    for (const el of [pl.hole, pl.sh, pl.rim]) { el.style.left = (G[0].x * S - hr).toFixed(1) + "px"; el.style.top = (G[0].y * S - hr).toFixed(1) + "px"; el.style.width = el.style.height = (hr * 2).toFixed(1) + "px"; }
+    const rh = box(pl.hole, G[0], G[0].r + 2); pl.hole.style.webkitMaskImage = pl.hole.style.maskImage = disc(G[0], G[0].r + 2, rh);
+    for (const el of [pl.sh, pl.rim]) { el.style.left = (G[0].x * S - hr).toFixed(1) + "px"; el.style.top = (G[0].y * S - hr).toFixed(1) + "px"; el.style.width = el.style.height = (hr * 2).toFixed(1) + "px"; }
     pl.rim.style.width = pl.rim.style.height = (G[0].r * S * 2).toFixed(1) + "px"; pl.rim.style.left = (G[0].x * S - G[0].r * S).toFixed(1) + "px"; pl.rim.style.top = (G[0].y * S - G[0].r * S).toFixed(1) + "px";
+    /* laser TM: the picture of the TM outline (baked from the old picture's coordinates x1.045), carried by the disc */
+    const LZ = { x: 698, y: 350, w: 277, h: 225 };
+    pl.laser.style.left = (LZ.x * S).toFixed(1) + "px"; pl.laser.style.top = (LZ.y * S).toFixed(1) + "px";
+    pl.laser.style.width = (LZ.w * S).toFixed(1) + "px"; pl.laser.style.height = (LZ.h * S).toFixed(1) + "px";
+    for (const [el, g] of [[pl.lr1, G[1]], [pl.lr2, G[2]]]) { const rr = g.r * S; el.style.left = (g.x * S - rr).toFixed(1) + "px"; el.style.top = (g.y * S - rr).toFixed(1) + "px"; el.style.width = el.style.height = (rr * 2).toFixed(1) + "px"; }
     pl.root.style.perspective = (R * 5.2).toFixed(0) + "px"; pl.root.style.perspectiveOrigin = (G[0].x * S).toFixed(1) + "px " + (G[0].y * S).toFixed(1) + "px";
     pl.root.style.transformOrigin = (G[0].x * S).toFixed(1) + "px " + (G[0].y * S).toFixed(1) + "px";
+  };
+  /* ---- dust: a thin swirling cloud around the medallion, projected in 3D (tilt + perspective + pointer parallax); the music drives it ---- */
+  let dust = null, dctx = null, dW = 0, dH = 0, dDpr = 1, dBass = 0, dMid = 0, dHi = 0, dYaw = 0, dPx = 0, dPy = 0, dPxT = 0, dPyT = 0;
+  const buildDust = () => {
+    dust = document.createElement("canvas"); dust.className = "tmx-dust"; dust.setAttribute("aria-hidden", "true"); heroEl.insertBefore(dust, homeImg.nextSibling);
+    dctx = dust.getContext("2d");
+    const rnd = (() => { let a = 7; return () => (a = (a * 16807) % 2147483647) / 2147483647; })();
+    dust.p = Array.from({ length: 240 }, (_, i) => {
+      const k = rnd(), tone = rnd();
+      return { rho: 1.0 + Math.pow(k, 1.6) * 2.5, ph: rnd() * 6.2832, h: (rnd() - 0.5) * (0.35 + 0.5 * k), w: (0.04 + rnd() * 0.07) / Math.sqrt(1 + k * 3), sz: 0.5 + rnd() * 1.5, band: i % 28, tw: rnd() * 6.28,
+        col: tone < 0.82 ? "205,225,255" : tone < 0.92 ? "150,115,255" : "95,225,205" };
+    });
+  };
+  const placeDust = () => { if (!dust) return; dDpr = Math.min(window.devicePixelRatio || 1, 2); dW = Math.max(1, Math.round(W)); dH = Math.max(1, Math.round(H)); dust.width = Math.round(dW * dDpr); dust.height = Math.round(dH * dDpr); };
+  const stepDust = (now, dt) => {
+    if (!dust || !dctx) return;
+    const M = window.__tmMusic || {}, d = M.data, on = !!M.playing;
+    let b = 0, m = 0, h = 0;
+    if (on && d && d.length > 40) { for (let i = 0; i < 3; i++) b += d[i]; for (let i = 3; i < 14; i++) m += d[i]; for (let i = 14; i < 40; i++) h += d[i]; b /= 3 * 220; m /= 11 * 160; h /= 26 * 110; }
+    const sm = (cur, t, k) => cur + (Math.min(1, t) - cur) * (1 - Math.exp(-dt / k));
+    dBass = sm(dBass, b, 90); dMid = sm(dMid, m, 140); dHi = sm(dHi, h, 70);
+    dPx += (dPxT - dPx) * (1 - Math.exp(-dt / 400)); dPy += (dPyT - dPy) * (1 - Math.exp(-dt / 400));
+    dYaw += dt * 0.00012 * (1 + 2.2 * dMid);
+    const c = dctx; c.setTransform(dDpr, 0, 0, dDpr, 0, 0); c.clearRect(0, 0, dW, dH);
+    const tilt = 1.05 + dPy * 0.12, ct = Math.cos(tilt), st = Math.sin(tilt), yaw = dYaw * 0.0 + Math.sin(now / 9000) * 0.25 + dPx * 0.35, cy_ = Math.cos(yaw), sy_ = Math.sin(yaw);
+    const D = R * 3.4, spin = dt * (0.2 + 1.6 * dMid + 0.6 * dBass) * 0.001;
+    c.globalCompositeOperation = "lighter";
+    for (const q of dust.p) {
+      q.ph += q.w * spin * 2.4;
+      const rho = q.rho * R * (1 + 0.1 * dBass * (1 + 0.5 * Math.sin(q.tw + now / 700)));
+      const x0 = rho * Math.cos(q.ph), z0 = rho * Math.sin(q.ph), y0 = q.h * R * (1 + 0.5 * dBass);
+      const y1 = y0 * ct - z0 * st, z1 = y0 * st + z0 * ct, x2 = x0 * cy_ + z1 * sy_, z2 = -x0 * sy_ + z1 * cy_;
+      const f = D / (D + z2); if (f <= 0) continue;
+      const sx = cx + x2 * f, sy = cy + y1 * f, dd = Math.hypot(sx - cx, sy - cy);
+      if (dd < R * 0.93 || sx < -20 || sx > dW + 20 || sy < -20 || sy > dH + 20) continue;
+      const band = d && on ? d[q.band] / 255 : 0;
+      let a = (on ? 0.22 + 0.9 * band + 0.5 * dHi : 0.3) * (0.55 + 0.45 * Math.sin(q.tw + now / 900)) * Math.min(1.4, f * f);
+      a *= 1 - clamp((dd - R * 2.7) / (R * 1.0), 0, 1); if (a < 0.02) continue;
+      const r = clamp(q.sz * 0.8 * f * (1 + 0.6 * band * (on ? 1 : 0) + 0.3 * dBass), 0.35, 2.1);
+      c.fillStyle = "rgba(" + q.col + "," + Math.min(1, a).toFixed(3) + ")"; c.beginPath(); c.arc(sx, sy, r, 0, 6.2832); c.fill();
+      if (r > 1.3 && a > 0.45) { c.fillStyle = "rgba(" + q.col + "," + (a * 0.1).toFixed(3) + ")"; c.beginPath(); c.arc(sx, sy, r * 2.6, 0, 6.2832); c.fill(); }
+    }
+    c.globalCompositeOperation = "source-over";
   };
   let plTeaserDone = false, plTeaserUntil = 0, plP = 0, plHov = 0, plHovT = 0, plBass = 0, plNx = 0, plNy = 0, plTx = 0, plTy = 0;
   /* a clicking step: quick snap with a little overshoot, then a pause -- the "tk" of a mechanism */
@@ -458,10 +508,13 @@
     pl.ringB.style.transform = "rotateZ(" + aB.toFixed(2) + "deg)";
     const lift = tk(cp, 3), L = Math.min(1, lift);
     const sc = 1 + 0.038 * lift + 0.02 * plHov + 0.01 * plBass * L;       /* the disc rises (shadow + parallax), it does not swallow the rings that are its key */
-    pl.g.style.transform = "translate3d(0," + (-R * 0.05 * lift).toFixed(2) + "px," + (R * 0.06 * lift).toFixed(1) + "px) scale(" + sc.toFixed(4) + ")";
-    pl.core.style.filter = L > 0.01 ? "brightness(" + (1 + 0.16 * L + 0.1 * plBass).toFixed(3) + ") contrast(" + (1 + 0.06 * L).toFixed(3) + ")" : "none";
+    pl.g.style.transform = "translate3d(0," + (-R * 0.035 * lift).toFixed(2) + "px," + (R * 0.05 * lift).toFixed(1) + "px) scale(" + sc.toFixed(4) + ")";
+    const lzI = clamp((lift - 0.3) / 0.7, 0, 1), pulse = 0.72 + 0.28 * Math.sin(now / 380) + 0.55 * plBass;
+    pl.laser.style.opacity = (lzI * Math.min(1, pulse)).toFixed(3);
+    pl.lr1.style.opacity = pl.lr2.style.opacity = (L * Math.min(1, 0.55 + 0.5 * plBass + 0.12 * Math.sin(now / 520))).toFixed(3);
+    pl.core.style.filter = L > 0.01 ? "brightness(" + (1 - 0.42 * lzI + 0.08 * plBass).toFixed(3) + ") saturate(" + (1 - 0.15 * lzI).toFixed(2) + ")" : "none";
     pl.hole.style.opacity = L > 0.004 ? "1" : "0";
-    pl.sh.style.opacity = (0.95 * L).toFixed(3); pl.sh.style.transform = "translate(" + (R * 0.055 * lift).toFixed(1) + "px," + (R * 0.085 * lift).toFixed(1) + "px) scale(" + (1.05 + 0.06 * lift).toFixed(3) + ")";
+    pl.sh.style.opacity = (0.6 * L).toFixed(3); pl.sh.style.transform = "translate(" + (R * 0.055 * lift).toFixed(1) + "px," + (R * 0.085 * lift).toFixed(1) + "px) scale(" + (1.05 + 0.06 * lift).toFixed(3) + ")";
     pl.rim.style.opacity = (L * (0.45 + 0.55 * plBass + 0.1 * Math.sin(now / 420))).toFixed(3);
     pl.root.style.transform = "scale(" + (1 + 0.012 * plHov).toFixed(4) + ")";
   };
@@ -722,7 +775,7 @@
       flood = lerp(0.5, 0.12, easeOut(t / 3600));
       if (t > 4000) handT = 0;
     }
-    if (mode === "home" && homeImg) { if (homeVisible) stepPlayer(now, dt); return; }       /* Home is a picture + a CSS mechanism: no WebGL work at all */
+    if (mode === "home" && homeImg) { if (homeVisible) { stepPlayer(now, dt); stepDust(now, dt); } return; }       /* Home is a picture + a CSS mechanism: no WebGL work at all */
     if (mode === "home") stepMusic(now, dt);
     if (mode === "home" && !homeVisible) return;
     if (!gl || !prog || !texDone) return;
@@ -849,12 +902,13 @@
         const bgImg = document.createElement("img"); bgImg.className = "tm-home-bg"; bgImg.alt = ""; bgImg.decoding = "async";
         bgImg.setAttribute("aria-hidden", "true"); bgImg.draggable = false; bgImg.src = "images/home-bg.webp?v=2"; homeImg.appendChild(bgImg);
         buildPlayer();
-        heroEl.insertBefore(homeImg, heroEl.firstChild);
+        heroEl.insertBefore(homeImg, heroEl.firstChild); buildDust();
         /* pointer: hover = a gentle zoom / tilt of the player; click on the medallion = play / pause */
         const inside = (e) => { const r = heroEl.getBoundingClientRect(); const dx = e.clientX - r.left - cx, dy = e.clientY - r.top - cy; return { dx, dy, hit: Math.hypot(dx, dy) < R * 0.8 }; };
         heroEl.addEventListener("pointermove", (e) => {
           if (mode !== "home") return;
           const o = inside(e), t = e.target, free = t === heroEl || (t.closest && t.closest(".hero-visual") && !t.closest("a,button,input,textarea,select,[role=button],[tabindex]"));
+          { const hr = heroEl.getBoundingClientRect(); dPxT = clamp((e.clientX - hr.left) / hr.width * 2 - 1, -1, 1); dPyT = clamp((e.clientY - hr.top) / hr.height * 2 - 1, -1, 1); }
           plHovT = o.hit && free ? 1 : 0; plTx = clamp(o.dx / (R * 0.8), -1, 1); plTy = clamp(o.dy / (R * 0.8), -1, 1); heroEl.style.cursor = plHovT ? "pointer" : "";
         });
         heroEl.addEventListener("pointerleave", () => { plHovT = 0; plTx = plTy = 0; heroEl.style.cursor = ""; });
