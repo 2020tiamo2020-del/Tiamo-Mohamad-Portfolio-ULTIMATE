@@ -42,12 +42,6 @@
   const IMG_W = 1600, IMG_H = 900, RING_D = 469, EMB_X = 802, EMB_Y = 446;
   const SRC = { alb: "images/intro-albedo.jpg?v=6", nor: "images/intro-normal.jpg?v=4", hei: "images/intro-height.jpg?v=6", cls: "images/intro-cavity.png?v=6", lz: "images/intro-laser.png?v=7" };
   const NMK = 10;
-  /* GEM LIGHTS — small coloured stones that sit on the hollow floor right under the dark walls, fixed and always lit.
-     Placed from the marked picture: [x, y (artwork px, 1600x900), core radius px, colour (0 cyan, 1 purple, 2 pink, 3 green, 4 amber), strength].
-     One colour per little group. They live in the intro only: they fade out when the camera arrives at Home. */
-  const GEM_STRENGTH = 1.0, GEM_BREATH = 0.05, GEM_MAP_W = 1200, GEM_MAP_H = 675;
-  const GEM_PAL = [[0.10, 0.92, 1.0], [0.60, 0.36, 1.0], [1.0, 0.36, 0.76], [0.30, 1.0, 0.42], [1.0, 0.62, 0.16]];
-  const GEMS = [[375.5,345.3,4.8,0,1.0],[305.9,428.5,3.0,0,0.66],[335.7,476.4,3.8,0,0.88],[297.7,406.9,3.4,0,0.63],[550.1,338.7,4.4,1,1.0],[548.5,387.6,3.8,1,0.77],[538.4,402.0,3.0,1,0.77],[499.2,357.3,3.5,1,0.63],[475.4,196.5,5.2,2,1.0],[457.0,207.3,3.1,2,0.72],[475.4,227.4,3.6,2,0.71],[455.8,237.0,4.0,2,0.73],[627.2,104.8,5.5,3,1.0],[590.8,120.4,3.7,3,0.71],[613.3,121.5,3.6,3,0.85],[772.3,103.6,5.7,4,1.0],[786.2,111.9,3.4,4,0.65],[786.0,124.8,3.9,4,0.85],[1069.0,184.0,5.0,0,1.0],[1109.5,230.2,2.6,0,0.69],[1001.7,250.6,6.0,1,1.0],[1042.1,292.6,3.5,1,0.78],[1038.0,332.8,2.7,1,0.81],[1058.9,303.8,3.9,1,0.76],[1172.9,308.7,5.5,2,1.0],[1191.5,325.8,3.4,2,0.73],[1239.6,396.2,3.6,2,0.65],[1208.4,424.4,3.0,2,0.72],[1214.0,442.5,3.3,2,0.62],[1258.8,442.3,3.5,2,0.66],[1204.4,449.6,3.4,2,0.88],[1224.0,470.5,2.7,2,0.81],[1213.8,556.4,3.8,2,0.89],[1029.4,500.4,4.8,3,1.0],[1023.8,508.5,2.9,3,0.75],[1053.3,524.0,3.5,3,0.86],[1019.8,523.5,2.8,3,0.7],[1056.1,717.2,4.7,4,1.0],[1090.1,717.9,2.8,4,0.88],[1016.5,748.1,2.9,4,0.68],[1060.9,748.1,4.1,4,0.85],[1032.7,694.7,3.9,4,0.66],[866.2,858.9,5.2,0,1.0],[643.8,779.8,5.6,1,1.0],[729.8,789.1,3.2,1,0.64],[735.5,809.4,2.6,1,0.83],[417.4,606.0,5.1,2,1.0],[373.8,611.6,3.4,2,0.73],[379.4,627.5,2.7,2,0.69],[216.4,395.9,4.4,3,1.0],[186.8,411.6,4.2,3,0.81],[164.6,462.5,3.1,3,0.79],[162.8,520.7,3.4,3,0.7],[195.4,532.8,2.9,3,0.83]];
   const GW = 192, GH = 108;                      /* mist-field resolution */
 
   gate.classList.add("tm-js");
@@ -59,11 +53,11 @@
   const FS = [
     "#ifdef GL_FRAGMENT_PRECISION_HIGH", "precision highp float;", "#else", "precision mediump float;", "#endif",
     "varying vec2 vP;",
-    "uniform sampler2D uAlb,uNor,uHei,uFld,uSp,uCls,uLz,uGem;",
+    "uniform sampler2D uAlb,uNor,uHei,uFld,uSp,uCls,uLz;",
     "uniform vec4 uLzR;",
     "uniform vec2 uRes,uZc,uTilt,uEmb;",
     "uniform vec4 uRect;",
-    "uniform float uZoom,uAmb,uInt,uTime,uAlphaMode,uOpacity,uRing,uMk,uGlow,uFlood,uPop,uBeat,uLit,uGemK;",
+    "uniform float uZoom,uAmb,uInt,uTime,uAlphaMode,uOpacity,uRing,uMk,uGlow,uFlood,uPop,uBeat,uLit;",
     "uniform vec4 uM[" + NMK + "];",
     "float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}",
     "float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);",
@@ -132,23 +126,6 @@
     "    col+=c*ac*(0.9+2.6*dif)*a*k*1.9;",
     "    col+=c*exp(-d*d/(r*r*0.05))*k*1.5;",
     "    col+=c*exp(-d/(r*1.5))*0.20*k*(0.5+fog);",
-    "   }",
-    "  }",
-    /* GEM LIGHTS: the baked gem map (rgb = coloured light, a = the stone itself). It is sampled at the relief's own uv, so the
-       gems stay glued to the rock under the parallax; their light is cast on the cobbles through the normal map. */
-    "  if(uGemK>0.002){",
-    "   vec4 gm=texture2D(uGem,uv);",
-    "   float gl0=dot(gm.rgb,vec3(0.3333));",
-    "   if(gl0+gm.a>0.003){",
-    "    vec2 ge=vec2(2.2/1600.0,2.2/900.0);",
-    "    float gx=dot(texture2D(uGem,uv+vec2(ge.x,0.0)).rgb,vec3(0.3333))-gl0;",
-    "    float gy=dot(texture2D(uGem,uv+vec2(0.0,ge.y)).rgb,vec3(0.3333))-gl0;",
-    "    vec3 gld=normalize(vec3(vec2(gx,gy)*70.0,0.30));",
-    "    float gdif=max(dot(n,gld),0.0);",
-    "    col+=gm.rgb*(0.26+0.55*ac*(1.0+3.2*gdif))*uGemK*1.6;",                 /* coloured light thrown on the stone */
-    "    col+=gm.rgb*(0.55+0.45*fog)*gl0*uGemK*0.65;",                            /* a little scatter in the haze */
-    "    vec3 gh=gm.rgb/max(max(gm.r,max(gm.g,gm.b)),0.001);",
-    "    col+=(gh*0.62+vec3(0.38))*gm.a*uGemK*1.9;",                             /* the gem body: hot, slightly white at the centre */
     "   }",
     "  }",
     /* music: EVERY carved hollow glows with the spectrum band that matches its size.
@@ -290,7 +267,7 @@
   };
   const initGL = () => {
     verify(prog); verify(pprog);
-    ["uAlb","uNor","uHei","uFld","uRes","uZc","uTilt","uEmb","uRect","uZoom","uAmb","uInt","uTime","uAlphaMode","uOpacity","uRing","uMk","uGlow","uFlood","uM","uSp","uCls","uLz","uLzR","uPop","uBeat","uLit","uGem","uGemK"].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
+    ["uAlb","uNor","uHei","uFld","uRes","uZc","uTilt","uEmb","uRect","uZoom","uAmb","uInt","uTime","uAlphaMode","uOpacity","uRing","uMk","uGlow","uFlood","uM","uSp","uCls","uLz","uLzR","uPop","uBeat","uLit"].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
     ["uRes","uZc","uTilt","uZoom","uTime","uDpr","uAlphaMode"].forEach((n) => { PU[n] = gl.getUniformLocation(pprog, n); });
     quad = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, quad);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
@@ -313,37 +290,6 @@
     setTexParams();
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, imgs[key]);
     tex[key] = t;
-  };
-
-  /* ------------------------------------------------------------ gem map
-     Baked once on the CPU into a 1200x675 RGBA texture: rgb = the coloured glow (tight halo + a long soft tail), a = the stone's own body. */
-  let gemTex = null;
-  const buildGemMap = () => {
-    try {
-      const W = GEM_MAP_W, H = GEM_MAP_H, k = W / IMG_W, buf = new Uint8Array(W * H * 4);
-      const acc = new Float32Array(W * H * 3), core = new Float32Array(W * H);
-      for (const g of GEMS) {
-        const gx = g[0] * k, gy = g[1] * k, r = g[2] * k, I = g[4], c = GEM_PAL[g[3]];
-        const sg = r * 2.25, reach = Math.ceil(r * 13);
-        const x0 = Math.max(0, Math.floor(gx - reach)), x1 = Math.min(W - 1, Math.ceil(gx + reach));
-        const y0 = Math.max(0, Math.floor(gy - reach)), y1 = Math.min(H - 1, Math.ceil(gy + reach));
-        for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
-          const dx = x + 0.5 - gx, dy = (y + 0.5 - gy) * 1.12, d = Math.sqrt(dx * dx + dy * dy);
-          const light = (0.95 * Math.exp(-d * d / (2 * sg * sg)) + 0.30 * Math.exp(-d / (r * 4.8))) * I;
-          const cs = Math.min(1, Math.max(0, (r * 1.25 - d) / (r * 0.9)));
-          const i = y * W + x;
-          acc[i * 3] += c[0] * light; acc[i * 3 + 1] += c[1] * light; acc[i * 3 + 2] += c[2] * light;
-          core[i] = Math.max(core[i], cs * cs * (3 - 2 * cs) * I);
-        }
-      }
-      for (let i = 0; i < W * H; i++) {
-        buf[i * 4] = Math.min(255, acc[i * 3] * 255); buf[i * 4 + 1] = Math.min(255, acc[i * 3 + 1] * 255); buf[i * 4 + 2] = Math.min(255, acc[i * 3 + 2] * 255); buf[i * 4 + 3] = Math.min(255, core[i] * 255);
-      }
-      gl.activeTexture(gl.TEXTURE7);
-      gemTex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, gemTex); setTexParams();
-      gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, W, H, 0, gl.RGBA, gl.UNSIGNED_BYTE, buf);
-    } catch (e) { console.warn("[tm-intro] gem map failed", e); gemTex = null; }
   };
 
   /* ------------------------------------------------------------ the mist field
@@ -610,7 +556,7 @@
   /* ------------------------------------------------------------ frame loop */
   let ready = false, readyPending = false, entering = false, enterT = 0, handT = 0, raf = 0, alive = true, shown = 0, t0 = performance.now(), litT = 0;
   let tilt = [0, 0], homeVisible = true, lastNow = 0, slow = 0, fast = 0, renderScale = 1;
-  let amb = 0.55, inten = 1.1, zoomV = 0, opac = 1, alphaMode = 1, glow = 0, mk = 0, flood = 0, gemK = 0;
+  let amb = 0.55, inten = 1.1, zoomV = 0, opac = 1, alphaMode = 1, glow = 0, mk = 0, flood = 0;
   const ZOOM_MAX = 2.4, PUSH = 1500;
 
   const draw = (now) => {
@@ -633,8 +579,7 @@
     gl.uniform4f(U.uRect, rect[0], rect[1], rect[2], rect[3]);
     gl.uniform1f(U.uZoom, zoomV); gl.uniform1f(U.uAmb, amb); gl.uniform1f(U.uInt, inten);
     gl.uniform1f(U.uTime, sec); gl.uniform1f(U.uAlphaMode, alphaMode); gl.uniform1f(U.uOpacity, opac);
-    gl.uniform1f(U.uRing, R); gl.uniform1f(U.uMk, 0); gl.uniform1f(U.uGlow, glow);
-    if (gemTex) { gl.activeTexture(gl.TEXTURE7); gl.bindTexture(gl.TEXTURE_2D, gemTex); gl.uniform1i(U.uGem, 7); gl.uniform1f(U.uGemK, gemK * (1 - GEM_BREATH + GEM_BREATH * Math.sin(sec * 0.9))); } else gl.uniform1f(U.uGemK, 0); gl.uniform1f(U.uFlood, 0);
+    gl.uniform1f(U.uRing, R); gl.uniform1f(U.uMk, 0); gl.uniform1f(U.uGlow, glow); gl.uniform1f(U.uFlood, 0);
     gl.uniform4fv(U.uM, markers);
     gl.activeTexture(gl.TEXTURE4); gl.bindTexture(gl.TEXTURE_2D, spTex);
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 64, 1, gl.LUMINANCE, gl.UNSIGNED_BYTE, spBytes);
@@ -757,10 +702,8 @@
       const lt = litT ? now - litT : 0;
       glow = easeOut(lt / 2000);
       mk = easeOut((lt - 600) / 2000);
-      gemK = easeOut((lt - 350) / 2200) * GEM_STRENGTH;                          /* the gems come up with the scene and then stay */
       if (!entering) { amb = 0.82 * easeOut(lt / 1600); inten = 1.12; flood = 0; }
     }
-    if (mode !== "intro") gemK = Math.max(0, gemK - dt / 450);                  /* Home never has them */
     /* the camera push */
     if (entering && mode === "intro") {
       const t = (now - enterT) / PUSH;
@@ -833,7 +776,7 @@
     if (state.cls === 0 || state.lz === 0) return;                         /* the hollow-size map is still on its way */
     if (!done(prog) || !done(pprog)) return;
     /* step 2: maps + shaders are both here */
-    try { initGL(); upload("alb", 0); upload("nor", 1); upload("hei", 2); if (state.cls !== 1 || !imgs.cls.naturalWidth) imgs.cls = flatCls(); upload("cls", 5); if (state.lz !== 1 || !imgs.lz.naturalWidth) imgs.lz = flatLz(); upload("lz", 6); buildField(); pickMarkers(); buildGemMap(); texDone = true; layout(); }
+    try { initGL(); upload("alb", 0); upload("nor", 1); upload("hei", 2); if (state.cls !== 1 || !imgs.cls.naturalWidth) imgs.cls = flatCls(); upload("cls", 5); if (state.lz !== 1 || !imgs.lz.naturalWidth) imgs.lz = flatLz(); upload("lz", 6); buildField(); pickMarkers(); texDone = true; layout(); }
     catch (e) { console.warn("[tm-intro] GL init failed", e); gl = null; prog = null; fallback(); }
   };
   const upTimer = setInterval(() => { tryUpload(); if (texDone || flat || !alive) clearInterval(upTimer); }, 40);
