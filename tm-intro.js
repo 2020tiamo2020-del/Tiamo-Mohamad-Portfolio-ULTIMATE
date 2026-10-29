@@ -383,20 +383,6 @@
 
   /* ---- Home background: the new carved-stone picture takes the old logo's place (same centre + size as the old medallion) ---- */
   const BG = { w: 1672, h: 941, ex: 838, ey: 466, d: 490 };       /* picture size, medallion centre, medallion ring diameter (px) */
-  /* Home marker lights: small coloured glows sitting in the valleys of the stone (places picked by hand on home-bg, 1672x941 px).
-     Each group has one colour and a phase around the medallion; the groups fade on and off one after another (see .tm-mk in tm-intro.css). */
-  const MK_COL = [[60, 225, 240], [150, 110, 255], [255, 110, 190], [110, 240, 130], [255, 170, 70]];   /* cyan, violet, pink, green, amber */
-  const MK_GROUPS = [{"c":0,"p":0.0,"d":[[385.2,358.3],[362.4,426.0],[339.6,493.7]]},{"c":1,"p":0.071,"d":[[567.3,420.7],[571.8,387.7],[576.3,354.6]]},{"c":2,"p":0.143,"d":[[494.4,205.4],[490.1,220.1],[485.8,234.8],[481.5,249.4]]},{"c":3,"p":0.214,"d":[[656.8,114.3],[638.0,122.0],[619.1,129.6]]},{"c":4,"p":0.286,"d":[[808.0,107.9],[816.0,118.8],[824.0,129.7]]},{"c":0,"p":0.357,"d":[[1158.4,241.6],[1115.6,193.2]]},{"c":1,"p":0.429,"d":[[1045.8,289.6],[1064.9,319.0],[1084.1,348.5]]},{"c":2,"p":0.5,"d":[[1225.0,322.7],[1243.9,340.5]]},{"c":3,"p":0.571,"d":[[1284.7,413.6],[1280.4,446.9],[1276.1,480.3],[1271.8,513.7],[1267.5,547.0],[1263.2,580.4]]},{"c":4,"p":0.643,"d":[[1101.2,522.2],[1098.0,534.3],[1094.8,546.3]]},{"c":0,"p":0.714,"d":[[1137.6,749.1],[1112.6,760.2],[1087.6,771.3],[1062.6,782.4]]},{"c":1,"p":0.786,"d":[[904.6,896.0],[768.2,844.3]]},{"c":2,"p":0.857,"d":[[437.1,632.2],[412.6,649.6]]},{"c":3,"p":0.929,"d":[[208.1,411.7],[203.1,447.4],[198.2,483.1],[193.3,518.8],[188.3,554.4]]}];
-  const buildHomeMarkers = (parent) => {
-    const wrap = document.createElement("div"); wrap.className = "tm-mk"; wrap.setAttribute("aria-hidden", "true");
-    MK_GROUPS.forEach((g) => g.d.forEach((p, k) => {
-      const d = document.createElement("i"); d.className = "tm-mkd";
-      d.style.left = (p[0] / BG.w * 100).toFixed(3) + "%"; d.style.top = (p[1] / BG.h * 100).toFixed(3) + "%";
-      d.style.setProperty("--c", MK_COL[g.c].join(",")); d.style.setProperty("--p", g.p); d.style.setProperty("--k", k);
-      wrap.appendChild(d);
-    }));
-    parent.appendChild(wrap);
-  };
   /* the three grooves of the medallion (picture px): the TM disc | ring C | ring B | fixed frame */
   const G = [{ x: 836.3, y: 456.7, r: 153.2 }, { x: 836.6, y: 457.0, r: 173.6 }, { x: 836.3, y: 459.5, r: 191.0 }];
   let homeImg = null, pl = null, plS = 1;
@@ -404,7 +390,6 @@
     if (!homeImg) return;
     const S = (R * 2) / BG.d; plS = S;
     homeImg.style.width = (BG.w * S).toFixed(1) + "px"; homeImg.style.height = (BG.h * S).toFixed(1) + "px";
-    homeImg.style.setProperty("--tm-s", S.toFixed(4));
     homeImg.style.left = (cx - BG.ex * S).toFixed(1) + "px"; homeImg.style.top = (cy - BG.ey * S).toFixed(1) + "px";
     homeImg.style.setProperty("--mx", (BG.ex * S).toFixed(1) + "px"); homeImg.style.setProperty("--my", (BG.ey * S).toFixed(1) + "px");
     homeImg.style.setProperty("--rx", (R * 3.1).toFixed(1) + "px"); homeImg.style.setProperty("--ry", (R * 1.9).toFixed(1) + "px");
@@ -865,7 +850,6 @@
         homeImg = document.createElement("div"); homeImg.className = "tm-home";
         const bgImg = document.createElement("img"); bgImg.className = "tm-home-bg"; bgImg.alt = ""; bgImg.decoding = "async";
         bgImg.setAttribute("aria-hidden", "true"); bgImg.draggable = false; bgImg.src = "images/home-bg.webp?v=2"; homeImg.appendChild(bgImg);
-        buildHomeMarkers(homeImg);
         buildPlayer();
         heroEl.insertBefore(homeImg, heroEl.firstChild);
         /* pointer: hover = a gentle zoom / tilt of the player; click on the medallion = play / pause */
