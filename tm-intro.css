@@ -218,7 +218,3 @@ html[dir="rtl"] .tm-hero-cv { -webkit-mask-image: radial-gradient(ellipse 60% 66
 .tmx-ring-c .tmx-ring-img { background-image: url("images/tm-ring-c.webp?v=1"); }
 .tmx-ring-b .tmx-ring-lit { -webkit-mask-image: url("images/tm-ring-b.webp?v=1"); mask-image: url("images/tm-ring-b.webp?v=1"); }
 .tmx-ring-c .tmx-ring-lit { -webkit-mask-image: url("images/tm-ring-c.webp?v=1"); mask-image: url("images/tm-ring-c.webp?v=1"); }
-
-/* v9 · laser TM: when the disc is up, the letters are drawn as thin glowing blue laser lines, the ring edges too */
-.tmx-laser { position: absolute; opacity: 0; background: url("images/tm-laser.webp?v=1") 0 0 / 100% 100% no-repeat; pointer-events: none; filter: drop-shadow(0 0 3px rgba(60,150,255,.8)); }
-.tmx-lring { position: absolute; opacity: 0; border-radius: 50%; box-sizing: border-box; border: 1px solid rgba(150,205,255,.9); box-shadow: 0 0 6px 0 rgba(60,150,255,.85), inset 0 0 6px 0 rgba(60,150,255,.5); pointer-events: none; }
