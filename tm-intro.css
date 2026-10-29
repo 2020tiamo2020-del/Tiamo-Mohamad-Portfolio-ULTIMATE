@@ -207,3 +207,14 @@ html[dir="rtl"] .tm-hero-cv { -webkit-mask-image: radial-gradient(ellipse 60% 66
 .tm-core-sh { position: absolute; border-radius: 50%; opacity: 0; background: radial-gradient(circle, rgba(0,0,0,.9) 58%, rgba(0,0,0,0) 74%); filter: blur(7px); }
 .tm-core-rim { position: absolute; border-radius: 50%; opacity: 0; box-sizing: border-box; border: 1.5px solid rgba(150,205,255,.95); box-shadow: 0 0 10px 1px rgba(70,150,255,.75), inset 0 0 14px 1px rgba(70,150,255,.35); }
 .tm-stone { display: none !important; }
+
+/* v8 · rebuilt rings: uniform, concentric, no baked-in lighting. The picture turns, the light stays put. */
+.tmx-track { position: absolute; border-radius: 50%; }
+.tmx-ring { position: absolute; }
+.tmx-ring-img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background-size: 100% 100%; background-repeat: no-repeat; will-change: transform; }
+.tmx-ring-lit { position: absolute; left: 0; top: 0; width: 100%; height: 100%; -webkit-mask-size: 100% 100%; mask-size: 100% 100%; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+  background: linear-gradient(150deg, rgba(190,215,255,.17) 0%, rgba(190,215,255,0) 46%, rgba(0,0,14,.34) 100%); }
+.tmx-ring-b .tmx-ring-img { background-image: url("images/tm-ring-b.webp?v=1"); }
+.tmx-ring-c .tmx-ring-img { background-image: url("images/tm-ring-c.webp?v=1"); }
+.tmx-ring-b .tmx-ring-lit { -webkit-mask-image: url("images/tm-ring-b.webp?v=1"); mask-image: url("images/tm-ring-b.webp?v=1"); }
+.tmx-ring-c .tmx-ring-lit { -webkit-mask-image: url("images/tm-ring-c.webp?v=1"); mask-image: url("images/tm-ring-c.webp?v=1"); }

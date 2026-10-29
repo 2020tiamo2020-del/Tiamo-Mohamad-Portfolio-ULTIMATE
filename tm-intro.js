@@ -384,7 +384,8 @@
   /* ---- Home background: the new carved-stone picture takes the old logo's place (same centre + size as the old medallion) ---- */
   const BG = { w: 1672, h: 941, ex: 838, ey: 466, d: 490 };       /* picture size, medallion centre, medallion ring diameter (px) */
   /* the three grooves of the medallion (picture px): the TM disc | ring C | ring B | fixed frame */
-  const G = [{ x: 836.3, y: 456.7, r: 153.2 }, { x: 836.6, y: 457.0, r: 173.6 }, { x: 836.3, y: 459.5, r: 191.0 }];
+  const G = [{ x: 836.45, y: 457.8, r: 153.3 }, { x: 836.45, y: 457.8, r: 173.45 }, { x: 836.45, y: 457.8, r: 190.76 }];       /* rebuilt rings: perfectly concentric, uniform width */
+  const RING_REF = 196;                                         /* half-size (picture px) of the ring images */
   let homeImg = null, pl = null, plS = 1;
   const placeHomeImg = () => {
     if (!homeImg) return;
@@ -408,7 +409,10 @@
   const buildPlayer = () => {
     const mk = (cls, par) => { const d = document.createElement("div"); d.className = cls; par.appendChild(d); return d; };
     const root = mk("tm-pl", homeImg);
-    pl = { root, hole: mk("tm-hole", root), ringB: mk("tm-pl-l", root), ringC: mk("tm-pl-l", root), g: mk("tm-core-g", root) };
+    pl = { root, track: mk("tmx-track", root) };
+    pl.wB = mk("tmx-ring tmx-ring-b", root); pl.ringB = mk("tmx-ring-img", pl.wB); pl.litB = mk("tmx-ring-lit", pl.wB);
+    pl.wC = mk("tmx-ring tmx-ring-c", root); pl.ringC = mk("tmx-ring-img", pl.wC); pl.litC = mk("tmx-ring-lit", pl.wC);
+    pl.hole = mk("tm-hole", root); pl.g = mk("tm-core-g", root);
     pl.sh = mk("tm-core-sh", pl.g); pl.core = mk("tm-pl-l", pl.g); pl.rim = mk("tm-core-rim", pl.g);
   };
   const placePlayer = (S) => {
@@ -421,15 +425,9 @@
       return rr;
     };
     const disc = (c, r, rr) => "radial-gradient(circle at " + rr.toFixed(1) + "px " + rr.toFixed(1) + "px, #000 " + (r * S - 0.7).toFixed(1) + "px, transparent " + (r * S + 0.7).toFixed(1) + "px)";
-    const ring = (el, cOut, rOut, cIn, rIn) => {
-      const rr = box(el, cOut, rOut);
-      const o = "radial-gradient(circle at " + rr.toFixed(1) + "px " + rr.toFixed(1) + "px, #000 " + (rOut * S - 0.7).toFixed(1) + "px, transparent " + (rOut * S + 0.7).toFixed(1) + "px)";
-      const ix = rr + (cIn.x - cOut.x) * S, iy = rr + (cIn.y - cOut.y) * S;
-      const i = "radial-gradient(circle at " + ix.toFixed(1) + "px " + iy.toFixed(1) + "px, #000 " + (rIn * S - 0.7).toFixed(1) + "px, transparent " + (rIn * S + 0.7).toFixed(1) + "px)";
-      el.style.webkitMaskImage = el.style.maskImage = o + "," + i;
-    };
-    ring(pl.ringB, G[2], G[2].r, G[1], G[1].r);
-    ring(pl.ringC, G[1], G[1].r, G[0], G[0].r);
+    const rbox = (w) => { const half = RING_REF * S; w.style.left = (G[0].x * S - half).toFixed(1) + "px"; w.style.top = (G[0].y * S - half).toFixed(1) + "px"; w.style.width = w.style.height = (half * 2).toFixed(1) + "px"; };
+    rbox(pl.wB); rbox(pl.wC); rbox(pl.track);
+    pl.track.style.background = "radial-gradient(circle closest-side, transparent " + ((G[0].r - 1.6) * S).toFixed(1) + "px, #04060d " + ((G[0].r - 0.8) * S).toFixed(1) + "px, #04060d " + ((G[2].r + 0.8) * S).toFixed(1) + "px, transparent " + ((G[2].r + 1.8) * S).toFixed(1) + "px)";
     const rc = box(pl.core, G[0], G[0].r); pl.core.style.webkitMaskImage = pl.core.style.maskImage = disc(G[0], G[0].r, rc);
     /* the group that lifts: shadow + disc + rim, one transform */
     const gl_ = G[0].x * S - rc, gt_ = G[0].y * S - rc;
