@@ -207,3 +207,26 @@ html[dir="rtl"] .tm-hero-cv { -webkit-mask-image: radial-gradient(ellipse 60% 66
 .tm-core-sh { position: absolute; border-radius: 50%; opacity: 0; background: radial-gradient(circle, rgba(0,0,0,.9) 58%, rgba(0,0,0,0) 74%); filter: blur(7px); }
 .tm-core-rim { position: absolute; border-radius: 50%; opacity: 0; box-sizing: border-box; border: 1.5px solid rgba(150,205,255,.95); box-shadow: 0 0 10px 1px rgba(70,150,255,.75), inset 0 0 14px 1px rgba(70,150,255,.35); }
 .tm-stone { display: none !important; }
+
+
+/* Home marker lights: small coloured glows in the valleys of the stone. One colour per place; the places fade on and off one after another,
+   in a slow wave around the medallion. They live inside .tm-home, so they scale, fade and move with the picture. */
+.tm-mk { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; mix-blend-mode: screen;
+  -webkit-mask-image: radial-gradient(ellipse var(--rx, 700px) var(--ry, 430px) at var(--mx, 50%) var(--my, 50%), #000 0, #000 46%, rgba(0,0,0,.6) 72%, transparent 100%),
+    linear-gradient(to right, transparent var(--hx0, 0px), #000 calc(var(--hx0, 0px) + 170px), #000 calc(var(--hx1, 100%) - 230px), transparent var(--hx1, 100%)),
+    linear-gradient(to bottom, transparent var(--hy0, 0px), #000 calc(var(--hy0, 0px) + 150px), #000 calc(var(--hy1, 100%) - 190px), transparent var(--hy1, 100%));
+  -webkit-mask-composite: source-in, source-in;
+          mask-image: radial-gradient(ellipse var(--rx, 700px) var(--ry, 430px) at var(--mx, 50%) var(--my, 50%), #000 0, #000 46%, rgba(0,0,0,.6) 72%, transparent 100%),
+    linear-gradient(to right, transparent var(--hx0, 0px), #000 calc(var(--hx0, 0px) + 170px), #000 calc(var(--hx1, 100%) - 230px), transparent var(--hx1, 100%)),
+    linear-gradient(to bottom, transparent var(--hy0, 0px), #000 calc(var(--hy0, 0px) + 150px), #000 calc(var(--hy1, 100%) - 190px), transparent var(--hy1, 100%));
+          mask-composite: intersect;
+  animation: tmMkIn 2.8s ease 2.2s backwards; }
+.tm-mkd { position: absolute; width: calc(var(--tm-s, 1) * 64px); height: calc(var(--tm-s, 1) * 64px);
+  margin: calc(var(--tm-s, 1) * -32px) 0 0 calc(var(--tm-s, 1) * -32px); border-radius: 50%; opacity: 0;
+  background:
+    radial-gradient(circle, rgba(255,255,255,.95) 0, rgba(var(--c),.95) 4.5%, rgba(var(--c),.55) 9%, transparent 15%),
+    radial-gradient(circle, rgba(var(--c),.34) 0, rgba(var(--c),.15) 32%, transparent 70%);
+  animation: tmMkCycle 13s ease-in-out infinite; animation-delay: calc(var(--p) * -13s + var(--k) * .16s); will-change: opacity; }
+@keyframes tmMkCycle { 0% { opacity: 0 } 13% { opacity: 1 } 50% { opacity: .92 } 62% { opacity: 0 } 100% { opacity: 0 } }
+@keyframes tmMkIn { from { opacity: 0 } to { opacity: 1 } }
+@media (prefers-reduced-motion: reduce) { .tm-mkd { animation: none; opacity: .6; } }
