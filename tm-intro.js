@@ -413,7 +413,8 @@
     pl.wB = mk("tmx-ring tmx-ring-b", root); pl.ringB = mk("tmx-ring-img", pl.wB); pl.litB = mk("tmx-ring-lit", pl.wB);
     pl.wC = mk("tmx-ring tmx-ring-c", root); pl.ringC = mk("tmx-ring-img", pl.wC); pl.litC = mk("tmx-ring-lit", pl.wC);
     pl.hole = mk("tm-hole", root); pl.g = mk("tm-core-g", root);
-    pl.sh = mk("tm-core-sh", pl.g); pl.core = mk("tm-pl-l", pl.g); pl.rim = mk("tm-core-rim", pl.g);
+    pl.sh = mk("tm-core-sh", pl.g); pl.core = mk("tm-pl-l", pl.g); pl.laser = mk("tmx-laser", pl.g); pl.rim = mk("tm-core-rim", pl.g);
+    pl.lr1 = mk("tmx-lring", root); pl.lr2 = mk("tmx-lring", root);          /* thin laser lines on the two ring edges */
   };
   const placePlayer = (S) => {
     if (!pl) return;
@@ -436,6 +437,11 @@
     const hr = G[0].r * S + 2;
     for (const el of [pl.hole, pl.sh, pl.rim]) { el.style.left = (G[0].x * S - hr).toFixed(1) + "px"; el.style.top = (G[0].y * S - hr).toFixed(1) + "px"; el.style.width = el.style.height = (hr * 2).toFixed(1) + "px"; }
     pl.rim.style.width = pl.rim.style.height = (G[0].r * S * 2).toFixed(1) + "px"; pl.rim.style.left = (G[0].x * S - G[0].r * S).toFixed(1) + "px"; pl.rim.style.top = (G[0].y * S - G[0].r * S).toFixed(1) + "px";
+    /* laser TM: the picture of the TM outline (baked from the old picture's coordinates x1.045), carried by the disc */
+    const LZ = { x: 700.15, y: 350.3, w: 276.9, h: 224.8 };
+    pl.laser.style.left = (LZ.x * S).toFixed(1) + "px"; pl.laser.style.top = (LZ.y * S).toFixed(1) + "px";
+    pl.laser.style.width = (LZ.w * S).toFixed(1) + "px"; pl.laser.style.height = (LZ.h * S).toFixed(1) + "px";
+    for (const [el, g] of [[pl.lr1, G[1]], [pl.lr2, G[2]]]) { const rr = g.r * S; el.style.left = (g.x * S - rr).toFixed(1) + "px"; el.style.top = (g.y * S - rr).toFixed(1) + "px"; el.style.width = el.style.height = (rr * 2).toFixed(1) + "px"; }
     pl.root.style.perspective = (R * 5.2).toFixed(0) + "px"; pl.root.style.perspectiveOrigin = (G[0].x * S).toFixed(1) + "px " + (G[0].y * S).toFixed(1) + "px";
     pl.root.style.transformOrigin = (G[0].x * S).toFixed(1) + "px " + (G[0].y * S).toFixed(1) + "px";
   };
@@ -459,7 +465,10 @@
     const lift = tk(cp, 3), L = Math.min(1, lift);
     const sc = 1 + 0.038 * lift + 0.02 * plHov + 0.01 * plBass * L;       /* the disc rises (shadow + parallax), it does not swallow the rings that are its key */
     pl.g.style.transform = "translate3d(0," + (-R * 0.05 * lift).toFixed(2) + "px," + (R * 0.06 * lift).toFixed(1) + "px) scale(" + sc.toFixed(4) + ")";
-    pl.core.style.filter = L > 0.01 ? "brightness(" + (1 + 0.16 * L + 0.1 * plBass).toFixed(3) + ") contrast(" + (1 + 0.06 * L).toFixed(3) + ")" : "none";
+    const lzI = clamp((lift - 0.3) / 0.7, 0, 1), pulse = 0.72 + 0.28 * Math.sin(now / 380) + 0.55 * plBass;
+    pl.laser.style.opacity = (lzI * Math.min(1, pulse)).toFixed(3);
+    pl.lr1.style.opacity = pl.lr2.style.opacity = (L * Math.min(1, 0.55 + 0.5 * plBass + 0.12 * Math.sin(now / 520))).toFixed(3);
+    pl.core.style.filter = L > 0.01 ? "brightness(" + (1 - 0.42 * lzI + 0.08 * plBass).toFixed(3) + ") saturate(" + (1 - 0.15 * lzI).toFixed(2) + ")" : "none";
     pl.hole.style.opacity = L > 0.004 ? "1" : "0";
     pl.sh.style.opacity = (0.95 * L).toFixed(3); pl.sh.style.transform = "translate(" + (R * 0.055 * lift).toFixed(1) + "px," + (R * 0.085 * lift).toFixed(1) + "px) scale(" + (1.05 + 0.06 * lift).toFixed(3) + ")";
     pl.rim.style.opacity = (L * (0.45 + 0.55 * plBass + 0.1 * Math.sin(now / 420))).toFixed(3);
