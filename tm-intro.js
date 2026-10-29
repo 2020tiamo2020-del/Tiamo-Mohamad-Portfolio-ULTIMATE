@@ -441,12 +441,15 @@
     pl.root.style.perspective = (R * 5.2).toFixed(0) + "px"; pl.root.style.perspectiveOrigin = (G[0].x * S).toFixed(1) + "px " + (G[0].y * S).toFixed(1) + "px";
     pl.root.style.transformOrigin = (G[0].x * S).toFixed(1) + "px " + (G[0].y * S).toFixed(1) + "px";
   };
-  let plP = 0, plHov = 0, plHovT = 0, plBass = 0, plNx = 0, plNy = 0, plTx = 0, plTy = 0;
+  let plTeaserDone = false, plTeaserUntil = 0, plP = 0, plHov = 0, plHovT = 0, plBass = 0, plNx = 0, plNy = 0, plTx = 0, plTy = 0;
   /* a clicking step: quick snap with a little overshoot, then a pause -- the "tk" of a mechanism */
   const tk = (x, n) => { x = clamp(x, 0, 1); const v = x * n, i = Math.floor(v), f = v - i, e = f < 0.42 ? easeOutBack(f / 0.42) : 1; return Math.min(1.04, (i + e) / n); };
   const stepPlayer = (now, dt) => {
     if (!pl) return;
-    const M = window.__tmMusic || {}, target = M.playing ? 1 : 0;
+    const M = window.__tmMusic || {};
+    /* one-time teaser: when the entrance is over, the lock opens and closes once by itself, so a visitor sees that the medallion is a player */
+    if (hintGo && !plTeaserDone && !reduce) { plTeaserDone = true; plTeaserUntil = now + 4600; }
+    const target = (M.playing || now < plTeaserUntil) ? 1 : 0;
     if (reduce) plP = target; else { const sp = dt / (target ? 3300 : 2700); plP = target > plP ? Math.min(1, plP + sp) : Math.max(0, plP - sp); }
     plHov += (plHovT - plHov) * (1 - Math.exp(-dt / 160)); plNx += (plTx - plNx) * (1 - Math.exp(-dt / 180)); plNy += (plTy - plNy) * (1 - Math.exp(-dt / 180));
     const d = M.data; let b = 0; if (M.playing && d && d.length > 2) b = Math.min(1, (d[0] + d[1] + d[2]) / (3 * 200)); plBass += (b - plBass) * (1 - Math.exp(-dt / 90));

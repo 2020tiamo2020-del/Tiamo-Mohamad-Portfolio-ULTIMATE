@@ -109,7 +109,7 @@ body.tm-playing .tm-progress{animation:tmPulse 1.2s ease-in-out infinite}
 [dir=rtl] .toast::after{transform-origin:100% 50%}
 .toast.show::after{animation:tmCount var(--tm-dur,3400ms) linear forwards}
 @keyframes tmCount{from{transform:scaleX(1)}to{transform:scaleX(0)}}
-@keyframes tmIconPop{from{scale:.2;rotate:-70deg;opacity:0}60%{scale:1.25;rotate:12deg;opacity:1}to{scale:1;rotate:0}}
+@keyframes tmIconPop{from{scale:.2;rotate:-70deg;opacity:0}60%{scale:1.25;rotate:12deg;opacity:1}to{scale:1;rotate:0deg}}
 @keyframes tmTxt{from{opacity:0;translate:0 8px;filter:blur(5px)}}
 .toast.show .toast-icon{animation:tmIconPop .85s .18s var(--tm-spring) backwards}
 .toast.show .toast-title{animation:tmTxt .6s .26s var(--tm-ease) backwards}
