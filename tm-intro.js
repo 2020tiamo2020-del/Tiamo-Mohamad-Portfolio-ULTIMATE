@@ -41,6 +41,7 @@
   /* artwork geometry: 1600x900 source; the medallion's outer ring is 469 px wide and centred at (802,446) */
   const IMG_W = 1600, IMG_H = 900, RING_D = 469, EMB_X = 802, EMB_Y = 446;
   const SRC = { alb: "images/intro-albedo.jpg?v=6", nor: "images/intro-normal.jpg?v=4", hei: "images/intro-height.jpg?v=6", cls: "images/intro-cavity.png?v=6", lz: "images/intro-laser.png?v=7" };
+  const INTRO_GLOWS = true;      /* false = the intro exactly as before (no coloured stone glows, no tiny dots) */
   const NMK = 10;
   const GW = 192, GH = 108;                      /* mist-field resolution */
 
@@ -63,10 +64,10 @@
     "float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);",
     " return mix(mix(hash(i),hash(i+vec2(1.0,0.0)),f.x),mix(hash(i+vec2(0.0,1.0)),hash(i+vec2(1.0,1.0)),f.x),f.y);}",
     "float fbm(vec2 p){float a=0.5,s=0.0;for(int i=0;i<3;i++){s+=a*noise(p);p*=2.03;a*=0.5;}return s;}",
-    /* marker palette: turquoise / green / soft pink / amber / violet */
-    "vec3 mkCol(float i){float k=mod(i,5.0);",
-    " if(k<0.5)return vec3(0.08,0.95,0.86); if(k<1.5)return vec3(0.38,1.0,0.48); if(k<2.5)return vec3(1.0,0.46,0.78);",
-    " if(k<3.5)return vec3(1.0,0.62,0.22); return vec3(0.62,0.45,1.0);}",
+    /* glow palette (reference picture): 0 green / 1 purple / 2 orange / 3 pale blue */
+    "vec3 mkCol(float i){float k=mod(i,4.0);",
+    " if(k<0.5)return vec3(0.22,1.0,0.30); if(k<1.5)return vec3(0.62,0.28,1.0); if(k<2.5)return vec3(1.0,0.58,0.12);",
+    " return vec3(0.62,0.78,1.0);}",
     "void shade(vec2 p,out vec3 col,out float lum){",
     /* pass 1: height at uniform zoom, so nearer (taller) stone magnifies more = real dolly parallax */
     " vec2 q=uZc+(p-uZc)/(1.0+uZoom);",                       /* the camera push is a pure, even zoom: the relief never swims or stretches */
@@ -109,23 +110,24 @@
     "  vec3 fogC=vec3(0.012,0.045,0.095)+vec3(0.02,0.10,0.22)*under*uGlow*(0.35+0.6*m);",
     "  float fk=clamp(fog*(0.26+0.55*low),0.0,1.0)*0.80;",
     "  col=col*(1.0-fk*0.55)+fogC*fk;",
-    /* coloured point lights: they wake up when the mist reaches them */
+    /* coloured glows that come OUT of the rock: the stone patch itself shines and breathes, the mist wakes it up even more */
     "  for(int i=0;i<" + NMK + ";i++){",
     "   vec4 mk=uM[i];",
     "   if(mk.z>0.0&&uMk>0.001){",
     "    vec2 mp=uRect.xy+mk.xy*uRect.zw;",
     "    float r=mk.z*uRing;",
     "    vec2 dv=mp-q;float d=length(dv);",
-    "    float fl=pow(max(0.0,sin(t*(0.55+0.5*fract(mk.w*3.7))+mk.w*40.0)),6.0);",
+    "    float ci=floor(mk.w),ph=fract(mk.w);",
+    "    float br=0.5+0.5*sin(t*(0.5+0.35*ph)+ph*40.0);",
     "    float near=texture2D(uFld,mk.xy).r;",
-    "    float k=(0.14+0.55*fl+1.1*smoothstep(0.05,0.5,near))*uMk;",
-    "    vec3 c=mkCol(float(i));",
-    "    float a=1.0-clamp(d/(r*3.4),0.0,1.0);a*=a;",
+    "    float k=(0.40+0.95*br*br+1.1*smoothstep(0.05,0.5,near))*uMk;",
+    "    vec3 c=mkCol(ci);",
+    "    float a=1.0-clamp(d/(r*3.2),0.0,1.0);a*=a;",
     "    vec3 ld=normalize(vec3(dv/(r*2.2),0.7));",
     "    float dif=max(dot(n,ld),0.0);",
-    "    col+=c*ac*(0.9+2.6*dif)*a*k*1.9;",
-    "    col+=c*exp(-d*d/(r*r*0.05))*k*1.5;",
-    "    col+=c*exp(-d/(r*1.5))*0.20*k*(0.5+fog);",
+    "    col+=c*ac*(1.1+2.8*dif)*a*k*1.7;",
+    "    col+=c*exp(-d*d/(r*r*0.38))*k*0.26;",
+    "    col+=c*exp(-d/(r*1.7))*0.11*k*(0.5+fog);",
     "   }",
     "  }",
     /* music: EVERY carved hollow glows with the spectrum band that matches its size.
@@ -368,11 +370,13 @@
       if (list.some((m) => Math.hypot(m.x - px, m.y - py) < R0 * 0.55)) continue;
       list.push({ x: px, y: py });
     }
+    /* positions + colours come from the reference picture (home-bg.jpg): green / purple / orange / pale blue glows on the big stones */
+    const GL = [[0.299, 0.090, 1], [0.639, 0.046, 3], [0.764, 0.101, 2], [0.785, 0.281, 0], [0.181, 0.539, 0], [0.665, 0.676, 1], [0.267, 0.762, 3], [0.153, 0.842, 2]];
     for (let i = 0; i < NMK; i++) {
-      const m = list[i];
-      markers[i*4] = m ? m.x / IMG_W : 0.5; markers[i*4+1] = m ? m.y / IMG_H : 0.5;
-      markers[i*4+2] = m ? 0.040 + rand() * 0.050 : 0;      /* radius in ring units (0 = off) */
-      markers[i*4+3] = rand();                              /* flash phase */
+      const m = GL[i];
+      markers[i*4] = m ? m[0] : 0.5; markers[i*4+1] = m ? m[1] : 0.5;
+      markers[i*4+2] = m ? 0.125 : 0;                              /* radius in ring units (0 = off) */
+      markers[i*4+3] = m ? m[2] + 0.07 + ((i * 0.6180339) % 1) * 0.9 : 0;     /* colour index + breathing phase */
     }
   };
 
@@ -610,6 +614,29 @@
   let amb = 0.55, inten = 1.1, zoomV = 0, opac = 1, alphaMode = 1, glow = 0, mk = 0, flood = 0;
   const ZOOM_MAX = 2.4, PUSH = 1500;
 
+  /* ---- tiny far-away coloured dots in the dark gaps next to the walls (positions from the reference picture) ---- */
+  const DOTS = [[0.3768,0.1096,2],[0.3513,0.1282,2],[0.3669,0.1308,2],[0.4788,0.1073,0],[0.489,0.1177,0],[0.489,0.1342,0],[0.6879,0.2084,1],[0.2701,0.2242,0],[0.2574,0.2381,0],[0.2698,0.2631,0],[0.2564,0.2746,0],[0.7168,0.2666,1],[0.6405,0.3245,1],[0.6541,0.3597,1],[0.6664,0.3952,1],[0.7616,0.3644,1],[0.7746,0.3854,1],[0.3224,0.4023,0],[0.322,0.4634,0],[0.3146,0.4813,0],[0.1995,0.4102,0],[0.0875,0.4744,3],[0.0669,0.4929,3],[0.8083,0.4747,1],[0.7864,0.5097,1],[0.7905,0.532,1],[0.8222,0.5312,1],[0.7831,0.5416,1],[0.7969,0.5671,1],[0.1617,0.4964,3],[0.051,0.5566,0],[0.0601,0.6041,2],[0.0731,0.6452,2],[0.1715,0.5746,0],[0.6786,0.6041,2],[0.6703,0.6276,2],[0.6774,0.6345,2],[0.7905,0.6745,0],[0.2291,0.7361,2],[0.2125,0.7561,2],[0.6792,0.8757,0],[0.7028,0.8777,0],[0.6823,0.9142,0],[0.6514,0.9142,2],[0.3887,0.9548,0],[0.449,0.9654,2]];
+  const DOT_RGB = ["90,255,120", "175,100,255", "255,165,55", "150,195,255"];
+  let dotCv = null, dotCtx = null;
+  const drawDots = (sec, amt) => {
+    if (!cv.parentNode) return;
+    if (!dotCv) { dotCv = document.createElement("canvas"); dotCv.style.cssText = "position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none"; cv.parentNode.appendChild(dotCv); dotCtx = dotCv.getContext("2d"); }
+    if (dotCv.width !== cv.width || dotCv.height !== cv.height) { dotCv.width = cv.width; dotCv.height = cv.height; }
+    const c = dotCtx, k = cv.width / Math.max(1, W), z = 1 + zoomV;
+    c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, dotCv.width, dotCv.height); c.setTransform(k, 0, 0, k, 0, 0);
+    c.globalCompositeOperation = "lighter";
+    const base = clamp(R / 250, 0.6, 1.5);
+    for (let i = 0; i < DOTS.length; i++) {
+      const d = DOTS[i], mx = rect[0] + d[0] * rect[2], my = rect[1] + d[1] * rect[3];
+      const x = zc[0] + (mx - zc[0]) * z, y = zc[1] + (my - zc[1]) * z;
+      if (x < -8 || x > W + 8 || y < -8 || y > H + 8) continue;
+      const br = 0.55 + 0.45 * Math.sin(sec * (0.9 + (i % 5) * 0.13) + i * 1.7);
+      const a = amt * (0.35 + 0.65 * br), r = (0.8 + (i % 3) * 0.35) * base * Math.pow(z, 0.8);
+      c.fillStyle = "rgba(" + DOT_RGB[d[2]] + "," + (0.12 * a).toFixed(3) + ")"; c.beginPath(); c.arc(x, y, r * 3.6, 0, 6.2832); c.fill();
+      c.fillStyle = "rgba(" + DOT_RGB[d[2]] + "," + Math.min(1, 0.95 * a).toFixed(3) + ")"; c.beginPath(); c.arc(x, y, r, 0, 6.2832); c.fill();
+    }
+    c.globalCompositeOperation = "source-over";
+  };
   const draw = (now) => {
     const sec = (now - t0) / 1000;
     /* camera tilt: pointer when present, otherwise a slow breathing sway */
@@ -630,7 +657,7 @@
     gl.uniform4f(U.uRect, rect[0], rect[1], rect[2], rect[3]);
     gl.uniform1f(U.uZoom, zoomV); gl.uniform1f(U.uAmb, amb); gl.uniform1f(U.uInt, inten);
     gl.uniform1f(U.uTime, sec); gl.uniform1f(U.uAlphaMode, alphaMode); gl.uniform1f(U.uOpacity, opac);
-    gl.uniform1f(U.uRing, R); gl.uniform1f(U.uMk, 0); gl.uniform1f(U.uGlow, glow); gl.uniform1f(U.uFlood, 0);
+    gl.uniform1f(U.uRing, R); gl.uniform1f(U.uMk, INTRO_GLOWS && mode === "intro" ? easeOut(sec / 4.5) : 0); gl.uniform1f(U.uGlow, glow); gl.uniform1f(U.uFlood, 0);
     gl.uniform4fv(U.uM, markers);
     gl.activeTexture(gl.TEXTURE4); gl.bindTexture(gl.TEXTURE_2D, spTex);
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 64, 1, gl.LUMINANCE, gl.UNSIGNED_BYTE, spBytes);
@@ -647,6 +674,7 @@
     gl.uniform2f(PU.uRes, W, H); gl.uniform2f(PU.uZc, zc[0], zc[1]); gl.uniform2f(PU.uTilt, tilt[0], tilt[1]);
     gl.uniform1f(PU.uZoom, zoomV); gl.uniform1f(PU.uTime, sec); gl.uniform1f(PU.uDpr, dpr); gl.uniform1f(PU.uAlphaMode, alphaMode);
     gl.drawArrays(gl.POINTS, 0, mode === "home" ? ((popV > 0.02 || litV > 0.02) ? 0 : 70) : PN);
+    if (INTRO_GLOWS && mode === "intro") drawDots(sec, easeOut(sec / 4.5));
   };
 
   /* The carved medallion is the player: it follows the music state published by script.js (window.__tmMusic) */
@@ -714,8 +742,7 @@
   const setMsg = (pct) => {
     let i = 0; for (let k = 0; k < MSG.length; k++) if (pct >= MSG[k][0]) i = k;
     if (i === msgI || !msgEl) return;
-    msgI = i; msgEl.setAttribute("data-en", MSG[i][1]); msgEl.setAttribute("data-ar", MSG[i][2]);
-    msgEl.textContent = isAr() ? MSG[i][2] : MSG[i][1];
+    msgI = i; msgEl.textContent = MSG[i][1];                     /* the gate is always the English design, also for Arabic visitors */
   };
   const frame = (now) => {
     if (!alive) return;

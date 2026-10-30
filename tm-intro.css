@@ -10,7 +10,7 @@
   --tm-ink: #e8f1ff; --tm-mute: rgba(150,186,236,.56); --tm-line: rgba(140,186,255,.30); --tm-glow: 96,156,255;
   background: radial-gradient(ellipse 90% 80% at 50% 44%, #0a1226 0%, #060a16 58%, #03050b 100%); touch-action: none;
 }
-[dir="rtl"] .enter-gate.tm-intro { --tm-title: Cairo, Inter, sans-serif; --tm-ui: Cairo, Inter, sans-serif; }
+/* (removed: the Arabic gate no longer swaps to Cairo, it keeps the English fonts) */
 body.gate-locked .tm-intro, body.gate-locked .tm-intro * { cursor: default !important; }
 body.gate-locked .tm-intro .tm-enter, body.gate-locked .tm-intro .tm-enter * { cursor: pointer !important; }
 .tm-intro .st-load { display: none !important; }            /* the older % loader is replaced by this one */
@@ -32,8 +32,6 @@ body.gate-locked .tm-intro .tm-enter, body.gate-locked .tm-intro .tm-enter * { c
 .tm-intro-tag em { font-style: normal; margin-right: -.6em; }
 .tm-intro-tag i { display: block; width: clamp(26px, 5vw, 58px); height: 1px; background: linear-gradient(90deg, transparent, var(--tm-line)); }
 .tm-intro-tag i:last-child { transform: scaleX(-1); }
-[dir="rtl"] .tm-intro-name { letter-spacing: .04em; margin-right: 0; }
-[dir="rtl"] .tm-intro-tag { letter-spacing: .08em; } [dir="rtl"] .tm-intro-tag em { margin-right: 0; }
 
 /* ---- letters (glitch engine in tm-intro.js; .tm-split is added only when the letters really are split) ---- */
 .tm-split .tm-ch { position: relative; display: inline-block; text-align: center; opacity: 0; }
@@ -58,7 +56,6 @@ body.gate-locked .tm-intro .tm-enter, body.gate-locked .tm-intro .tm-enter * { c
 .tm-load-bar b { position: absolute; left: 0; top: -.5px; height: 2px; width: 0; background: linear-gradient(90deg, rgba(90,150,255,.15), #a9d2ff); box-shadow: 0 0 12px rgba(130,190,255,.85); }
 .tm-load-bar b::after { content: ""; position: absolute; right: -2px; top: -2px; width: 5px; height: 6px; background: #eaf4ff; box-shadow: 0 0 14px 3px rgba(150,205,255,.9); border-radius: 1px; }
 .tm-load-label { font-family: var(--tm-ui); font-size: 8.5px; letter-spacing: .55em; margin-right: -.55em; text-transform: uppercase; color: var(--tm-mute); min-height: 1.2em; }
-[dir="rtl"] .tm-load-label { letter-spacing: .08em; margin-right: 0; }
 .tm-intro.is-full .tm-load-num { color: #fff; text-shadow: 0 0 26px rgba(150,205,255,.9); }
 .tm-intro.is-ready .tm-intro-load { opacity: 0; transform: translateY(-10px) scale(.98); filter: blur(5px); }
 
@@ -80,7 +77,6 @@ body.gate-locked .tm-intro .tm-enter, body.gate-locked .tm-intro .tm-enter * { c
 .tm-c.bl { left: -1px; bottom: -1px; border-left-width: 1px; border-bottom-width: 1px; } .tm-c.br { right: -1px; bottom: -1px; border-right-width: 1px; border-bottom-width: 1px; }
 .tm-enter-word { font-family: var(--tm-ui); font-size: 14px; line-height: 1; letter-spacing: .62em; margin-right: -.62em; text-transform: uppercase; color: var(--tm-ink); text-shadow: 0 0 16px rgba(var(--tm-glow), .5); transition: text-shadow .3s; }
 .tm-enter-sub { display: flex; align-items: center; gap: 10px; font-family: var(--tm-ui); font-size: 8px; letter-spacing: .46em; margin-right: -.46em; text-transform: uppercase; color: var(--tm-mute); transition: color .3s; }
-[dir="rtl"] .tm-enter-word, [dir="rtl"] .tm-enter-sub { letter-spacing: .08em; margin-right: 0; }
 .tm-eq { display: inline-flex; align-items: flex-end; gap: 2px; height: 9px; }
 .tm-eq b { display: block; width: 2px; height: 3px; background: currentColor; opacity: .85; animation: tmEq 1.15s ease-in-out infinite; }
 .tm-eq b:nth-child(2) { animation-delay: -.3s; } .tm-eq b:nth-child(3) { animation-delay: -.7s; } .tm-eq b:nth-child(4) { animation-delay: -.5s; } .tm-eq b:nth-child(5) { animation-delay: -.9s; }
@@ -226,3 +222,6 @@ html[dir="rtl"] .tm-hero-cv { -webkit-mask-image: radial-gradient(ellipse 60% 66
 /* v10 · the cavity under the lifted disc is the same stone, in shadow (not a black hole); 3D dust canvas behind the content */
 .tmx-hole { filter: brightness(.42) saturate(.85); }
 .tmx-dust { position: absolute; left: 0; top: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
+
+/* v11 · the gate is the English design for everybody (Arabic visitors get exactly the same type, spacing, loading and name animation) */
+#enterGate.tm-intro, #enterGate.tm-intro * { direction: ltr; }
