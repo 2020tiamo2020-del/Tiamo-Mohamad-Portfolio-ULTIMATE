@@ -42,7 +42,7 @@
   const IMG_W = 1600, IMG_H = 900, RING_D = 469, EMB_X = 802, EMB_Y = 446;
   const SRC = { alb: "images/intro-albedo.jpg?v=6", nor: "images/intro-normal.jpg?v=4", hei: "images/intro-height.jpg?v=6", cls: "images/intro-cavity.png?v=6", lz: "images/intro-laser.png?v=7" };
   const INTRO_GLOWS = true;      /* false = the intro exactly as before (no coloured stone glows, no tiny dots) */
-  const NMK = 10;
+  const NMK = 12;
   const GW = 192, GH = 108;                      /* mist-field resolution */
 
   gate.classList.add("tm-js");
@@ -117,17 +117,17 @@
     "    vec2 mp=uRect.xy+mk.xy*uRect.zw;",
     "    float r=mk.z*uRing;",
     "    vec2 dv=mp-q;float d=length(dv);",
-    "    float ci=floor(mk.w),ph=fract(mk.w);",
+    "    float cf=floor(mk.w),ph=fract(mk.w);float ci=mod(cf,10.0);float rad=step(9.5,cf);",
     "    float br=0.5+0.5*sin(t*(0.5+0.35*ph)+ph*40.0);",
     "    float near=texture2D(uFld,mk.xy).r;",
-    "    float k=(0.40+0.95*br*br+1.1*smoothstep(0.05,0.5,near))*uMk;",
+    "    float k=(0.52+1.15*br*br+1.2*smoothstep(0.05,0.5,near))*uMk*(1.0+0.35*rad);",
     "    vec3 c=mkCol(ci);",
     "    float a=1.0-clamp(d/(r*3.2),0.0,1.0);a*=a;",
     "    vec3 ld=normalize(vec3(dv/(r*2.2),0.7));",
     "    float dif=max(dot(n,ld),0.0);",
-    "    col+=c*ac*(1.1+2.8*dif)*a*k*1.7;",
-    "    col+=c*exp(-d*d/(r*r*0.38))*k*0.26;",
-    "    col+=c*exp(-d/(r*1.7))*0.11*k*(0.5+fog);",
+    "    col+=c*(ac+0.07*rad)*(1.1+2.8*dif)*a*k*2.0;",
+    "    col+=c*exp(-d*d/(r*r*0.38))*k*(0.30+0.16*rad);",
+    "    col+=c*exp(-d/(r*1.7))*(0.13+0.07*rad)*k*(0.5+fog);",
     "   }",
     "  }",
     /* music: EVERY carved hollow glows with the spectrum band that matches its size.
@@ -371,11 +371,11 @@
       list.push({ x: px, y: py });
     }
     /* positions + colours come from the reference picture (home-bg.jpg): green / purple / orange / pale blue glows on the big stones */
-    const GL = [[0.299, 0.090, 1], [0.639, 0.046, 3], [0.764, 0.101, 2], [0.785, 0.281, 0], [0.181, 0.539, 0], [0.665, 0.676, 1], [0.267, 0.762, 3], [0.153, 0.842, 2]];
+    const GL = [[0.299, 0.090, 1], [0.639, 0.046, 3], [0.764, 0.101, 2], [0.785, 0.281, 0], [0.181, 0.539, 0], [0.665, 0.676, 1], [0.267, 0.762, 3], [0.153, 0.842, 2], [0.296, 0.313, 11], [0.698, 0.251, 12], [0.319, 0.652, 12]];
     for (let i = 0; i < NMK; i++) {
       const m = GL[i];
       markers[i*4] = m ? m[0] : 0.5; markers[i*4+1] = m ? m[1] : 0.5;
-      markers[i*4+2] = m ? 0.125 : 0;                              /* radius in ring units (0 = off) */
+      markers[i*4+2] = m ? (m[2] >= 10 ? 0.15 : 0.14) : 0;                              /* radius in ring units (0 = off) */
       markers[i*4+3] = m ? m[2] + 0.07 + ((i * 0.6180339) % 1) * 0.9 : 0;     /* colour index + breathing phase */
     }
   };
@@ -496,32 +496,64 @@
   let plTeaserDone = false, plTeaserUntil = 0, plP = 0, plHov = 0, plHovT = 0, plBass = 0, plNx = 0, plNy = 0, plTx = 0, plTy = 0;
   /* a clicking step: quick snap with a little overshoot, then a pause -- the "tk" of a mechanism */
   const tk = (x, n) => { x = clamp(x, 0, 1); const v = x * n, i = Math.floor(v), f = v - i, e = f < 0.42 ? easeOutBack(f / 0.42) : 1; return Math.min(1.04, (i + e) / n); };
+  /* ---- the mechanism sound (audio/1029.mp3, 4.62 s): 14 even ratchet clicks -> a few heavy clunks -> two final hits.
+     The animation is a pure function of the sound's own time, so it matches it click by click, and closing = the reversed sound + the reversed animation. ---- */
+  const SFX_T = 4.62;
+  const CLK = [0.05, 0.21, 0.36, 0.49, 0.63, 0.77, 0.92, 1.05, 1.2, 1.35, 1.49, 1.63, 1.77, 1.92];          /* ring clicks */
+  const LIFT = [[2.54, 0.30], [3.04, 0.35], [3.47, 0.35]];                                                   /* the disc is pushed up in 3 clunks */
+  const STRAIN = [2.28, 2.41, 2.70, 2.91];                                                                   /* small tremors before the clunks */
+  const snap = (ta, t0, dur) => easeOutBack((ta - t0) / dur);
+  let sfx = null, plDir = 0, plT = 0, plA = 0, plA0 = 0;
+  const sfxInit = () => {                                    /* called from the Enter click (a user gesture) so the sound is allowed */
+    if (sfx) return; sfx = { ctx: null, fwd: null, rev: null, src: null, gain: null };
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext; sfx.ctx = new AC(); sfx.gain = sfx.ctx.createGain(); sfx.gain.gain.value = 0.6; sfx.gain.connect(sfx.ctx.destination);
+      const load = (u) => fetch(u).then((r) => r.arrayBuffer()).then((b) => new Promise((ok, no) => sfx.ctx.decodeAudioData(b, ok, no)));
+      load("audio/1029.mp3?v=1").then((b) => { sfx.fwd = b; }).catch(() => {}); load("audio/1029-reverse.mp3?v=1").then((b) => { sfx.rev = b; }).catch(() => {});
+    } catch (_) { sfx.ctx = null; }
+  };
+  window.__tmSfxState = () => ({ ok: !!(sfx && sfx.ctx), fwd: !!(sfx && sfx.fwd), rev: !!(sfx && sfx.rev), state: sfx && sfx.ctx ? sfx.ctx.state : null, plT: plT, dir: plDir });
+  const sfxPlay = (dir, ta) => {
+    if (!sfx || !sfx.ctx) return;
+    try {
+      if (sfx.src) { try { sfx.src.stop(); } catch (_) {} sfx.src = null; }
+      const buf = dir > 0 ? sfx.fwd : sfx.rev; if (!buf) return;
+      if (sfx.ctx.state === "suspended") sfx.ctx.resume();
+      const off = clamp(dir > 0 ? ta : SFX_T - ta, 0, buf.duration - 0.02), src = sfx.ctx.createBufferSource();
+      src.buffer = buf; src.connect(sfx.gain); src.start(0, off); sfx.src = src;
+    } catch (_) {}
+  };
   const stepPlayer = (now, dt) => {
     if (!pl) return;
     const M = window.__tmMusic || {};
     /* one-time teaser: when the entrance is over, the lock opens and closes once by itself, so a visitor sees that the medallion is a player */
-    if (hintGo && !plTeaserDone && !reduce) { plTeaserDone = true; plTeaserUntil = now + 4600; }
+    if (hintGo && !plTeaserDone && !reduce) { plTeaserDone = true; plTeaserUntil = now + SFX_T * 1000 + 1300; }
     const target = (M.playing || now < plTeaserUntil) ? 1 : 0;
-    if (reduce) plP = target; else { const sp = dt / (target ? 3300 : 2700); plP = target > plP ? Math.min(1, plP + sp) : Math.max(0, plP - sp); }
+    if (target !== plDir) { plDir = target; plA = now; plA0 = plT; if (!reduce && (target || plT > 0)) sfxPlay(target ? 1 : -1, plT); }
+    plT = reduce ? target * SFX_T : clamp(plA0 + (target ? 1 : -1) * (now - plA) / 1000, 0, SFX_T);       /* wall-clock, exactly like the sound: never drifts, even on a slow frame rate */
     plHov += (plHovT - plHov) * (1 - Math.exp(-dt / 160)); plNx += (plTx - plNx) * (1 - Math.exp(-dt / 180)); plNy += (plTy - plNy) * (1 - Math.exp(-dt / 180));
     const d = M.data; let b = 0; if (M.playing && d && d.length > 2) b = Math.min(1, (d[0] + d[1] + d[2]) / (3 * 200)); plBass += (b - plBass) * (1 - Math.exp(-dt / 90));
-    const rp = clamp(plP / 0.55, 0, 1), cp = clamp((plP - 0.45) / 0.55, 0, 1);       /* rings first, then the disc (and back in the opposite order) */
-    const aC = tk(rp, 8) * 240, aB = -tk(rp, 10) * 300;                               /* counter-rotation, different click counts */
-    /* no tilt: the rings only turn flat on their own axis */
+    const ta = plT;
+    let aC = 0, aB = 0;                                                         /* the two rings turn against each other, click by click */
+    for (let i = 0; i < CLK.length; i++) { const v = 30 * snap(ta, CLK[i], 0.09); if (i % 2 === 0) aC += v; else aB -= v; }
     pl.ringC.style.transform = "rotateZ(" + aC.toFixed(2) + "deg)";
     pl.ringB.style.transform = "rotateZ(" + aB.toFixed(2) + "deg)";
-    const lift = tk(cp, 3), L = Math.min(1, lift);
-    const sc = 1 + 0.038 * lift + 0.02 * plHov + 0.01 * plBass * L;       /* the disc rises (shadow + parallax), it does not swallow the rings that are its key */
-    pl.g.style.transform = "translate3d(0," + (-R * 0.035 * lift).toFixed(2) + "px," + (R * 0.05 * lift).toFixed(1) + "px) scale(" + sc.toFixed(4) + ")";
-    const lzI = clamp((lift - 0.3) / 0.7, 0, 1), pulse = 0.72 + 0.28 * Math.sin(now / 380) + 0.55 * plBass;
+    let lift = 0; for (const [t0, w] of LIFT) lift += w * snap(ta, t0, 0.14);
+    if (ta > 3.77) lift += 0.022 * Math.sin((ta - 3.77) * 42) * Math.exp(-(ta - 3.77) * 13);   /* the last hit: a tiny settle */
+    lift = clamp(lift, 0, 1.06); const L = Math.min(1, lift);
+    let jx = 0, jy = 0; for (const t0 of STRAIN) { const e = ta - t0; if (e > 0 && e < 0.2) { const a = Math.exp(-e * 38); jx += 0.9 * Math.sin(e * 120) * a; jy += 0.6 * Math.cos(e * 95) * a; } }
+    const sc = 1 + 0.038 * L + 0.02 * plHov + 0.01 * plBass * L;
+    pl.g.style.transform = "translate3d(" + jx.toFixed(2) + "px," + (-R * 0.035 * lift + jy).toFixed(2) + "px," + (R * 0.05 * lift).toFixed(1) + "px) scale(" + sc.toFixed(4) + ")";
+    const lzI = clamp((L - 0.3) / 0.7, 0, 1), pulse = 0.72 + 0.28 * Math.sin(now / 380) + 0.55 * plBass;
     pl.laser.style.opacity = (lzI * Math.min(1, pulse)).toFixed(3);
     pl.lr1.style.opacity = pl.lr2.style.opacity = (L * Math.min(1, 0.55 + 0.5 * plBass + 0.12 * Math.sin(now / 520))).toFixed(3);
     pl.core.style.filter = L > 0.01 ? "brightness(" + (1 - 0.42 * lzI + 0.08 * plBass).toFixed(3) + ") saturate(" + (1 - 0.15 * lzI).toFixed(2) + ")" : "none";
     pl.hole.style.opacity = L > 0.004 ? "1" : "0";
-    pl.sh.style.opacity = (0.6 * L).toFixed(3); pl.sh.style.transform = "translate(" + (R * 0.055 * lift).toFixed(1) + "px," + (R * 0.085 * lift).toFixed(1) + "px) scale(" + (1.05 + 0.06 * lift).toFixed(3) + ")";
+    pl.sh.style.opacity = (0.6 * L).toFixed(3); pl.sh.style.transform = "translate(" + (R * 0.055 * L).toFixed(1) + "px," + (R * 0.085 * L).toFixed(1) + "px) scale(" + (1.05 + 0.06 * L).toFixed(3) + ")";
     pl.rim.style.opacity = (L * (0.45 + 0.55 * plBass + 0.1 * Math.sin(now / 420))).toFixed(3);
     pl.root.style.transform = "scale(" + (1 + 0.012 * plHov).toFixed(4) + ")";
   };
+
 
   const layout = () => {
     if (mode === "intro") {
@@ -618,24 +650,44 @@
   const DOTS = [[0.3768,0.1096,2],[0.3513,0.1282,2],[0.3669,0.1308,2],[0.4788,0.1073,0],[0.489,0.1177,0],[0.489,0.1342,0],[0.6879,0.2084,1],[0.2701,0.2242,0],[0.2574,0.2381,0],[0.2698,0.2631,0],[0.2564,0.2746,0],[0.7168,0.2666,1],[0.6405,0.3245,1],[0.6541,0.3597,1],[0.6664,0.3952,1],[0.7616,0.3644,1],[0.7746,0.3854,1],[0.3224,0.4023,0],[0.322,0.4634,0],[0.3146,0.4813,0],[0.1995,0.4102,0],[0.0875,0.4744,3],[0.0669,0.4929,3],[0.8083,0.4747,1],[0.7864,0.5097,1],[0.7905,0.532,1],[0.8222,0.5312,1],[0.7831,0.5416,1],[0.7969,0.5671,1],[0.1617,0.4964,3],[0.051,0.5566,0],[0.0601,0.6041,2],[0.0731,0.6452,2],[0.1715,0.5746,0],[0.6786,0.6041,2],[0.6703,0.6276,2],[0.6774,0.6345,2],[0.7905,0.6745,0],[0.2291,0.7361,2],[0.2125,0.7561,2],[0.6792,0.8757,0],[0.7028,0.8777,0],[0.6823,0.9142,0],[0.6514,0.9142,2],[0.3887,0.9548,0],[0.449,0.9654,2]];
   const DOT_RGB = ["90,255,120", "175,100,255", "255,165,55", "150,195,255"];
   let dotCv = null, dotCtx = null;
-  const drawDots = (sec, amt) => {
+  const LZ_UV = { x: 698 / 1672, y: 350 / 941, w: 277 / 1672, h: 225 / 941 };
+  let lzImg = null, lzIn = false, lzT0 = 0, lzV = 0, lzLast = 0;
+  const drawLaser = (c, k, z, now) => {
+    if (!lzImg) { lzImg = new Image(); lzImg.decoding = "async"; lzImg.src = "images/tm-laser.webp?v=2"; }
+    const dt = Math.min(80, lzLast ? now - lzLast : 16); lzLast = now;
+    const x0 = zc[0] + (rect[0] + LZ_UV.x * rect[2] - zc[0]) * z, y0 = zc[1] + (rect[1] + LZ_UV.y * rect[3] - zc[1]) * z, w = LZ_UV.w * rect[2] * z, h = LZ_UV.h * rect[3] * z;
+    const inside = moved && px > x0 - w * 0.06 && px < x0 + w * 1.06 && py > y0 - h * 0.08 && py < y0 + h * 1.08;
+    if (inside && !lzIn) { lzIn = true; lzT0 = now; } else if (!inside) lzIn = false;
+    const want = (lzIn && now - lzT0 < 1900) ? 1 : 0;                               /* touch: lights up, holds a moment, goes dark again */
+    lzV += (want - lzV) * (1 - Math.exp(-dt / (want > lzV ? 130 : 650)));
+    let en = 0; if (entering) { const e = now - enterT; en = e < 250 ? e / 250 : e < 1700 ? 1 : e < 3000 ? 1 - (e - 1700) / 1300 : 0; if (e < 700) en *= 1 + 0.25 * Math.sin(e / 700 * Math.PI); }
+    const I = Math.max(lzV, en) * (0.92 + 0.08 * Math.sin(now / 260));
+    if (I < 0.01 || !lzImg.complete || !lzImg.naturalWidth) return;
+    c.save(); c.globalCompositeOperation = "lighter";
+    c.shadowColor = "rgba(60,150,255," + Math.min(1, 0.95 * I).toFixed(3) + ")"; c.shadowBlur = 16 * k * Math.min(1.4, z);
+    c.globalAlpha = Math.min(1, I); c.drawImage(lzImg, x0, y0, w, h);
+    c.shadowBlur = 0; c.globalAlpha = Math.min(1, 0.55 * I); c.drawImage(lzImg, x0, y0, w, h);
+    c.restore();
+  };
+  const drawDots = (sec, amt, now) => {
     if (!cv.parentNode) return;
     if (!dotCv) { dotCv = document.createElement("canvas"); dotCv.style.cssText = "position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none"; cv.parentNode.appendChild(dotCv); dotCtx = dotCv.getContext("2d"); }
     if (dotCv.width !== cv.width || dotCv.height !== cv.height) { dotCv.width = cv.width; dotCv.height = cv.height; }
     const c = dotCtx, k = cv.width / Math.max(1, W), z = 1 + zoomV;
     c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, dotCv.width, dotCv.height); c.setTransform(k, 0, 0, k, 0, 0);
     c.globalCompositeOperation = "lighter";
-    const base = clamp(R / 250, 0.6, 1.5);
+    const base = clamp(R / 250, 0.7, 1.7);
     for (let i = 0; i < DOTS.length; i++) {
       const d = DOTS[i], mx = rect[0] + d[0] * rect[2], my = rect[1] + d[1] * rect[3];
       const x = zc[0] + (mx - zc[0]) * z, y = zc[1] + (my - zc[1]) * z;
       if (x < -8 || x > W + 8 || y < -8 || y > H + 8) continue;
       const br = 0.55 + 0.45 * Math.sin(sec * (0.9 + (i % 5) * 0.13) + i * 1.7);
-      const a = amt * (0.35 + 0.65 * br), r = (0.8 + (i % 3) * 0.35) * base * Math.pow(z, 0.8);
-      c.fillStyle = "rgba(" + DOT_RGB[d[2]] + "," + (0.12 * a).toFixed(3) + ")"; c.beginPath(); c.arc(x, y, r * 3.6, 0, 6.2832); c.fill();
-      c.fillStyle = "rgba(" + DOT_RGB[d[2]] + "," + Math.min(1, 0.95 * a).toFixed(3) + ")"; c.beginPath(); c.arc(x, y, r, 0, 6.2832); c.fill();
+      const a = amt * (0.42 + 0.7 * br), r = (1.05 + (i % 3) * 0.4) * base * Math.pow(z, 0.8);
+      c.fillStyle = "rgba(" + DOT_RGB[d[2]] + "," + (0.17 * a).toFixed(3) + ")"; c.beginPath(); c.arc(x, y, r * 3.6, 0, 6.2832); c.fill();
+      c.fillStyle = "rgba(" + DOT_RGB[d[2]] + "," + Math.min(1, 1.15 * a).toFixed(3) + ")"; c.beginPath(); c.arc(x, y, r, 0, 6.2832); c.fill();
     }
     c.globalCompositeOperation = "source-over";
+    drawLaser(c, k, z, now);
   };
   const draw = (now) => {
     const sec = (now - t0) / 1000;
@@ -674,7 +726,7 @@
     gl.uniform2f(PU.uRes, W, H); gl.uniform2f(PU.uZc, zc[0], zc[1]); gl.uniform2f(PU.uTilt, tilt[0], tilt[1]);
     gl.uniform1f(PU.uZoom, zoomV); gl.uniform1f(PU.uTime, sec); gl.uniform1f(PU.uDpr, dpr); gl.uniform1f(PU.uAlphaMode, alphaMode);
     gl.drawArrays(gl.POINTS, 0, mode === "home" ? ((popV > 0.02 || litV > 0.02) ? 0 : 70) : PN);
-    if (INTRO_GLOWS && mode === "intro") drawDots(sec, easeOut(sec / 4.5));
+    if (INTRO_GLOWS && mode === "intro") drawDots(sec, easeOut(sec / 4.5), now);
   };
 
   /* The carved medallion is the player: it follows the music state published by script.js (window.__tmMusic) */
@@ -894,7 +946,7 @@
 
   const enter = () => {
     if (entering || !ready) return;
-    entering = true; enterT = performance.now();
+    entering = true; enterT = performance.now(); sfxInit();
     window.__tmGoing = true;
     if (window.__tmMark) window.__tmMark();
     gate.classList.add("tm-go");
