@@ -1,0 +1,69 @@
+/* ==========================================================================
+   SECTION CUT · scroll transition between sections  (pairs with section-cut.js)
+   Same idea as the About background: the screen is re-cut through horizontal
+   strips in the site's violet / cyan, with the next section's name hitting the
+   screen in huge type. Never blocks the mouse wheel (pointer-events:none).
+   Sits under the header (z 30) so the menu stays visible.
+   Delete this file + section-cut.js to undo.
+   ========================================================================== */
+
+@property --sx-a{syntax:"<color>";inherits:true;initial-value:#7d2cff}
+@property --sx-b{syntax:"<color>";inherits:true;initial-value:#16d8ff}
+
+#sx{
+  position:fixed;inset:0;z-index:28;pointer-events:none;
+  visibility:hidden;overflow:hidden;
+  --sx-a:#7d2cff;--sx-b:#16d8ff;
+}
+#sx.run{visibility:visible}
+
+/* strips */
+#sx .sx-s{
+  position:absolute;left:0;width:100%;
+  transform:translate3d(-101%,0,0);
+  will-change:transform;
+  contain:layout paint;
+}
+/* odd strips: colour (violet -> cyan), even strips: deep dark with a neon edge  => the striped look of the reel */
+#sx .sx-s.c{background:linear-gradient(100deg,var(--sx-a) 0%,color-mix(in srgb,var(--sx-a) 55%,var(--sx-b)) 55%,var(--sx-b) 100%)}
+#sx .sx-s.d{background:linear-gradient(100deg,#07050f 0%,#120a24 70%,#07050f 100%)}
+/* bright leading line on the edge of each strip */
+#sx .sx-s::after{
+  content:"";position:absolute;top:0;bottom:0;width:3px;
+  background:#fff;box-shadow:0 0 14px 2px rgba(255,255,255,.75),0 0 34px 6px var(--sx-b);
+  opacity:.9;
+}
+#sx .sx-s.l::after{right:0}     /* strip travelling left -> right: bright edge on the right */
+#sx .sx-s.r::after{left:0}      /* strip travelling right -> left: bright edge on the left  */
+
+/* the name that hits the screen */
+#sx .sx-t{
+  position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:.1em;text-align:center;color:#fff;opacity:0;
+  font-weight:800;line-height:.95;text-transform:uppercase;
+  text-shadow:0 0 40px rgba(0,0,0,.45);
+  padding:0 4vw;
+}
+#sx .sx-n{
+  font-size:clamp(88px,20vw,300px);letter-spacing:-.04em;
+  color:transparent;-webkit-text-stroke:2px rgba(255,255,255,.9);
+  font-variant-numeric:tabular-nums;
+}
+#sx .sx-w{
+  font-size:clamp(30px,6.4vw,104px);letter-spacing:.02em;
+  max-width:100%;overflow-wrap:anywhere;
+}
+html[lang="ar"] #sx .sx-t{text-transform:none;letter-spacing:0}
+html[lang="ar"] #sx .sx-n{letter-spacing:0}
+html[lang="ar"] #sx .sx-w{letter-spacing:0;line-height:1.25}
+#sx .sx-n:empty{display:none}
+
+/* white blink at the moment of the cut */
+#sx .sx-f{position:absolute;inset:0;background:#fff;opacity:0}
+/* fine scan lines */
+#sx .sx-l2{position:absolute;inset:0;opacity:.12;mix-blend-mode:multiply;
+  background:repeating-linear-gradient(to bottom,#000 0 1px,transparent 1px 3px)}
+
+@media(max-width:900px){
+  #sx .sx-n{-webkit-text-stroke-width:1.5px}
+}

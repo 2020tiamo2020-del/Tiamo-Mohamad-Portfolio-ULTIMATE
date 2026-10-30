@@ -1,0 +1,84 @@
+/* ==========================================================================
+   ABOUT · "Cut" background  (pairs with about-cut.js)
+   Idea taken from the neon-bike reel: the subject stands still while the
+   background behind him is re-cut again and again through horizontal strips,
+   always in one colour family. Here: your own works, in violet / cyan tones.
+   Loads AFTER about-fx.css. Delete this file + about-cut.js to undo.
+   ========================================================================== */
+
+@property --abc-t1{syntax:"<color>";inherits:true;initial-value:#7d2cff}
+@property --abc-t2{syntax:"<color>";inherits:true;initial-value:#16d8ff}
+
+/* the stage: sits exactly where the neon frame is, BEHIND the portrait (head still breaks out at the top) */
+#about .ab-cut{
+  position:absolute;z-index:-1;
+  inset:14% -4px -22px -4px;
+  border-radius:16px;overflow:hidden;
+  pointer-events:none;
+  isolation:isolate;
+  background:#07050f;
+  opacity:0;
+  --abc-t1:#7d2cff;--abc-t2:#16d8ff;
+  transition:opacity 1.2s ease .5s,--abc-t1 .7s ease,--abc-t2 .7s ease;
+}
+#about .ab-cut.on{opacity:1}
+@media(max-width:900px){#about .ab-cut{inset:12% -3px -16px -3px;border-radius:14px}}
+
+/* strips */
+#about .ab-band{position:absolute;left:0;right:0;overflow:hidden;contain:paint}
+#about .ab-l{
+  position:absolute;left:0;width:100%;
+  background-size:cover;background-position:center;background-repeat:no-repeat;
+  filter:grayscale(1) contrast(1.18) brightness(.82);
+  transform:scale(1.001);
+}
+#about .ab-l.b{clip-path:inset(0 100% 0 0)}
+
+/* one-colour grade over everything (like the green grade in the reel) */
+#about .ab-cut::before{
+  content:"";position:absolute;inset:0;z-index:2;
+  background:linear-gradient(165deg,var(--abc-t1),var(--abc-t2));
+  mix-blend-mode:color;opacity:.95;
+}
+/* depth: darker at the bottom + soft edges so the portrait stays the hero */
+#about .ab-cut::after{
+  content:"";position:absolute;inset:0;z-index:3;
+  background:
+    linear-gradient(to top,rgba(5,4,10,.82) 0%,rgba(5,4,10,.18) 38%,transparent 62%),
+    radial-gradient(ellipse 90% 70% at 50% 40%,transparent 40%,rgba(5,4,10,.55) 100%);
+}
+/* white blink on every cut */
+#about .ab-flash{position:absolute;inset:0;z-index:4;background:#fff;opacity:0;mix-blend-mode:overlay}
+/* thin scan lines for a screen feel */
+#about .ab-scan{position:absolute;inset:0;z-index:4;opacity:.16;
+  background:repeating-linear-gradient(to bottom,rgba(0,0,0,.9) 0 1px,transparent 1px 3px)}
+
+/* shine: runs only on the silhouette of the portrait (mask = the transparent PNG itself) */
+#about .ab-shine{
+  position:absolute;inset:0;z-index:2;pointer-events:none;opacity:0;
+  -webkit-mask-image:var(--abc-mask,none);mask-image:var(--abc-mask,none);
+  -webkit-mask-size:contain;mask-size:contain;
+  -webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;
+  -webkit-mask-position:center;mask-position:center;
+  background:linear-gradient(105deg,transparent 38%,rgba(157,102,255,.0) 43%,rgba(190,160,255,.55) 48.5%,#fff 50%,rgba(22,216,255,.55) 52%,transparent 60%);
+  background-size:300% 100%;background-position:100% 0;
+  mix-blend-mode:screen;
+}
+#about .ab-shine.go{animation:abcShine 1.15s cubic-bezier(.55,0,.25,1) both}
+@keyframes abcShine{
+  0%{opacity:1;background-position:100% 0}
+  100%{opacity:1;background-position:0% 0}
+}
+
+/* the bands the glitch touches */
+#about .ab-l.glitch{animation:abcGlitch .22s steps(2,end) 1}
+@keyframes abcGlitch{
+  0%{transform:translateX(0)}
+  25%{transform:translateX(-9px)}
+  50%{transform:translateX(7px)}
+  75%{transform:translateX(-4px)}
+  100%{transform:translateX(0)}
+}
+
+/* nothing to show (no image loaded) -> layer stays invisible */
+#about .ab-cut:not(.has){display:none}
