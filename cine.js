@@ -400,7 +400,7 @@
     if (on !== wasOn) {
       stage.classList.toggle("is-on", on); wasOn = on;
     }
-    if (!on) { if (wasCover) { document.body.classList.remove("cn-on"); wasCover = false; } if (act > 0) raf = requestAnimationFrame(frame); return; }
+    if (!on) { el.world.classList.remove("is-on"); if (wasCover) { document.body.classList.remove("cn-on"); wasCover = false; } if (act > 0) raf = requestAnimationFrame(frame); return; }
 
     const pw = Math.min(p, HOLD_FROM);          // motion that must freeze in the final frame uses pw
     const ar = isAr();

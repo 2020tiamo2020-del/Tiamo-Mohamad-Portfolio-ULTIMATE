@@ -25,6 +25,7 @@
   visibility:hidden;background:transparent;direction:ltr;color:#eaffe0;
   font-family:"CN Anton","Inter",sans-serif;contain:layout paint}
 .cn-stage.is-on{visibility:visible}
+.cn-stage:not(.is-on),.cn-stage:not(.is-on) *{visibility:hidden!important}   /* a visible child would otherwise show through a hidden parent */
 .cn-stage[data-lang="ar"]{--wf:"CN Lalezar","Cairo",sans-serif}
 .cn-stage[data-lang="en"]{--wf:"CN Anton","Inter",sans-serif}
 .cn-stage *{box-sizing:border-box}
