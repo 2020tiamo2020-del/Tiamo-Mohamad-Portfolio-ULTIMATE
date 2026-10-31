@@ -127,3 +127,11 @@ body.light .st-chap button.on i{color:#fff}
 body.st-fold .st-rail{opacity:.62;transition:opacity .3s ease,visibility .5s ease}
 body.st-fold .st-rail:hover{opacity:1}
 body.st-fold .st-rail:not(:hover):not(.st-flash) .st-lbl{max-width:0!important;opacity:0!important;padding-inline-end:0!important}
+
+/* "Process": the rail is tucked away completely; it appears when the pointer reaches its spot */
+body.st-hide .st-rail{opacity:0;transition:opacity .35s ease,visibility .5s ease}
+body.st-hide .st-rail:hover,body.st-hide .st-rail:focus-within{opacity:1}
+body.st-hide::after{content:"";position:fixed;inset-inline-start:7px;top:50%;width:3px;height:64px;margin-top:-32px;border-radius:3px;z-index:24;pointer-events:none;
+  background:linear-gradient(180deg,transparent,rgba(190,170,255,.45),transparent);transition:opacity .3s}
+@media (max-width:1279px){body.st-hide::after{display:none}}
+body.st-hide:has(.st-rail:hover)::after{opacity:0}

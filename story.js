@@ -339,10 +339,14 @@
   }));
 })();
 
-/* the side rail folds to dots while "Start a Project" (big headline + form) is on screen; hover opens it again */
+/* the side rail adapts to text-heavy sections: "Start a Project" folds it to dots, "Process" tucks it away completely;
+   in both cases hovering the rail opens it again */
 (() => {
-  const el = document.getElementById("brief");
-  if (!el || !("IntersectionObserver" in window)) return;
-  new IntersectionObserver(es => es.forEach(e => document.body.classList.toggle("st-fold", e.isIntersecting)),
-    { rootMargin: "-30% 0px -30% 0px", threshold: 0 }).observe(el);
+  if (!("IntersectionObserver" in window)) return;
+  [["brief", "st-fold"], ["process", "st-hide"]].forEach(([id, cls]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    new IntersectionObserver(es => es.forEach(e => document.body.classList.toggle(cls, e.isIntersecting)),
+      { rootMargin: "-30% 0px -30% 0px", threshold: 0 }).observe(el);
+  });
 })();
