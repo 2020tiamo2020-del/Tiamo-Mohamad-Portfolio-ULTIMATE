@@ -96,6 +96,7 @@
         '<div class="cn-half cn-bot"><div class="cn-mini"></div><div class="cn-card"></div></div>' +
         '<div class="cn-seam"></div>' +
       '</div>' +
+      '<div class="cn-load"><div class="ldr"><i></i><i></i><i></i><i></i><i></i><b>TM</b></div></div>' +
       '<div class="cn-cap"><small></small><strong></strong></div>' +
       '<div class="cn-bar t"></div><div class="cn-bar b"></div>' +
       '<div class="cn-vig"></div><div class="cn-scan"></div><div class="cn-grain"></div>' +
@@ -114,7 +115,7 @@
     hlA: q(".cn-hl.a"), hlB: q(".cn-hl.b"), anam: q(".cn-anam"), beam: q(".cn-beam"),
     tunnel: q(".cn-tunnel"), intro: q(".cn-intro"), top: q(".cn-top"), bot: q(".cn-bot"), strobe: q(".cn-strobe"), count: q(".cn-count"),
     mini: q(".cn-mini"), card: q(".cn-card"), seam: q(".cn-seam"), cap: q(".cn-cap"), barT: q(".cn-bar.t"), barB: q(".cn-bar.b"),
-    flash: q(".cn-flash"), hud: q(".cn-hud"), hudL: q(".cn-hud .l"), hudR: q(".cn-hud .r"), hint: q(".cn-hint"), gate: q(".cn-gate"), replay: q(".cn-replay")
+    flash: q(".cn-flash"), hud: q(".cn-hud"), hudL: q(".cn-hud .l"), hudR: q(".cn-hud .r"), hint: q(".cn-hint"), gate: q(".cn-gate"), replay: q(".cn-replay"), load: q(".cn-load")
   };
   const ctx = {
     bg: el.bg.getContext("2d"), fuse: el.fuse.getContext("2d"), strobe: el.strobe.getContext("2d"), tunnel: el.tunnel.getContext("2d")
@@ -381,6 +382,8 @@
   }
 
   /* ------------------------------ frame ------------------------------ */
+  const DEMO = /[?&]cineload=1/.test(location.search);
+  let demoStart = 0, wasReady = false;
   let lastCard = -1, lastCap = -1, lastY = null, lastMove = 0, raf = 0, wasOn = false, wasCover = false, curGhost = 0;
   const set = (n, v) => stage.style.setProperty(n, v);
 
@@ -399,9 +402,14 @@
     const on = enter > 0 && exit < 1;
 
     if (on !== wasOn) {
-      stage.classList.toggle("is-on", on); wasOn = on;
+      stage.classList.toggle("is-on", on); wasOn = on; if (on) demoStart = 0;
     }
     if (!on) { el.world.classList.remove("is-on"); if (wasCover) { document.body.classList.remove("cn-on"); wasCover = false; } if (act > 0) raf = requestAnimationFrame(frame); return; }
+
+    /* loader: only shows while the scene's pictures are still arriving (or with ?cineload=1 to preview it) */
+    if (!demoStart) demoStart = now;
+    const ready = okImg(el.rider) && okImg(IM.plates[PLAN[0]]) && IM.strobe.filter(okImg).length >= 6 && !(DEMO && now - demoStart < 3500);
+    if (ready !== wasReady) { el.load.classList.toggle("is-done", ready); wasReady = ready; }
 
     const pw = Math.min(p, HOLD_FROM);          // motion that must freeze in the final frame uses pw
     const ar = isAr();
@@ -656,4 +664,17 @@
   });
 
   window.__cinema = { layout, wake, get p() { const r = sec.getBoundingClientRect(); return clamp(-r.top / T, 0, 1); }, T: () => T };
+})();
+
+
+/* "Start a project": while the brief is handed to WhatsApp, the Send button shows the glass-rings loader */
+(() => {
+  document.addEventListener("click", e => {
+    const b = e.target.closest && e.target.closest("#bbSend");
+    if (!b || b.getAttribute("aria-disabled") === "true" || b.classList.contains("is-sending")) return;
+    let m = b.querySelector(".ldr");
+    if (!m) { m = document.createElement("span"); m.className = "ldr ldr-mini"; m.setAttribute("aria-hidden", "true"); m.innerHTML = "<i></i><i></i><i></i>"; b.appendChild(m); }
+    b.classList.add("is-sending");
+    setTimeout(() => b.classList.remove("is-sending"), 1800);
+  });
 })();
