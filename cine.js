@@ -59,13 +59,13 @@
       words: ["POWERS", "BEYOND", "YOUR\nIMAGINATION"],
       cards: ["IMAGINE", "CREATE", "DESIGN", "ANIMATE", "BEYOND"],
       caps: [["01 / VISION", "Eyes on the impossible."], ["02 / POWER", "Built to outrun the ordinary."]],
-      scene: "SCENE 03½ — <b>BEYOND</b>", intro: ["CHAPTER 03½", "BEYOND"], hint: "SCROLL", mini: "SIGNAL / INCOMING", ghost: "POWERS ✦ BEYOND ✦ YOUR IMAGINATION ✦ "
+      scene: "SCENE 03½ — <b>BEYOND</b>", intro: ["CHAPTER 03½", "BEYOND"], hint: "SCROLL", replay: "Replay", mini: "SIGNAL / INCOMING", ghost: "POWERS ✦ BEYOND ✦ YOUR IMAGINATION ✦ "
     },
     ar: {
       words: ["قدرات", "فوق", "خيالك"],
       cards: ["تخيّل", "ابتكر", "صمّم", "حرّك", "تجاوز"],
       caps: [["01 / الرؤية", "عينٌ على المستحيل."], ["02 / القوة", "صُمّم ليتجاوز المألوف."]],
-      scene: "المشهد ٣½ — <b>ما وراء الخيال</b>", intro: ["الفصل ٣½", "ما وراء الخيال"], hint: "مرّر", mini: "إشارة / قادمة", ghost: "قدرات ✦ فوق ✦ خيالك ✦ "
+      scene: "المشهد ٣½ — <b>ما وراء الخيال</b>", intro: ["الفصل ٣½", "ما وراء الخيال"], hint: "مرّر", replay: "إعادة المشهد", mini: "إشارة / قادمة", ghost: "قدرات ✦ فوق ✦ خيالك ✦ "
     }
   };
   const L = () => COPY[isAr() ? "ar" : "en"];
@@ -102,11 +102,9 @@
       '<div class="cn-flash"></div>' +
       '<div class="cn-hud"><div class="l"></div><div class="r"></div><div class="bar"><i></i></div></div>' +
       '<div class="cn-hint"><span></span><i></i></div>' +
+      '<button type="button" class="cn-replay"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg><span></span></button>' +
     '</div>' +
     '<div class="cn-gate"></div>';
-  const dim = document.createElement("div");
-  dim.className = "cn-dim";
-  document.body.appendChild(dim);
   document.body.appendChild(stage);
 
   const q = s => stage.querySelector(s);
@@ -116,7 +114,7 @@
     hlA: q(".cn-hl.a"), hlB: q(".cn-hl.b"), anam: q(".cn-anam"), beam: q(".cn-beam"),
     tunnel: q(".cn-tunnel"), intro: q(".cn-intro"), top: q(".cn-top"), bot: q(".cn-bot"), strobe: q(".cn-strobe"), count: q(".cn-count"),
     mini: q(".cn-mini"), card: q(".cn-card"), seam: q(".cn-seam"), cap: q(".cn-cap"), barT: q(".cn-bar.t"), barB: q(".cn-bar.b"),
-    flash: q(".cn-flash"), hud: q(".cn-hud"), hudL: q(".cn-hud .l"), hudR: q(".cn-hud .r"), hint: q(".cn-hint"), gate: q(".cn-gate")
+    flash: q(".cn-flash"), hud: q(".cn-hud"), hudL: q(".cn-hud .l"), hudR: q(".cn-hud .r"), hint: q(".cn-hint"), gate: q(".cn-gate"), replay: q(".cn-replay")
   };
   const ctx = {
     bg: el.bg.getContext("2d"), fuse: el.fuse.getContext("2d"), strobe: el.strobe.getContext("2d"), tunnel: el.tunnel.getContext("2d")
@@ -205,6 +203,8 @@
     el.intro.querySelector("small").textContent = t.intro[0];
     el.intro.querySelector("b").textContent = t.intro[1];
     el.hint.querySelector("span").textContent = t.hint;
+    el.replay.querySelector("span").textContent = t.replay;
+    el.replay.setAttribute("aria-label", t.replay);
     el.mini.textContent = t.mini;
     el.ghost.forEach(s => (s.textContent = t.ghost.repeat(4)));
     lastCard = -1; lastCap = -1;
@@ -213,7 +213,7 @@
 
   let lastVh = 0, lastVw = 0;
   function layout() {
-    const w = innerWidth;
+    const w = document.documentElement.clientWidth || innerWidth;
     let h = innerHeight;
     if (w === lastVw && Math.abs(h - lastVh) < 150 && lastVh) h = Math.max(h, lastVh);   // mobile browser bars: keep the tallest height so nothing jumps
     lastVw = w; lastVh = h; vw = w; vh = h;
@@ -380,7 +380,7 @@
   }
 
   /* ------------------------------ frame ------------------------------ */
-  let lastCard = -1, lastCap = -1, lastY = null, lastMove = 0, raf = 0, wasOn = false, curGhost = 0;
+  let lastCard = -1, lastCap = -1, lastY = null, lastMove = 0, raf = 0, wasOn = false, wasCover = false, curGhost = 0;
   const set = (n, v) => stage.style.setProperty(n, v);
 
   function frame(now) {
@@ -398,26 +398,33 @@
     const on = enter > 0 && exit < 1;
 
     if (on !== wasOn) {
-      stage.classList.toggle("is-on", on); dim.classList.toggle("is-on", on); wasOn = on;
+      stage.classList.toggle("is-on", on); wasOn = on;
     }
-    if (!on) { if (act > 0) raf = requestAnimationFrame(frame); return; }
+    if (!on) { if (wasCover) { document.body.classList.remove("cn-on"); wasCover = false; } if (act > 0) raf = requestAnimationFrame(frame); return; }
 
     const pw = Math.min(p, HOLD_FROM);          // motion that must freeze in the final frame uses pw
     const ar = isAr();
     const side = ar ? -1 : 1;
 
-    /* ---- aperture (entry / exit) ---- */
-    const open = p > 0 || exit > 0 ? 1 : E.io3(seg(enter, .32, 1));
-    let ins = (1 - open) * 50;
-    if (exit > 0) ins = E.io3(seg(exit, 0, .85)) * 50;
-    el.clip.style.clipPath = ins > 0.05 ? "inset(" + ins.toFixed(2) + "% 0)" : "none";
-    const gateW = exit > 0 ? 100 * (1 - E.io3(seg(exit, .7, 1))) : 100 * E.out3(seg(enter, 0, .38));
+    /* ---- entry / exit: the new section opens from the line under 03, and lifts away at the end ---- */
+    const exitPx = clamp(y - T, 0, vh);
+    let clipV = "none", gateTop = -20, gateW = 0, gateO = 0;
+    if (y < 0 && r.top > .5) {                                   // entering: only the part below the line is the new world
+      clipV = "inset(" + r.top.toFixed(1) + "px 0 0 0)";
+      gateTop = r.top; gateW = 100 * E.out3(seg(enter, 0, .22)); gateO = 1 - seg(enter, .93, 1);
+    } else if (exitPx > .5) {                                    // leaving: the world is pushed up, the line rides its lower edge
+      clipV = "inset(0 0 " + exitPx.toFixed(1) + "px 0)";
+      gateTop = vh - exitPx; gateW = 100 * (1 - seg(exit, .85, 1)); gateO = 1;
+    }
+    el.clip.style.clipPath = clipV;
+    el.gate.style.top = gateTop.toFixed(1) + "px";
     el.gate.style.width = gateW + "vw";
-    el.gate.style.opacity = exit > 0 ? String(1 - seg(exit, .85, 1)) : String(enter > 0 ? clamp(1 - seg(enter, .75, 1), 0, 1) : 0);
-    dim.style.opacity = String(exit > 0 ? .92 * (1 - seg(exit, 0, .7)) : .92 * E.out3(seg(enter, .08, .75)));
+    el.gate.style.opacity = String(gateO);
+    const covering = on && r.top < vh * .45 && r.bottom > vh * .55;
+    if (covering !== wasCover) { document.body.classList.toggle("cn-on", covering); wasCover = covering; }
 
     /* ---- tunnel + intro (before / around p=0) ---- */
-    const tk = p > 0.036 ? 0 : (exit > 0 ? 0 : (1 - seg(p, 0, .036)) * E.out3(seg(enter, .2, 1)));
+    const tk = p > 0.036 || exitPx > 0 ? 0 : (1 - seg(p, 0, .036)) * E.out3(seg(enter, .1, .8));
     if (tk > 0) paintTunnel(ctx.tunnel, el.tunnel.width, el.tunnel.height, enter * 5 + p * 60, tk);
     el.tunnel.style.opacity = tk > 0 ? "1" : "0";
     el.intro.style.opacity = String(E.out3(seg(enter, .5, .95)) * (1 - seg(p, 0, .02)));
@@ -520,7 +527,7 @@
 
       /* words */
       const wv = clamp(1 - E.io3(seg(p, .545, .565)) + E.io3(seg(p, .715, .745)), 0, 1);
-      const re = SAFE ? 0 : (1 - E.out3(seg(p, .715, .775)));         // re-entry slam after the close-ups
+      const re = (SAFE || p < .715) ? 0 : (1 - E.out3(seg(p, .715, .775)));         // re-entry slam after the close-ups
       el.words.style.opacity = wv.toFixed(3);
       el.words.style.transform = re > 0 ? "scale(" + (1 + .16 * re).toFixed(4) + ")" : "none";
       el.words.style.transformOrigin = (vw / 2) + "px " + (vh * .45) + "px";
@@ -549,6 +556,9 @@
     set("--hud", hudV.toFixed(3));
     set("--pp", p.toFixed(4));
     set("--hint", (E.out3(seg(p, .80, .85)) * (1 - seg(exit, 0, .3))).toFixed(3));
+    const rv = E.out3(seg(p, .82, .87)) * (1 - seg(exit, 0, .25));
+    el.replay.style.opacity = rv.toFixed(3);
+    el.replay.style.pointerEvents = rv > .6 ? "auto" : "none";
     const secs = p * 24, ss = Math.floor(secs), ff = Math.floor((secs - ss) * 24);
     el.hudR.textContent = "TC 00:00:" + pad(ss) + ":" + pad(ff);
 
@@ -611,6 +621,12 @@
   }
 
   /* ------------------------------ wiring ------------------------------ */
+  el.replay.addEventListener("click", () => {
+    const top = sec.getBoundingClientRect().top + scrollY;
+    const lenis = window.__lenis;
+    if (lenis && lenis.scrollTo) lenis.scrollTo(top + 2, { duration: 2.2 });
+    else scrollTo({ top: top + 2, behavior: "smooth" });
+  });
   function wake() { if (!raf) raf = requestAnimationFrame(frame); }
   let rt = 0;
   addEventListener("scroll", wake, { passive: true });

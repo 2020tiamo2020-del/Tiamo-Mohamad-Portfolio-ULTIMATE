@@ -166,6 +166,7 @@
       ["about", "#about", "About", "عنّي"],
       ["services", "#services", "Services", "الخدمات"],
       ["work", "#work", "Work", "الأعمال"],
+      ["cinema", "#cinema", "Beyond", "ما وراء الخيال"],
       ["creation", "#creation", "AI Creation", "إبداع الـ AI"],
       ["beforeafter", "#beforeafter", "Before & After", "قبل وبعد"],
       ["process", "#process", "Process", "طريقة العمل"],

@@ -35,7 +35,7 @@
 .cn-clip{position:absolute;inset:0;overflow:hidden;background:var(--ink);will-change:clip-path}
 
 /* entry gate: the line of light that splits the page open */
-.cn-gate{position:absolute;left:50%;top:50%;height:3px;width:0;transform:translate(-50%,-50%);border-radius:3px;
+.cn-gate{position:absolute;left:50%;top:-20px;height:3px;width:0;transform:translate(-50%,-50%);border-radius:3px;
   background:linear-gradient(90deg,transparent,#e9ffd2 14%,#fff 50%,#e9ffd2 86%,transparent);
   box-shadow:0 0 14px #fff,0 0 34px var(--g2),0 0 90px var(--g3),0 0 200px rgba(60,255,90,.55);opacity:0;z-index:5}
 
@@ -159,6 +159,22 @@
 .cn-hint i{display:block;width:1px;height:34px;background:linear-gradient(180deg,#b8ff6b,transparent);animation:cnhint 1.6s ease-in-out infinite}
 @keyframes cnhint{0%{transform:scaleY(.2);transform-origin:top}50%{transform:scaleY(1);transform-origin:top}51%{transform-origin:bottom}100%{transform:scaleY(.1);transform-origin:bottom}}
 
+/* ---------- replay ---------- */
+.cn-replay{position:absolute;z-index:10;left:50%;bottom:calc(var(--hb,4.5vh) + 92px);transform:translateX(-50%);opacity:0;pointer-events:none;cursor:pointer;
+  display:inline-flex;align-items:center;gap:10px;padding:13px 24px;border-radius:999px;border:1px solid rgba(160,255,120,.5);color:#eaffd8;
+  background:rgba(4,20,8,.55);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 0 28px rgba(80,255,80,.25),inset 0 0 18px rgba(80,255,80,.12);
+  font:600 11px/1 "Michroma","Inter","Cairo",sans-serif;letter-spacing:.28em;text-transform:uppercase;transition:background .25s,box-shadow .25s,transform .25s}
+.cn-replay:hover,.cn-replay:focus-visible{background:rgba(40,140,50,.5);box-shadow:0 0 44px rgba(110,255,70,.5),inset 0 0 20px rgba(110,255,70,.25);transform:translateX(-50%) scale(1.05);outline:none}
+.cn-stage[data-lang="ar"] .cn-replay{letter-spacing:.04em;font-size:14px}
+/* Arabic glyphs overhang their line box; give the gradient-clip area room so no letter is shaved */
+.cn-stage[data-lang="ar"] .cn-w .cn-ch{padding:.34em .4em;margin:-.34em -.4em}
+.cn-stage[data-lang="ar"] .cn-card{padding:.2em .3em}
+
+/* while the scene is on screen the side section-rail folds to dots (hover to open) so it never covers the words */
+body.cn-on .st-rail{opacity:.6;transition:opacity .3s}
+body.cn-on .st-rail:hover{opacity:1}
+body.cn-on .st-rail:not(:hover):not(.st-flash) .st-lbl{max-width:0!important;opacity:0!important;padding-inline-end:0!important}
+
 /* ---------- small screens ---------- */
 @media (max-width:900px){
   .cn-ghost span{font-size:clamp(90px,34vw,200px)}
@@ -166,6 +182,7 @@
   .cn-stage[data-lang="ar"] .cn-cap{right:6vw}
   .cn-cap strong{font-size:clamp(26px,8vw,46px)}
   .cn-hud .l,.cn-hud .r,.cn-hint{display:none}
+  .cn-replay{bottom:calc(var(--hb,4.5vh) + 54px)}
   .cn-card{font-size:min(26vw,19vh)}
 }
 
