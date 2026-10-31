@@ -452,6 +452,7 @@ nav?.querySelectorAll("a").forEach(a => a.addEventListener("click", closeMenu));
     if (id === "services") return frameServices();
     if (id === "beforeafter") return frameBeforeAfter();
     if (id === "contact") return frameContact();
+    if (id === "cinema") { const c = document.getElementById("cinema"); if (c) { scrollYTo(absTop(c) + 2); setTimeout(() => { try { window.__updateActiveNav && window.__updateActiveNav(); } catch (_) {} }, 400); } return; }
     if (id === "home") { scrollYTo(0); setTimeout(() => { try { window.__updateActiveNav && window.__updateActiveNav(); } catch (_) {} }, 350); return; }
     const el = document.getElementById(id);
     if (!el) return;
@@ -459,6 +460,7 @@ nav?.querySelectorAll("a").forEach(a => a.addEventListener("click", closeMenu));
     setTimeout(() => { try { window.__updateActiveNav && window.__updateActiveNav(); } catch (_) {} }, 400);
   };
 
+  window.__frameSection = frameSection;   /* the side rail (story.js) calls the very same function */
   document.querySelectorAll("#nav a[href^='#']").forEach(a => {
     a.addEventListener("click", e => {
       const id = (a.getAttribute("href") || "").replace(/^#/, "");

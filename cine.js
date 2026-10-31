@@ -241,6 +241,7 @@
     el.refl.style.top = "calc(100% - " + (rig.h * .075) + "px)";
     stage.style.setProperty("--fy", (rig.y + rig.h * .72) + "px");
     placeWords();
+    refreshTop();
     wake();
   }
 
@@ -391,7 +392,7 @@
     lastY = y;
     const act = clamp(1 - (now - lastMove) / 300, 0, 1);       // 1 while scrolling, fades to 0 once you stop (shake / flash / glitch settle)
 
-    if (!IM.started && r.top < vh * 3.2) loadAll();
+    if (!IM.started && r.top < vh * 3.5) loadAll();
     const enter = clamp((y + vh) / vh, 0, 1);
     const p = clamp(y / T, 0, 1);
     const exit = clamp((y - T) / vh, 0, 1);
@@ -629,7 +630,15 @@
   });
   function wake() { if (!raf) raf = requestAnimationFrame(frame); }
   let rt = 0;
-  addEventListener("scroll", wake, { passive: true });
+  let topAbs = 1e9;
+  const refreshTop = () => { topAbs = sec.getBoundingClientRect().top + scrollY; };
+  const onScroll = () => {
+    const y = scrollY;
+    if (!IM.started && y > topAbs - vh * 3.5) loadAll();
+    if (wasOn || raf || (y > topAbs - vh * 1.6 && y < topAbs + T + vh * 1.6)) wake();    /* otherwise: do nothing at all */
+  };
+  addEventListener("scroll", onScroll, { passive: true });
+  if (window.ResizeObserver) { let rq = 0; new ResizeObserver(() => { cancelAnimationFrame(rq); rq = requestAnimationFrame(refreshTop); }).observe(document.documentElement); }
   addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(layout, 120); }, { passive: true });
   addEventListener("orientationchange", () => setTimeout(layout, 250));
   new MutationObserver(() => run("lang", () => { applyLangText(); wake(); })).observe(document.documentElement, { attributes: true, attributeFilter: ["lang"] });
