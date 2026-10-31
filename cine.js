@@ -86,7 +86,7 @@
           '<img class="cn-refl" alt="" src="' + ASSET + 'rider.webp" decoding="async">' +
           '<img class="cn-rider" alt="" src="' + ASSET + 'rider.webp" decoding="async">' +
           '<canvas class="cn-fuse" width="320" height="310"></canvas>' +
-          '<i class="cn-hl a"></i><i class="cn-hl b"></i>' +
+          '<i class="cn-hl a"></i><i class="cn-hl b"></i><i class="cn-hl c"></i><i class="cn-hl d"></i><i class="cn-hl e"></i>' +
         '</div>' +
         '<div class="cn-anam"></div><div class="cn-beam"></div>' +
       '</div>' +

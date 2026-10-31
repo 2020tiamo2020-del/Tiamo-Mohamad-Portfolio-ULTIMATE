@@ -99,6 +99,9 @@
   background:radial-gradient(closest-side,rgba(230,255,200,.95),rgba(110,255,70,.55) 38%,transparent 72%);opacity:var(--hl,0)}
 .cn-hl.a{left:14%;top:44%}
 .cn-hl.b{left:42%;top:35.5%;width:13%;height:5%}
+.cn-hl.c{left:10.5%;top:32.8%;width:9.5%;height:4.6%}
+.cn-hl.d{left:4.4%;top:36.6%;width:8.4%;height:4.6%}
+.cn-hl.e{left:12.2%;top:43.2%;width:7.6%;height:9.5%}
 .cn-anam{position:absolute;left:-30vw;right:-30vw;height:3px;top:50%;pointer-events:none;mix-blend-mode:screen;opacity:var(--an,0);
   background:linear-gradient(90deg,transparent,rgba(120,255,90,.9) 30%,#fff 50%,rgba(120,255,90,.9) 70%,transparent);box-shadow:0 0 18px #6dff3c,0 0 60px rgba(60,255,90,.6)}
 
