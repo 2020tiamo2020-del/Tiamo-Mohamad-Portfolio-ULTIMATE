@@ -194,7 +194,6 @@
         ev.preventDefault();
         /* same sections as the top bar -> use the top bar's own framing, so both land on exactly the same spot */
         if (window.__frameSection && ["home", "about", "services", "work", "cinema", "creation", "beforeafter", "contact"].indexOf(d.id) > -1) {
-          try { window.playNavSound && window.playNavSound(); } catch (_) {}
           history.pushState(null, "", "#" + d.id);
           window.__frameSection(d.id);
           return;
