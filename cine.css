@@ -25,7 +25,6 @@
   visibility:hidden;background:transparent;direction:ltr;color:#eaffe0;
   font-family:"CN Anton","Inter",sans-serif;contain:layout paint}
 .cn-stage.is-on{visibility:visible}
-.cn-stage:not(.is-on),.cn-stage:not(.is-on) *{visibility:hidden!important}   /* a visible child would otherwise show through a hidden parent */
 .cn-stage[data-lang="ar"]{--wf:"CN Lalezar","Cairo",sans-serif}
 .cn-stage[data-lang="en"]{--wf:"CN Anton","Inter",sans-serif}
 .cn-stage *{box-sizing:border-box}
@@ -201,36 +200,3 @@ body.cn-on .st-rail:not(:hover):not(.st-flash) .st-lbl{max-width:0!important;opa
 .cn-intro small{display:block;font:600 11px/1 "Michroma","Inter",sans-serif;letter-spacing:.5em;color:#9bff72;margin-bottom:18px;text-shadow:0 0 18px rgba(80,255,80,.7)}
 .cn-intro b{display:block;font-family:var(--wf);font-weight:400;font-size:min(16vw,22vh);line-height:1.2;letter-spacing:.04em;color:#f1ffe4;text-shadow:0 0 40px rgba(80,255,80,.55),0 0 120px rgba(30,200,70,.5)}
 .cn-stage[data-lang="ar"] .cn-intro small{letter-spacing:.1em}
-
-
-/* ==========================================================================
-   Glass-rings loader (adapted from a Uiverse.io "ripple" loader).
-   Changes: only transform animates (no moving blur/shadow), colours follow the site, the logo is the "TM" mark.
-   ========================================================================== */
-.ldr{--s:150px;--c1:rgba(139,53,255,.26);--c2:rgba(22,216,255,.10);--bd:190,170,255;--dur:2.2s;position:relative;width:var(--s);aspect-ratio:1;display:grid;place-items:center;flex:none}
-.ldr i{position:absolute;border-radius:50%;background:linear-gradient(0deg,var(--c1),var(--c2));border-top:1px solid rgba(var(--bd),.8);
-  box-shadow:0 8px 14px -6px rgba(0,0,0,.45);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);animation:ldrRip var(--dur) infinite ease-in-out;will-change:transform}
-.ldr i:nth-child(1){inset:40%;z-index:5}
-.ldr i:nth-child(2){inset:30%;z-index:4;border-top-color:rgba(var(--bd),.6);animation-delay:.2s}
-.ldr i:nth-child(3){inset:20%;z-index:3;border-top-color:rgba(var(--bd),.45);animation-delay:.4s}
-.ldr i:nth-child(4){inset:10%;z-index:2;border-top-color:rgba(var(--bd),.3);animation-delay:.6s}
-.ldr i:nth-child(5){inset:0;z-index:1;border-top-color:rgba(var(--bd),.18);animation-delay:.8s}
-.ldr b{position:relative;z-index:9;font:400 calc(var(--s) * .2)/1 "CN Anton","Inter",sans-serif;letter-spacing:.04em;color:#9a8fb8;animation:ldrCol var(--dur) infinite ease-in-out}
-@keyframes ldrRip{0%,100%{transform:scale(1)}50%{transform:scale(1.28)}}
-@keyframes ldrCol{0%,100%{color:#8f86ad}50%{color:#fff}}
-
-/* scene loader (green) */
-.cn-load{position:absolute;inset:0;z-index:11;display:grid;place-items:center;background:#020504;opacity:1;transition:opacity .7s ease .1s}
-.cn-load.is-done{opacity:0;pointer-events:none;visibility:hidden;transition:opacity .7s ease,visibility 0s .8s}
-.cn-load .ldr{--c1:rgba(80,255,80,.26);--c2:rgba(20,160,60,.10);--bd:160,255,120}
-.cn-load .ldr b{color:#4f9a52}
-@keyframes ldrColG{0%,100%{color:#4f9a52}50%{color:#eaffd8}}
-.cn-load .ldr b{animation-name:ldrColG}
-
-/* send button */
-#bbSend{position:relative}
-#bbSend .ldr-mini{--s:30px;--c1:rgba(26,15,77,.30);--c2:rgba(26,15,77,.08);--bd:26,15,77;--dur:1.2s;position:absolute;left:50%;top:50%;margin:-15px 0 0 -15px;opacity:0;transition:opacity .2s;pointer-events:none}
-#bbSend .ldr-mini i{box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;border-top-width:1.5px}
-#bbSend.is-sending{color:transparent!important;pointer-events:none}
-#bbSend.is-sending .ldr-mini{opacity:1}
-@media (prefers-reduced-motion:reduce){.ldr i,.ldr b{animation:none}}
