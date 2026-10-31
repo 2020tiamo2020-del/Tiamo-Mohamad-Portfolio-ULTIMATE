@@ -338,3 +338,11 @@
     update();
   }));
 })();
+
+/* the side rail folds to dots while "Start a Project" (big headline + form) is on screen; hover opens it again */
+(() => {
+  const el = document.getElementById("brief");
+  if (!el || !("IntersectionObserver" in window)) return;
+  new IntersectionObserver(es => es.forEach(e => document.body.classList.toggle("st-fold", e.isIntersecting)),
+    { rootMargin: "-30% 0px -30% 0px", threshold: 0 }).observe(el);
+})();
