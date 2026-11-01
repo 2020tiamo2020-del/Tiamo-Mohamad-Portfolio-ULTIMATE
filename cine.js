@@ -22,14 +22,14 @@
 
   /* ------------------------------ tunables ------------------------------ */
   const ASSET = "images/cine/";
-  const TRAVEL_DESKTOP = 9.6;      // runway length in screen-heights
-  const TRAVEL_MOBILE = 9.0;
+  const TRAVEL_DESKTOP = 11.4;      // runway length in screen-heights
+  const TRAVEL_MOBILE = 10.6;
   const PE = 0.66;                 // share of the runway used by the motorbike scene (the rest is the helmet finale)
   const P_END_OLD = 0.84;          // the motorbike timeline's own 0..1 range ends here
-  const HM_HITS = [0.10, 0.17, 0.24, 0.31];   // the four word-slams of the helmet finale
+  const HM_HITS = [0.12, 0.20, 0.28, 0.36];   // the four word-slams of the helmet finale
   const SAFE = !!window.CINE_SAFE || matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const HM_FLASH = SAFE ? [] : [[0.03, 0.6], [0.52, 0.3], [0.68, 0.4], [0.86, 0.3]];                         // [q, strength]
-  const HM_SHAKE = SAFE ? [] : [[0.03, 1.2], [0.10, 0.7], [0.17, 0.8], [0.24, 0.9], [0.31, 1.0], [0.52, 0.6], [0.68, 0.9], [0.86, 1.2]];
+  const HM_FLASH = SAFE ? [] : [[0.03, 0.6], [0.54, 0.35], [0.70, 0.55]];                         // [q, strength]
+  const HM_SHAKE = SAFE ? [] : [[0.03, 1.2], [0.12, 0.8], [0.20, 0.9], [0.28, 1.0], [0.36, 1.1], [0.54, 1.0], [0.70, 1.5], [0.84, 0.8]];
   const STROBE_MIN_MS = SAFE ? 420 : 85;   // hard cap on how fast the top-half images may cut (≈11 per second)
   const HOLD_FROM = 0.79;                  // from here on, the final frame is frozen
   const N_STROBE = 23;
@@ -74,8 +74,8 @@
     }
   };
   const HMC = {
-    en: { words: ["THE MIND", "BEHIND", "EVERY", "FRAME"], lock: ["LET'S BUILD", "YOURS."] },
-    ar: { words: ["العقل", "وراء", "كل", "مشهد"], lock: ["لنصنع", "مشهدك."] }
+    en: { words: ["THE MIND", "BEHIND", "EVERY", "FRAME"], lock: ["LET'S BUILD", "YOURS."], trk: ["LOCK · VISION", "24 FPS · 4K"] },
+    ar: { words: ["العقل المبدع", "خلف", "كل", "إطار"], lock: ["لنصنع", "مشهدك."], trk: ["تثبيت · الرؤية", "٢٤ إطار · 4K"] }
   };
   const L = () => COPY[isAr() ? "ar" : "en"];
 
@@ -104,9 +104,13 @@
         '<div class="cn-hm-fig">' +
           '<img class="cn-hm-a m" alt="" src="' + ASSET + 'helmet-face.webp" decoding="async">' +
           '<img class="cn-hm-b m" alt="" src="' + ASSET + 'helmet-closed.webp" decoding="async">' +
+          '<img class="cn-hm-na m" alt="" src="' + ASSET + 'helmet-a-neon.webp" decoding="async">' +
+          '<img class="cn-hm-nb m" alt="" src="' + ASSET + 'helmet-b-neon.webp" decoding="async">' +
+          '<img class="cn-hm-nb2" alt="" src="' + ASSET + 'helmet-b-neon.webp" decoding="async">' +
           '<canvas class="cn-hm-vis" width="768" height="594"></canvas><i class="cn-hm-wipe"></i>' +
+          '<div class="cn-hm-trk"><i class="c1"></i><i class="c2"></i><i class="c3"></i><i class="c4"></i><span class="t1"></span><span class="t2"></span></div>' +
         '</div>' +
-        '<div class="cn-hm-bloom"></div>' +
+        '<div class="cn-hm-bloom"></div><i class="cn-hm-ring"></i><canvas class="cn-hm-pt"></canvas>' +
         '<div class="cn-hm-ln"><img class="cn-hm-l" alt="" src="' + ASSET + 'launch.webp" decoding="async"><div class="cn-hm-wheel"><i></i></div></div>' +
         '<div class="cn-hm-lock"><strong></strong><strong></strong></div>' +
       '</div>' +
@@ -121,6 +125,7 @@
       '<div class="cn-vig"></div><div class="cn-scan"></div><div class="cn-grain"></div>' +
       '<div class="cn-flash"></div>' +
       '<div class="cn-hud"><div class="l"></div><div class="r"></div><div class="bar"><i></i></div></div>' +
+      '<button type="button" class="cn-snd" aria-label="Sound"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path class="w" d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/><path class="x" d="M17 9l5 6M22 9l-5 6"/></svg></button>' +
       '<div class="cn-hint"><span></span><i></i></div>' +
       '<button type="button" class="cn-replay"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg><span></span></button>' +
     '</div>' +
@@ -134,16 +139,16 @@
     hlA: q(".cn-hl.a"), hlB: q(".cn-hl.b"), anam: q(".cn-anam"), beam: q(".cn-beam"),
     tunnel: q(".cn-tunnel"), intro: q(".cn-intro"), top: q(".cn-top"), bot: q(".cn-bot"), strobe: q(".cn-strobe"), count: q(".cn-count"),
     mini: q(".cn-mini"), card: q(".cn-card"), seam: q(".cn-seam"), cap: q(".cn-cap"), barT: q(".cn-bar.t"), barB: q(".cn-bar.b"),
-    flash: q(".cn-flash"), hud: q(".cn-hud"), hudL: q(".cn-hud .l"), hudR: q(".cn-hud .r"), hint: q(".cn-hint"), gate: q(".cn-gate"), replay: q(".cn-replay"), hm: q(".cn-hm"), hmWords: q(".cn-hm-words"), hmFig: q(".cn-hm-fig"), hmA: q(".cn-hm-a"), hmB: q(".cn-hm-b"), hmVis: q(".cn-hm-vis"), hmWipe: q(".cn-hm-wipe"), hmLock: q(".cn-hm-lock"), hmLn: q(".cn-hm-ln"), hmL: q(".cn-hm-l"), hmWheel: q(".cn-hm-wheel i"), hmBloom: q(".cn-hm-bloom")
+    flash: q(".cn-flash"), hud: q(".cn-hud"), hudL: q(".cn-hud .l"), hudR: q(".cn-hud .r"), hint: q(".cn-hint"), gate: q(".cn-gate"), replay: q(".cn-replay"), hm: q(".cn-hm"), hmWords: q(".cn-hm-words"), hmFig: q(".cn-hm-fig"), hmA: q(".cn-hm-a"), hmB: q(".cn-hm-b"), hmVis: q(".cn-hm-vis"), hmWipe: q(".cn-hm-wipe"), hmLock: q(".cn-hm-lock"), hmLn: q(".cn-hm-ln"), hmL: q(".cn-hm-l"), hmWheel: q(".cn-hm-wheel i"), hmBloom: q(".cn-hm-bloom"), hmNa: q(".cn-hm-na"), hmNb: q(".cn-hm-nb"), hmNb2: q(".cn-hm-nb2"), hmTrk: q(".cn-hm-trk"), hmPt: q(".cn-hm-pt"), hmRing: q(".cn-hm-ring"), snd: q(".cn-snd")
   };
   const ctx = {
-    bg: el.bg.getContext("2d"), fuse: el.fuse.getContext("2d"), strobe: el.strobe.getContext("2d"), tunnel: el.tunnel.getContext("2d"), hmv: el.hmVis.getContext("2d")
+    bg: el.bg.getContext("2d"), fuse: el.fuse.getContext("2d"), strobe: el.strobe.getContext("2d"), tunnel: el.tunnel.getContext("2d"), hmv: el.hmVis.getContext("2d"), hmpt: el.hmPt.getContext("2d")
   };
   const tmp = document.createElement("canvas");
   const tmpx = tmp.getContext("2d");
 
   /* ------------------------------ images ------------------------------ */
-  const IM = { plates: {}, strobe: [], mask: null, visor: null, ready: false, started: false };
+  const IM = { plates: {}, strobe: [], vr: [], mask: null, visor: null, ready: false, started: false };
   const loadImg = src => { const i = new Image(); i.decoding = "async"; i.src = src; return i; };
   const okImg = i => !!(i && i.complete && i.naturalWidth > 0);
   function loadAll() {
@@ -153,6 +158,7 @@
     for (let i = 0; i < N_STROBE; i++) IM.strobe[i] = loadImg(ASSET + "s" + pad(i) + ".webp");
     IM.mask = loadImg(ASSET + "fuse-mask.png");
     IM.visor = loadImg(ASSET + "visor-mask.png");
+    for (let i = 0; i < 10; i++) IM.vr[i] = loadImg(ASSET + "vr" + pad(i) + ".webp");
   }
 
   /* ------------------------------ layout ------------------------------ */
@@ -209,6 +215,12 @@
     const f = el.hmFig.style;
     f.width = figW + "px"; f.height = hB + "px"; f.top = figTop + "px"; f.left = "0px";
     el.hmA.style.height = hA + "px"; el.hmB.style.height = hB + "px"; el.hmVis.style.height = hB + "px";
+    el.hmNa.style.height = hA + "px"; el.hmNb.style.height = hB + "px"; el.hmNb2.style.height = hB + "px";
+    const tk = el.hmTrk.style; tk.left = (478 * s) + "px"; tk.top = (305 * s) + "px"; tk.width = (190 * s) + "px"; tk.height = (72 * s) + "px";
+    const trkT = HMC[ar ? "ar" : "en"].trk; el.hmTrk.querySelector(".t1").textContent = trkT[0]; el.hmTrk.querySelector(".t2").textContent = trkT[1];
+    el.hmPt.width = Math.round(vw * .6); el.hmPt.height = Math.round(vh * .6);
+    hm.vx = hm.cxB - figW / 2 + 520 * s; hm.vy = figTop + 345 * s;
+    el.hmRing.style.left = hm.vx + "px"; el.hmRing.style.top = hm.vy + "px";
     stage.style.setProperty("--rx", (hm.cxB - figW / 2 + 520 * s) + "px");
     stage.style.setProperty("--ry", (figTop + 345 * s) + "px");
     const mx = (x, w) => (ar ? vw - x - w : x);
@@ -389,12 +401,27 @@
       else break;
     }
     const kb = 1.03 + .075 * seg(Math.min(p, HOLD_FROM), .23, HOLD_FROM);
-    const A = IM.plates[PLAN[cur]];
+    drawMix(c, W, H, IM.plates[PLAN[cur]], nxt < 0 ? null : IM.plates[PLAN[nxt]], qv, tt, kb, (Math.min(p, HOLD_FROM) - .3) * W * .05);
+  }
+
+  /* backdrop of the helmet finale: its own plates and wipes, so the world keeps moving behind the figures */
+  const FIN = ["p09", "p16", "p07", "p19", "p03"];
+  const FTR = [{ a: .13, b: .17, t: 0 }, { a: .21, b: .25, t: 3 }, { a: .29, b: .33, t: 1 }, { a: .67, b: .73, t: 2 }];   // the last one is the whip into the light trails
+  function paintFinaleBackdrop(c, W, H, q) {
+    let cur = 0, nxt = -1, qv = 0, tt = 0;
+    const order = [0, 1, 2, 3, 4];
+    for (let i = 0; i < FTR.length; i++) {
+      if (q >= FTR[i].b) cur = i + 1;
+      else if (q >= FTR[i].a) { cur = i; nxt = i + 1; qv = (q - FTR[i].a) / (FTR[i].b - FTR[i].a); tt = FTR[i].t; break; }
+      else break;
+    }
+    drawMix(c, W, H, IM.plates[FIN[order[Math.min(cur, 4)]]], nxt < 0 ? null : IM.plates[FIN[order[Math.min(nxt, 4)]]], qv, tt, 1.08 + .05 * seg(q, 0, .7), (q - .5) * W * .03);
+  }
+
+  function drawMix(c, W, H, A, B, qv, tt, kb, drift) {
     c.fillStyle = "#020504"; c.fillRect(0, 0, W, H);
-    const drift = (Math.min(p, HOLD_FROM) - .3) * W * .05;
     cover(c, A, W, H, kb, drift, 0, 1);
-    if (nxt < 0) return;
-    const B = IM.plates[PLAN[nxt]];
+    if (!B) return;
     const e = E.io3(qv);
     c.save();
     if (tt === 0) {                                   // diagonal slash
@@ -540,7 +567,7 @@
 
     /* ---- tunnel + intro (before / around p=0) ---- */
     const tk0 = p > 0.036 || exitPx > 0 || q > 0 ? 0 : (1 - seg(p, 0, .036)) * E.out3(seg(enter, .1, .8));
-    const spd = (q > 0 && exitPx <= 0) ? E.io3(seg(q, .66, .74)) * (1 - E.io3(seg(q, .86, .95))) * .9 : 0;
+    const spd = (q > 0 && exitPx <= 0) ? E.io3(seg(q, .70, .76)) * (1 - E.io3(seg(q, .88, .95))) * .9 : 0;
     const tk = Math.max(tk0, spd);
     if (tk > 0) paintTunnel(ctx.tunnel, el.tunnel.width, el.tunnel.height, spd > 0 ? q * 18 : enter * 5 + p * 60, tk);
     el.tunnel.style.opacity = tk > 0 ? "1" : "0";
@@ -606,7 +633,7 @@
 
       /* backdrop */
       const W = el.bg.width, H = el.bg.height;
-      paintBackdrop(ctx.bg, W, H, p);
+      if (q > 0) paintFinaleBackdrop(ctx.bg, W, H, q); else paintBackdrop(ctx.bg, W, H, p);
       const blurK = clamp(wA * .9 + wN * .55 + hmv * .3, 0, 1);
       if (blurK > .04) {
         const f = 1 / (1 + blurK * 9);
@@ -686,6 +713,7 @@
     /* ---- HUD ---- */
     const hudV = E.out3(seg(p, .245, .28)) * (1 - E.io3(seg(exit, 0, .5)));
     set("--hud", hudV.toFixed(3));
+    el.snd.style.opacity = hudV.toFixed(3); el.snd.style.pointerEvents = hudV > .6 ? "auto" : "none";
     set("--pp", pr.toFixed(4));
     set("--hint", (E.out3(seg(q, .94, .98)) * (1 - seg(exit, 0, .3))).toFixed(3));
     const rv = E.out3(seg(q, .94, .98)) * (1 - seg(exit, 0, .25));
@@ -698,99 +726,191 @@
     else if (!raf) raf = 0;
   }
 
-  /* ------------------------------ helmet finale + launch ------------------------------ */
+  /* ------------------------------ sound (synthesised, no files; respects the viewer's mute switch) ------------------------------ */
+  const Snd = (() => {
+    let ac = null, master = null, nbuf = null;
+    const muted = () => !!window.CINE_MUTE || (() => { try { return localStorage.getItem("cine-mute") === "1"; } catch (_) { return false; } })();
+    const get = () => {
+      if (muted()) return null;
+      if (!ac) {
+        try {
+          const C = window.AudioContext || window.webkitAudioContext; ac = new C();
+          const comp = ac.createDynamicsCompressor(); master = ac.createGain(); master.gain.value = .62; master.connect(comp); comp.connect(ac.destination);
+          nbuf = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate); const d = nbuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+        } catch (_) { ac = null; return null; }
+      }
+      if (ac.state === "suspended") ac.resume().catch(() => {});
+      return ac;
+    };
+    const env = (g, t, a, peak, d) => { g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + d); };
+    const osc = (a, type, f0, f1, t, d, peak, att) => { const o = a.createOscillator(), g = a.createGain(); o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(Math.max(1, f1), t + d); env(g, t, att || .005, peak, d); o.connect(g); g.connect(master); o.start(t); o.stop(t + d + .05); };
+    const noise = (a, t, d, peak, type, f0, f1, att) => { const s = a.createBufferSource(); s.buffer = nbuf; const f = a.createBiquadFilter(); f.type = type; f.frequency.setValueAtTime(f0, t); f.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + d); const g = a.createGain(); env(g, t, att || .004, peak, d); s.connect(f); f.connect(g); g.connect(master); s.start(t); s.stop(t + d + .05); };
+    return {
+      muted, toggle() { try { localStorage.setItem("cine-mute", muted() ? "0" : "1"); } catch (_) { window.CINE_MUTE = !window.CINE_MUTE; } },
+      boom(v) { const a = get(); if (!a) return; const t = a.currentTime; osc(a, "sine", 90, 34, t, .75, .95 * (v || 1), .004); noise(a, t, .35, .5 * (v || 1), "lowpass", 900, 120); },
+      thump() { const a = get(); if (!a) return; const t = a.currentTime; osc(a, "sine", 135, 46, t, .22, .9, .003); noise(a, t, .05, .35, "highpass", 3000, 6000); },
+      clunk() { const a = get(); if (!a) return; const t = a.currentTime; osc(a, "square", 240, 90, t, .09, .22, .002); osc(a, "sine", 70, 40, t, .3, .8, .003); noise(a, t, .12, .45, "bandpass", 2400, 900); },
+      whoosh(d) { const a = get(); if (!a) return; const t = a.currentTime; noise(a, t, d || .7, .5, "bandpass", 300, 4200, (d || .7) * .55); },
+      riser(d) { const a = get(); if (!a) return; const t = a.currentTime; noise(a, t, d, .55, "bandpass", 250, 6000, d * .9); osc(a, "sawtooth", 110, 760, t, d, .18, d * .9); },
+      engine(d) {
+        const a = get(); if (!a) return; const t = a.currentTime;
+        [0, 1.012].forEach(k => { const o = a.createOscillator(), f = a.createBiquadFilter(), g = a.createGain(); o.type = "sawtooth"; o.frequency.setValueAtTime(48 * (k || 1), t); o.frequency.exponentialRampToValueAtTime(230 * (k || 1), t + d * .8); f.type = "lowpass"; f.frequency.setValueAtTime(500, t); f.frequency.exponentialRampToValueAtTime(3200, t + d * .8); env(g, t, d * .5, .3, d * .55); o.connect(f); f.connect(g); g.connect(master); o.start(t); o.stop(t + d + .1); });
+        noise(a, t, d, .38, "bandpass", 500, 3000, d * .4);
+      }
+    };
+  })();
+  const SND_EVENTS = [
+    [.03, () => { Snd.boom(1); Snd.whoosh(.6); }],
+    [HM_HITS[0], () => { Snd.thump(); }], [HM_HITS[1], () => { Snd.thump(); }], [HM_HITS[2], () => { Snd.thump(); }], [HM_HITS[3], () => { Snd.thump(); Snd.boom(.6); }],
+    [.45, () => Snd.whoosh(.7)], [.54, () => { Snd.clunk(); Snd.boom(.7); }], [.56, () => Snd.riser(2.3)], [.70, () => { Snd.engine(2.4); Snd.boom(1); }]
+  ];
+  let sndPrevQ = null;
+
+  /* ------------------------------ helmet finale: face -> visor -> reflections -> launch ------------------------------ */
+  const ORDER_VR = [0, 1, 3, 2, 5, 8, 7, 0, 1, 3, 2, 8, 5, 7, 3, 1, 2, 8];
   let hmIdx = -1, hmLastCut = 0, hmVisible = false;
+
   function paintVisor(q, act, now) {
     const c = ctx.hmv, W = 768, H = 594;
     c.globalCompositeOperation = "source-over";
     c.clearRect(0, 0, W, H);
     if (!okImg(IM.visor)) return;
-    const N = 30, tf = seg(q, .52, .68) * N, target = Math.floor(tf);
+    const N = 26, tf = seg(q, .56, .68) * N, target = Math.floor(tf);
     if (hmIdx < 0) hmIdx = target;
     if (target !== hmIdx && now - hmLastCut >= STROBE_MIN_MS) { hmIdx += Math.sign(target - hmIdx); hmLastCut = now; }
-    const t = clamp(tf - hmIdx, 0, 1);
-    const img = IM.strobe[(((hmIdx * 5) % N_STROBE) + N_STROBE) % N_STROBE];
+    const t = clamp(tf - hmIdx, 0, 1), fin = q >= .68;
+    const img = IM.vr[fin ? 9 : ORDER_VR[((hmIdx % ORDER_VR.length) + ORDER_VR.length) % ORDER_VR.length]];
     if (okImg(img)) {
-      c.save(); c.setTransform(1, 0, -.11, 1, 46, 0);
-      cover(c, img, W, H, 1.3 + .12 * t, (hash(hmIdx) - .5) * W * .08, 0, 1);
+      c.save(); c.setTransform(1, 0, -.08, 1, 36, 0);                  // slight shear: the glass is curved, not flat
+      cover(c, img, W, H, 1.2 + .14 * t + (fin ? .12 * seg(q, .68, .74) : 0), (hash(hmIdx) - .5) * W * .05, 0, 1);
       c.restore();
-      c.save(); c.globalCompositeOperation = "screen"; cover(c, img, W, H, 1.34, W * .012, 0, .28); c.restore();
     }
-    c.fillStyle = "rgba(70,255,90,.05)"; c.fillRect(0, 0, W, H);
-    const dg = c.createLinearGradient(0, 0, 0, H); dg.addColorStop(0, "rgba(0,0,0,.05)"); dg.addColorStop(1, "rgba(0,0,0,.55)"); c.fillStyle = dg; c.fillRect(0, 0, W, H);   // glass depth
-    const sx = lerp(-W * .3, W * 1.3, seg(q, .50, .70)), g = c.createLinearGradient(sx - 120, 0, sx + 120, H * .6);   // moving sheen
-    g.addColorStop(0, "rgba(255,255,255,0)"); g.addColorStop(.5, "rgba(230,255,220,.38)"); g.addColorStop(1, "rgba(255,255,255,0)");
+    // glass depth: darker toward the chin, a moving sheen and two neon streak accents
+    const dg = c.createLinearGradient(0, 0, 0, H); dg.addColorStop(0, "rgba(0,0,0,0)"); dg.addColorStop(1, "rgba(0,0,0,.5)"); c.fillStyle = dg; c.fillRect(0, 0, W, H);
+    const sx = lerp(-W * .3, W * 1.3, seg(q, .54, .72)), g = c.createLinearGradient(sx - 90, 0, sx + 90, H * .7);
+    g.addColorStop(0, "rgba(200,255,180,0)"); g.addColorStop(.5, "rgba(220,255,200,.30)"); g.addColorStop(1, "rgba(200,255,180,0)");
     c.fillStyle = g; c.fillRect(0, 0, W, H);
-    c.globalCompositeOperation = "destination-in"; c.drawImage(IM.visor, 0, 0, W, H);     // everything is cut to the glass shape
+    c.globalCompositeOperation = "lighter"; c.strokeStyle = "rgba(150,255,110,.5)"; c.lineWidth = 2;
+    for (let k = 0; k < 2; k++) { const y = H * (.28 + .3 * k) + Math.sin(q * 40 + k) * 6; c.beginPath(); c.moveTo(0, y); c.lineTo(W, y - 50); c.stroke(); }
+    c.globalCompositeOperation = "destination-in"; c.drawImage(IM.visor, 0, 0, W, H);      // everything is cut to the glass shape
     c.globalCompositeOperation = "source-over";
+  }
+
+  function paintParticles(q, act) {
+    const cv = el.hmPt, c = ctx.hmpt, W = cv.width, H = cv.height, k = W / vw;
+    c.clearRect(0, 0, W, H);
+    const dust = E.io3(seg(q, .06, .16)) * (1 - E.io3(seg(q, .66, .74)));
+    if (dust > .01) {
+      c.fillStyle = "rgba(170,255,120,1)";
+      for (let i = 0; i < 70; i++) {
+        const sp = .4 + hash(i * 1.3) * 1.4, x = hash(i) * W, y = ((hash(i * 2.1) - q * sp * 1.4) % 1 + 1) % 1 * H, r = (.6 + hash(i * 3.7) * 1.8) * k * 1.6;
+        c.globalAlpha = dust * (.15 + .6 * hash(i * 5.3)) * (.6 + .4 * Math.sin(q * 50 + i));
+        c.beginPath(); c.arc(x, y, r, 0, 6.283); c.fill();
+      }
+    }
+    const sp = E.out3(seg(q, .70, .84)) * (1 - E.io3(seg(q, .78, .90)));
+    if (sp > .01) {
+      const cx = hm.vx * k, cy = hm.vy * k, R = Math.hypot(W, H);
+      c.lineCap = "round"; c.globalCompositeOperation = "lighter";
+      for (let i = 0; i < 80; i++) {
+        const a = hash(i * 1.9) * 6.283, d0 = E.out3(seg(q, .70, .84)) * (.25 + hash(i * 4.1) * .75) * R, d1 = d0 * (.55 + .3 * hash(i));
+        c.strokeStyle = "rgba(" + (170 + hash(i) * 85 | 0) + ",255," + (100 + hash(i * 2) * 100 | 0) + "," + (sp * (.4 + .6 * hash(i * 7))).toFixed(3) + ")";
+        c.lineWidth = (1 + hash(i * 6) * 2.2) * k * 1.5;
+        c.beginPath(); c.moveTo(cx + Math.cos(a) * d1, cy + Math.sin(a) * d1); c.lineTo(cx + Math.cos(a) * d0, cy + Math.sin(a) * d0); c.stroke();
+      }
+      c.globalCompositeOperation = "source-over";
+    }
+    c.globalAlpha = 1;
   }
 
   function updHM(q, pr, act, now, side, shx, shy) {
     const on = q > 0;
     if (on !== hmVisible) { el.hm.classList.toggle("is-on", on); hmVisible = on; }
+    /* sound cues fire when you scroll forward across them */
+    if (sndPrevQ !== null && on) { for (const [qq, fn] of SND_EVENTS) if (sndPrevQ < qq && q >= qq && q - sndPrevQ < .15) { try { fn(); } catch (_) {} } }
+    sndPrevQ = q;
     if (!on) return;
     const ar = isAr(), s = hm.s;
     el.hm.style.transform = "translate3d(" + shx.toFixed(1) + "px," + shy.toFixed(1) + "px,0)";
 
-    /* the figure: slams in (face), slides to centre while the visor closes, then rushes past us */
-    const inA = E.out3(seg(q, .04, .10)), wp = E.io3(seg(q, .42, .52)), mv = E.io3(seg(q, .44, .58)), fx = E.io3(seg(q, .68, .78));
+    /* the figure: opens like a light slit, slides to centre while the visor closes, pushes into the visor, then rushes past */
+    const rev = E.out3(seg(q, .03, .10)), inA = rev, wp = E.io3(seg(q, .44, .54)), mv = E.io3(seg(q, .46, .60));
+    const push = E.io3(seg(q, .56, .70)), fx = E.io3(seg(q, .70, .80));
     const cx = lerp(hm.cxA, hm.cxB, mv);
-    const sc = lerp(1.14, 1, inA) * lerp(1 + .04 * seg(q, .10, .42), 1, mv) * (1 + .7 * fx);
-    const tx = cx - hm.figW / 2 + (1 - inA) * (ar ? -90 : 90);
+    const sc = lerp(1.1, 1, E.out3(seg(q, .03, .12))) * lerp(1 + .045 * seg(q, .10, .44), 1, mv) * (1 + 1.15 * push) * (1 + .9 * fx);
+    const tx = cx - hm.figW / 2 + (1 - rev) * (ar ? -70 : 70);
     const vx = hm.cxB - hm.figW / 2 + 520 * s, vy = hm.figTop + 345 * s;
     el.hmFig.style.transformOrigin = (vx - (cx - hm.figW / 2)) + "px " + (vy - hm.figTop) + "px";
     el.hmFig.style.transform = "translate3d(" + tx.toFixed(1) + "px,0,0) scale(" + sc.toFixed(4) + ")";
-    el.hmFig.style.opacity = (inA * (1 - fx)).toFixed(3);
-    el.hmFig.style.visibility = (inA * (1 - fx)) > .003 ? "visible" : "hidden";
+    const vis = (1 - fx);
+    el.hmFig.style.opacity = vis.toFixed(3);
+    el.hmFig.style.visibility = (rev > .003 && vis > .003) ? "visible" : "hidden";
+    const inset = (1 - rev) * 50;
+    el.hmFig.style.clipPath = inset > .1 ? "inset(" + inset.toFixed(2) + "% 0)" : "none";
 
     /* visor-close wipe: B (closed) is revealed from the top down, A (face) stays underneath */
     const wy = wp * hm.hB;
     el.hmA.style.clipPath = wp > 0 ? "inset(" + wy.toFixed(1) + "px 0 0 0)" : "none";
     el.hmA.style.visibility = wp >= 1 ? "hidden" : "visible";
     const bClip = wp <= 0 ? "inset(0 0 100% 0)" : "inset(0 0 " + Math.max(0, hm.hB - wy).toFixed(1) + "px 0)";
-    el.hmB.style.clipPath = bClip; el.hmVis.style.clipPath = bClip;
-    el.hmWipe.style.top = wy.toFixed(1) + "px";
-    el.hmWipe.style.opacity = (wp > 0 && wp < 1) ? "1" : "0";
+    el.hmB.style.clipPath = bClip; el.hmVis.style.clipPath = bClip; el.hmNb.style.clipPath = bClip; el.hmNb2.style.clipPath = bClip;
+    el.hmNa.style.clipPath = el.hmA.style.clipPath;
+    if (rev < 1) { el.hmWipe.style.top = (hm.hA / 2) + "px"; el.hmWipe.style.opacity = String(1 - rev); }
+    else { el.hmWipe.style.top = wy.toFixed(1) + "px"; el.hmWipe.style.opacity = (wp > 0 && wp < 1) ? "1" : "0"; }
+
+    /* neon: face lights pulse on the beats; after the visor shuts the whole helmet powers up in a sweep */
+    let beat = 0; for (let i = 0; i < HM_HITS.length; i++) beat += pulse(q, HM_HITS[i], .02);
+    beat = Math.min(1, beat) * act;
+    el.hmNa.style.opacity = (.30 + .7 * beat).toFixed(3);
+    const pw2 = E.io3(seg(q, .54, .64)), sw = lerp(-20, 130, seg(q, .54, .66));
+    el.hmNb.style.opacity = (.22 + .55 * pw2).toFixed(3);
+    el.hmNb2.style.opacity = (Math.sin(Math.PI * seg(q, .54, .66)) * 1).toFixed(3);
+    stage.style.setProperty("--sw", sw.toFixed(1) + "%");
+    el.hmA.style.filter = "brightness(" + (1 + .14 * beat).toFixed(3) + ")";
+    el.hmB.style.filter = "brightness(" + (1 + .22 * Math.min(1, pulse(q, .54, .03) * act)).toFixed(3) + ")";
+
+    /* eye tracker locks on during the face act */
+    const trk = E.out3(seg(q, .14, .20)) * (1 - E.io3(seg(q, .42, .46)));
+    el.hmTrk.style.opacity = trk.toFixed(3);
+    el.hmTrk.style.transform = "scale(" + lerp(1.7, 1, trk).toFixed(3) + ")";
+    el.hmTrk.classList.toggle("blink", beat > .3);
 
     /* reflections inside the visor glass (only while the closed helmet is on screen) */
-    const showVis = wp > .02 && fx < .98;
-    if (showVis) paintVisor(q, act, now);
-    set("--vis", (E.io3(seg(q, .50, .58)) * .72 * (1 - fx)).toFixed(3));
-    let beat = 0; for (let i = 0; i < HM_HITS.length; i++) beat += pulse(q, HM_HITS[i], .02);
-    const ign = pulse(q, .52, .03) + pulse(q, .66, .03);
-    el.hmB.style.filter = "brightness(" + (1 + .22 * (ign * act)) .toFixed(3) + ")";
-    el.hmA.style.filter = "brightness(" + (1 + .16 * Math.min(1, beat) * act).toFixed(3) + ")";
+    if (wp > .02 && fx < .98) paintVisor(q, act, now);
+    set("--vis", (E.io3(seg(q, .52, .58)) * (.88 + .12 * Math.min(1, beat + pulse(q, .56, .03))) * (1 - fx)).toFixed(3));
 
-    /* glow, rays, bloom */
+    /* glow, rays, bloom, shock ring */
     stage.style.setProperty("--hx", cx + "px");
-    set("--hg", clamp(.55 * inA + .5 * Math.min(1, beat) * act + .35 * seg(q, .5, .8), 0, 1.4).toFixed(3));
-    set("--rayo", (E.io3(seg(q, .50, .66)) * (1 - E.io3(seg(q, .80, .90))) * .9).toFixed(3));
+    set("--hg", clamp(.5 * inA + .55 * beat + .35 * seg(q, .5, .8), 0, 1.4).toFixed(3));
+    set("--rayo", (E.io3(seg(q, .52, .66)) * (1 - E.io3(seg(q, .84, .92))) * .9).toFixed(3));
     set("--ra", (Math.min(q, .9) * 260).toFixed(1) + "deg");
-    const bloom = E.io3(seg(q, .60, .68)) * (1 - E.io3(seg(q, .68, .80)));
-    el.hmBloom.style.opacity = (bloom * .85).toFixed(3);
+    const bloom = E.io3(seg(q, .62, .70)) * (1 - E.io3(seg(q, .70, .80)));
+    el.hmBloom.style.opacity = (bloom * .8).toFixed(3);
     el.hmBloom.style.transform = "scale(" + (1 + bloom * 1.3).toFixed(3) + ")";
+    const rg = seg(q, .70, .84);
+    el.hmRing.style.opacity = (rg > 0 && rg < 1 ? (1 - rg) * .95 : 0).toFixed(3);
+    el.hmRing.style.transform = "translate(-50%,-50%) scale(" + (.2 + E.out3(rg) * 16).toFixed(3) + ")";
+    paintParticles(q, act);
 
-    /* headline words on the beats */
     updHmWords(q, act, side);
 
     /* LAUNCH: the bike bursts out of the visor, tyre running out of frame, wheel spinning with the scroll */
-    const u = seg(q, .68, .88), f = E.io3(u), L = hm.ln;
+    const u = seg(q, .70, .90), f = E.io3(u), L = hm.ln;
     if (u <= 0) { el.hmLn.style.visibility = "hidden"; }
     else {
-      const S0 = .05, scl = S0 * Math.pow(1 / S0, f) * (1 + .05 * Math.sin(Math.PI * seg(q, .80, .90)));
+      const S0 = .05, scl = S0 * Math.pow(1 / S0, f) * (1 + .05 * Math.sin(Math.PI * seg(q, .82, .92)));
       const ox = lerp(vx - L.cx, 0, Math.pow(f, .85)), oy = lerp(vy - L.cy, 0, Math.pow(f, .85));
       const vel = Math.abs(E.io3(u) - E.io3(Math.max(0, u - .025))) * 60;
       el.hmLn.style.visibility = "visible";
       el.hmLn.style.opacity = clamp(u * 9, 0, 1).toFixed(3);
       el.hmLn.style.transform = "translate3d(" + ox.toFixed(1) + "px," + oy.toFixed(1) + "px,0) rotate(" + lerp(-9, 0, f).toFixed(2) + "deg) scale(" + scl.toFixed(4) + ")";
       el.hmL.style.filter = vel > .4 ? "blur(" + clamp(vel, 0, 9).toFixed(1) + "px)" : "none";
-      const spin = (q - .68) * 2400;                                   // degrees: tied to scroll, so it stops when you stop
-      el.hmWheel.style.transform = "rotate(" + spin.toFixed(1) + "deg)";
+      el.hmWheel.style.transform = "rotate(" + ((q - .70) * 2400).toFixed(1) + "deg)";   // tied to scroll: stops when you stop
       el.hmWheel.parentNode.style.opacity = (.35 + .55 * clamp(vel / 3, 0, 1)).toFixed(3);
     }
 
     /* lock-up beside the bike */
-    const lk = E.out3(seg(q, .90, .95));
+    const lk = E.out3(seg(q, .91, .96));
     el.hmLock.style.opacity = lk.toFixed(3);
     el.hmLock.style.transform = "translate3d(" + ((1 - lk) * -50 * side).toFixed(1) + "px,0,0)";
   }
@@ -801,13 +921,12 @@
       const t0 = HM_HITS[i], u = seg(q, t0, t0 + .045), ex = E.io3(seg(q, .44 + .012 * i, .50 + .012 * i));
       let tx = 0, ty = 0, sc = 1, sk = 0, op = u > 0 ? 1 : 0, blur = 0, clip = "none", gl = false;
       w.el.style.transformOrigin = ar ? "100% 50%" : "0% 50%";
-      if (i === 0) { const e = E.outExp(u); tx = dir * (w.w + vw * .3) * (1 - e); sk = dir * -18 * (1 - e) * -1; blur = (1 - e) * 10; gl = !SAFE && act > 0 && u > 0 && u < .9; }
+      if (i === 0) { const e = E.outExp(u); tx = dir * (w.w + vw * .3) * (1 - e); sk = dir * 18 * (1 - e); blur = (1 - e) * 10; gl = !SAFE && act > 0 && u > 0 && u < .9; }
       else if (i === 1) { ty = -(w.y + w.h + 80) * (1 - E.bounce(u)); gl = !SAFE && act > 0 && u > 0 && u < .9; }
       else if (i === 2) { const e = E.outExp(u); sc = lerp(3.4, 1, e); blur = (1 - e) * 12; gl = !SAFE && act > 0 && u > 0 && u < .8; }
       else { op = u <= 0 ? 0 : (SAFE || u > .6 ? 1 : (hash(Math.floor(q * 900) + i) > .42 ? 1 : .1)); const rv = (1 - E.out3(u)) * 100; clip = "inset(0 " + (ar ? "0 0 " + rv + "%" : rv + "% 0 0") + ")"; gl = !SAFE && act > 0 && u > 0 && u < .8; }
       const fill = E.io3(seg(q, t0 + .02, t0 + .09));
       w.el.style.setProperty("--f", fill.toFixed(3));
-      // leave: slides out with a glitch when the visor closes
       tx += -dir * ex * (w.w * .7); op *= (1 - ex); if (ex > 0 && ex < 1) gl = gl || (!SAFE && act > 0);
       w.el.style.opacity = op.toFixed(3);
       w.el.style.transform = "translate3d(" + tx.toFixed(1) + "px," + ty.toFixed(1) + "px,0) scale(" + sc.toFixed(3) + ") skewX(" + sk.toFixed(1) + "deg)";
@@ -873,6 +992,9 @@
   }
 
   /* ------------------------------ wiring ------------------------------ */
+  const syncSnd = () => { el.snd.classList.toggle("off", Snd.muted()); el.snd.setAttribute("aria-pressed", String(!Snd.muted())); };
+  el.snd.addEventListener("click", () => { Snd.toggle(); syncSnd(); if (!Snd.muted()) Snd.thump(); });
+  syncSnd();
   el.replay.addEventListener("click", () => {
     const top = sec.getBoundingClientRect().top + scrollY;
     const lenis = window.__lenis;
