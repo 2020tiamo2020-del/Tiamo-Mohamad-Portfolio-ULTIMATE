@@ -260,3 +260,10 @@ body.cn-on .st-rail:not(:hover):not(.st-flash) .st-lbl{max-width:0!important;opa
   background:rgba(4,20,8,.5);color:#cfffbf;display:grid;place-items:center;cursor:pointer;opacity:0;pointer-events:none;padding:0;transition:background .2s}
 .cn-snd:hover{background:rgba(40,140,50,.5)}
 .cn-snd .x{display:none}.cn-snd.off .x{display:block}.cn-snd.off .w{display:none}
+
+/* never let a visible child show through a hidden finale layer */
+.cn-hm:not(.is-on),.cn-hm:not(.is-on) *{visibility:hidden!important}
+/* idle = no drawing at all: also pause the CSS loops */
+.cn-stage.idle .cn-grain,.cn-stage.idle .cn-hint i,.cn-stage.idle .cn-rec i{animation-play-state:paused}
+/* Arabic eye-tracker labels hug the right edge of the brackets */
+.cn-stage[data-lang="ar"] .cn-hm-trk span{left:auto;right:0;text-align:right}

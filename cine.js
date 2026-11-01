@@ -519,6 +519,7 @@
   }
 
   /* ------------------------------ frame ------------------------------ */
+  let pending = false;
   let lastCard = -1, lastCap = -1, lastY = null, lastMove = 0, raf = 0, wasOn = false, wasCover = false, curGhost = 0;
   const set = (n, v) => stage.style.setProperty(n, v);
 
@@ -528,7 +529,9 @@
     const y = -r.top;
     if (lastY === null || Math.abs(y - lastY) > .4) lastMove = now;
     lastY = y;
-    const act = clamp(1 - (now - lastMove) / 300, 0, 1);       // 1 while scrolling, fades to 0 once you stop (shake / flash / glitch settle)
+    const act = clamp(1 - (now - lastMove) / 300, 0, 1);
+    pending = false;
+    stage.classList.toggle("idle", act === 0);       // 1 while scrolling, fades to 0 once you stop (shake / flash / glitch settle)
 
     if (!IM.started && r.top < vh * 3.5) loadAll();
     const enter = clamp((y + vh) / vh, 0, 1);
@@ -587,6 +590,7 @@
       /* strobe: scroll sets the target frame, but cuts can never come faster than STROBE_MIN_MS */
       const N = 56, tf = seg(p, .036, .205) * N, target = Math.floor(tf);
       if (strobeIdx < 0) { strobeIdx = target; strobeShown = -1; }
+      if (target !== strobeIdx) pending = true;
       if (target !== strobeIdx && now - lastCut >= STROBE_MIN_MS) { strobeIdx += Math.sign(target - strobeIdx); lastCut = now; strobeSeed = (hash(strobeIdx * 1.3) * 1000) | 0; }
       const t = clamp(tf - strobeIdx, 0, 1);
       const img = IM.strobe[((strobeIdx % N_STROBE) + N_STROBE) % N_STROBE * 7 % N_STROBE];
@@ -722,7 +726,7 @@
     const secs = pr * 24, ss = Math.floor(secs), ff = Math.floor((secs - ss) * 24);
     el.hudR.textContent = "TC 00:00:" + pad(ss) + ":" + pad(ff);
 
-    if (act > 0 || pr > 0.001 && pr < 1) raf = requestAnimationFrame(frame);
+    if (act > 0 || pending) raf = requestAnimationFrame(frame);   // once you stop scrolling and everything has settled, drawing stops completely
     else if (!raf) raf = 0;
   }
 
@@ -777,6 +781,7 @@
     if (!okImg(IM.visor)) return;
     const N = 26, tf = seg(q, .56, .68) * N, target = Math.floor(tf);
     if (hmIdx < 0) hmIdx = target;
+    if (target !== hmIdx) pending = true;
     if (target !== hmIdx && now - hmLastCut >= STROBE_MIN_MS) { hmIdx += Math.sign(target - hmIdx); hmLastCut = now; }
     const t = clamp(tf - hmIdx, 0, 1), fin = q >= .68;
     const img = IM.vr[fin ? 9 : ORDER_VR[((hmIdx % ORDER_VR.length) + ORDER_VR.length) % ORDER_VR.length]];
@@ -829,7 +834,7 @@
     /* sound cues fire when you scroll forward across them */
     if (sndPrevQ !== null && on) { for (const [qq, fn] of SND_EVENTS) if (sndPrevQ < qq && q >= qq && q - sndPrevQ < .15) { try { fn(); } catch (_) {} } }
     sndPrevQ = q;
-    if (!on) return;
+    if (!on) { el.hmFig.style.visibility = "hidden"; el.hmLn.style.visibility = "hidden"; return; }
     const ar = isAr(), s = hm.s;
     el.hm.style.transform = "translate3d(" + shx.toFixed(1) + "px," + shy.toFixed(1) + "px,0)";
 
