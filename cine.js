@@ -22,9 +22,14 @@
 
   /* ------------------------------ tunables ------------------------------ */
   const ASSET = "images/cine/";
-  const TRAVEL_DESKTOP = 7.6;      // runway length in screen-heights
-  const TRAVEL_MOBILE = 7.0;
+  const TRAVEL_DESKTOP = 9.6;      // runway length in screen-heights
+  const TRAVEL_MOBILE = 9.0;
+  const PE = 0.66;                 // share of the runway used by the motorbike scene (the rest is the helmet finale)
+  const P_END_OLD = 0.84;          // the motorbike timeline's own 0..1 range ends here
+  const HM_HITS = [0.10, 0.17, 0.24, 0.31];   // the four word-slams of the helmet finale
   const SAFE = !!window.CINE_SAFE || matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const HM_FLASH = SAFE ? [] : [[0.03, 0.6], [0.52, 0.3], [0.68, 0.4], [0.86, 0.3]];                         // [q, strength]
+  const HM_SHAKE = SAFE ? [] : [[0.03, 1.2], [0.10, 0.7], [0.17, 0.8], [0.24, 0.9], [0.31, 1.0], [0.52, 0.6], [0.68, 0.9], [0.86, 1.2]];
   const STROBE_MIN_MS = SAFE ? 420 : 85;   // hard cap on how fast the top-half images may cut (≈11 per second)
   const HOLD_FROM = 0.79;                  // from here on, the final frame is frozen
   const N_STROBE = 23;
@@ -68,6 +73,10 @@
       scene: "المشهد ٣½ — <b>ما وراء الخيال</b>", intro: ["الفصل ٣½", "ما وراء الخيال"], hint: "مرّر", replay: "إعادة المشهد", mini: "إشارة / قادمة", ghost: "قدرات ✦ فوق ✦ خيالك ✦ "
     }
   };
+  const HMC = {
+    en: { words: ["THE MIND", "BEHIND", "EVERY", "FRAME"], lock: ["LET'S BUILD", "YOURS."] },
+    ar: { words: ["العقل", "وراء", "كل", "مشهد"], lock: ["لنصنع", "مشهدك."] }
+  };
   const L = () => COPY[isAr() ? "ar" : "en"];
 
   /* ------------------------------ stage DOM ------------------------------ */
@@ -89,6 +98,17 @@
           '<i class="cn-hl a"></i><i class="cn-hl b"></i><i class="cn-hl c"></i><i class="cn-hl d"></i><i class="cn-hl e"></i>' +
         '</div>' +
         '<div class="cn-anam"></div><div class="cn-beam"></div>' +
+      '</div>' +
+      '<div class="cn-hm">' +
+        '<div class="cn-hm-glow"></div><div class="cn-hm-rays"></div><div class="cn-hm-words"></div>' +
+        '<div class="cn-hm-fig">' +
+          '<img class="cn-hm-a m" alt="" src="' + ASSET + 'helmet-face.webp" decoding="async">' +
+          '<img class="cn-hm-b m" alt="" src="' + ASSET + 'helmet-closed.webp" decoding="async">' +
+          '<canvas class="cn-hm-vis" width="768" height="594"></canvas><i class="cn-hm-wipe"></i>' +
+        '</div>' +
+        '<div class="cn-hm-bloom"></div>' +
+        '<div class="cn-hm-ln"><img class="cn-hm-l" alt="" src="' + ASSET + 'launch.webp" decoding="async"><div class="cn-hm-wheel"><i></i></div></div>' +
+        '<div class="cn-hm-lock"><strong></strong><strong></strong></div>' +
       '</div>' +
       '<div class="cn-split">' +
         '<canvas class="cn-tunnel"></canvas><div class="cn-intro"><small></small><b></b></div>' +
@@ -114,16 +134,16 @@
     hlA: q(".cn-hl.a"), hlB: q(".cn-hl.b"), anam: q(".cn-anam"), beam: q(".cn-beam"),
     tunnel: q(".cn-tunnel"), intro: q(".cn-intro"), top: q(".cn-top"), bot: q(".cn-bot"), strobe: q(".cn-strobe"), count: q(".cn-count"),
     mini: q(".cn-mini"), card: q(".cn-card"), seam: q(".cn-seam"), cap: q(".cn-cap"), barT: q(".cn-bar.t"), barB: q(".cn-bar.b"),
-    flash: q(".cn-flash"), hud: q(".cn-hud"), hudL: q(".cn-hud .l"), hudR: q(".cn-hud .r"), hint: q(".cn-hint"), gate: q(".cn-gate"), replay: q(".cn-replay")
+    flash: q(".cn-flash"), hud: q(".cn-hud"), hudL: q(".cn-hud .l"), hudR: q(".cn-hud .r"), hint: q(".cn-hint"), gate: q(".cn-gate"), replay: q(".cn-replay"), hm: q(".cn-hm"), hmWords: q(".cn-hm-words"), hmFig: q(".cn-hm-fig"), hmA: q(".cn-hm-a"), hmB: q(".cn-hm-b"), hmVis: q(".cn-hm-vis"), hmWipe: q(".cn-hm-wipe"), hmLock: q(".cn-hm-lock"), hmLn: q(".cn-hm-ln"), hmL: q(".cn-hm-l"), hmWheel: q(".cn-hm-wheel i"), hmBloom: q(".cn-hm-bloom")
   };
   const ctx = {
-    bg: el.bg.getContext("2d"), fuse: el.fuse.getContext("2d"), strobe: el.strobe.getContext("2d"), tunnel: el.tunnel.getContext("2d")
+    bg: el.bg.getContext("2d"), fuse: el.fuse.getContext("2d"), strobe: el.strobe.getContext("2d"), tunnel: el.tunnel.getContext("2d"), hmv: el.hmVis.getContext("2d")
   };
   const tmp = document.createElement("canvas");
   const tmpx = tmp.getContext("2d");
 
   /* ------------------------------ images ------------------------------ */
-  const IM = { plates: {}, strobe: [], mask: null, ready: false, started: false };
+  const IM = { plates: {}, strobe: [], mask: null, visor: null, ready: false, started: false };
   const loadImg = src => { const i = new Image(); i.decoding = "async"; i.src = src; return i; };
   const okImg = i => !!(i && i.complete && i.naturalWidth > 0);
   function loadAll() {
@@ -132,6 +152,7 @@
     PLAN.forEach(n => (IM.plates[n] = loadImg(ASSET + n + ".webp")));
     for (let i = 0; i < N_STROBE; i++) IM.strobe[i] = loadImg(ASSET + "s" + pad(i) + ".webp");
     IM.mask = loadImg(ASSET + "fuse-mask.png");
+    IM.visor = loadImg(ASSET + "visor-mask.png");
   }
 
   /* ------------------------------ layout ------------------------------ */
@@ -154,7 +175,96 @@
     wd.fs = fs; wd.w = r.w; wd.h = r.h;
   }
 
+  /* ---------- helmet finale: words, figure, lock-up ---------- */
+  let hmWords = [], hm = { s: 1, figW: 1, hA: 1, hB: 1, figTop: 0, topBar: 90, botBar: 60, cxA: 0, cxB: 0 };
+  function buildHmWords() {
+    el.hmWords.textContent = "";
+    hmWords = [];
+    const ar = isAr();
+    HMC[ar ? "ar" : "en"].words.forEach(txt => {
+      const d = document.createElement("div");
+      d.className = "cn-w cn-hw";
+      d.setAttribute("data-t", txt);
+      d.setAttribute("lang", ar ? "ar" : "en");
+      const chars = [];
+      if (ar) { const s = document.createElement("span"); s.className = "cn-ch"; s.textContent = txt; d.appendChild(s); chars.push(s); }
+      else txt.split("").forEach(c => {
+        if (c === " ") { const sp = document.createElement("span"); sp.className = "cn-sp"; d.appendChild(sp); return; }
+        const s = document.createElement("span"); s.className = "cn-ch"; s.textContent = c; d.appendChild(s); chars.push(s);
+      });
+      el.hmWords.appendChild(d);
+      hmWords.push({ el: d, chars, fs: 100, x: 0, y: 0, w: 1, h: 1 });
+    });
+    const lk = HMC[ar ? "ar" : "en"].lock, st = el.hmLock.querySelectorAll("strong");
+    st[0].textContent = lk[0]; st[1].textContent = lk[1];
+  }
+  function placeHm() {
+    if (!vw) return;
+    const ar = isAr();
+    const topBar = Math.max(safeTop + 8, vh * .115), botBar = vh * .085;
+    const s = Math.min((vh - topBar + 4) / 745, vw * (port ? 1.35 : .78) / 1024);
+    const figW = 1024 * s, hA = 745 * s, hB = 791 * s;
+    const figTop = port ? Math.max(topBar - 4, vh * .30) : topBar - 4;
+    hm = { s, figW, hA, hB, figTop, topBar, botBar, cxA: port ? vw * .5 : (ar ? vw * .36 : vw * .64), cxB: vw * .5 };
+    const f = el.hmFig.style;
+    f.width = figW + "px"; f.height = hB + "px"; f.top = figTop + "px"; f.left = "0px";
+    el.hmA.style.height = hA + "px"; el.hmB.style.height = hB + "px"; el.hmVis.style.height = hB + "px";
+    stage.style.setProperty("--rx", (hm.cxB - figW / 2 + 520 * s) + "px");
+    stage.style.setProperty("--ry", (figTop + 345 * s) + "px");
+    const mx = (x, w) => (ar ? vw - x - w : x);
+    // words: a stacked headline in the free column next to the figure
+    const helmetLeft = hm.cxA - figW / 2 + 285 * s;
+    let y = port ? safeTop + vh * .02 : topBar + vh * .03;
+    const cols = port ? [.88, .80, .70, .70] : [.40, .31, .27, .27];
+    hmWords.forEach((w, i) => {
+      const helmetRight = hm.cxA - figW / 2 + 760 * s;
+      const tw = Math.min(vw * cols[i], port ? vw * .9 : (ar ? vw - helmetRight : helmetLeft) - vw * .075);
+      fitWord(w, Math.max(110, Math.min(tw, port ? vw * .9 : 1e9)), port ? vh * .062 : (ar ? vh * .205 : vh * .150));
+      w.x = port ? (vw - w.w) / 2 : mx(vw * .05, w.w);
+      w.y = y; y += w.h * (port ? 1.0 : (ar ? .86 : .98));
+      w.el.style.left = w.x + "px"; w.el.style.top = w.y + "px";
+    });
+    // lock-up
+    const st = el.hmLock.querySelectorAll("strong");
+    const target = port ? vw * .8 : Math.max(150, (hm.cxB - figW * .27) - vw * .075);
+    let fs = 100; el.hmLock.style.fontSize = "100px";
+    el.hmLock.style.cssText += ";width:auto;left:0;top:0";
+    const w100 = Math.max(st[0].offsetWidth, st[1].offsetWidth, 1);
+    fs = Math.min(100 * target / w100, port ? vh * .08 : vh * .14);
+    el.hmLock.style.fontSize = fs + "px";
+    const lw = Math.max(st[0].offsetWidth, st[1].offsetWidth), lh = el.hmLock.offsetHeight;
+    const lx = port ? (vw - lw) / 2 : mx(vw * .05, lw);
+    const ly = port ? safeTop + vh * .03 : Math.max(topBar + vh * .08, (vh - lh) / 2 - vh * .02);
+    el.hmLock.style.left = lx + "px"; el.hmLock.style.top = ly + "px";
+    hm.lock = { x: lx, w: lw };
+    // launch image: big, leaning at the camera; its front wheel runs out of the frame at the bottom
+    const kk = Math.min(1.3 * vh / 1536, (port ? 1.25 : .9) * vw / 1024);
+    const lnW = 1024 * kk, lnH = 1536 * kk, lcx = port ? vw * .5 : (ar ? vw * .40 : vw * .60), lnTop = topBar + 4;
+    hm.ln = { w: lnW, h: lnH, cx: lcx, cy: lnTop + lnH / 2, left: lcx - lnW / 2, top: lnTop, k: kk };
+    const ls = el.hmLn.style;
+    ls.width = lnW + "px"; ls.height = lnH + "px"; ls.left = hm.ln.left + "px"; ls.top = lnTop + "px";
+    // lock-up now sits beside the bike (opposite column), no longer beside the helmet
+    const free = port ? vw * .8 : Math.max(150, (lcx - lnW / 2 + 110 * kk) - vw * .075);
+    el.hmLock.style.fontSize = "100px";
+    const w2 = Math.max(st[0].offsetWidth, st[1].offsetWidth, 1);
+    const fs2 = Math.min(100 * free / w2, port ? vh * .075 : vh * .13);
+    el.hmLock.style.fontSize = fs2 + "px";
+    const lw2 = Math.max(st[0].offsetWidth, st[1].offsetWidth), lh2 = el.hmLock.offsetHeight;
+    const lx2 = port ? (vw - lw2) / 2 : mx(vw * .05, lw2);
+    const ly2 = port ? vh * .74 : Math.max(topBar + vh * .08, (vh - lh2) / 2);
+    el.hmLock.style.left = lx2 + "px"; el.hmLock.style.top = ly2 + "px";
+    hm.lock = { x: lx2, y: ly2, w: lw2, h: lh2 };
+    // Replay sits right under the lock-up (never on top of the bike)
+    el.replay.classList.toggle("fin", !port);
+    if (!port) {
+      el.replay.style.top = (ly2 + lh2 + 26) + "px";
+      if (ar) { el.replay.style.right = (vw - (lx2 + lw2)) + "px"; el.replay.style.left = "auto"; }
+      else { el.replay.style.left = lx2 + "px"; el.replay.style.right = "auto"; }
+    } else { el.replay.style.top = ""; el.replay.style.left = ""; el.replay.style.right = ""; }
+  }
+
   function placeWords() {
+    placeHm();
     if (!words.length) return;
     const ar = isAr();
     const mx = (x, w) => (ar ? vw - x - w : x);
@@ -199,6 +309,7 @@
     const t = L(), ar = isAr();
     stage.setAttribute("data-lang", ar ? "ar" : "en");
     buildWords();
+    buildHmWords();
     el.hudL.innerHTML = t.scene;
     el.intro.querySelector("small").textContent = t.intro[0];
     el.intro.querySelector("b").textContent = t.intro[1];
@@ -394,7 +505,9 @@
 
     if (!IM.started && r.top < vh * 3.5) loadAll();
     const enter = clamp((y + vh) / vh, 0, 1);
-    const p = clamp(y / T, 0, 1);
+    const pr = clamp(y / T, 0, 1);                                  // raw position on the whole runway
+    const p = pr < PE ? pr / PE * P_END_OLD : P_END_OLD;            // motorbike timeline (unchanged)
+    const q = pr > PE ? (pr - PE) / (1 - PE) : 0;                   // helmet finale timeline 0..1
     const exit = clamp((y - T) / vh, 0, 1);
     const on = enter > 0 && exit < 1;
 
@@ -403,6 +516,7 @@
     }
     if (!on) { el.world.classList.remove("is-on"); if (wasCover) { document.body.classList.remove("cn-on"); wasCover = false; } if (act > 0) raf = requestAnimationFrame(frame); return; }
 
+    let shx = 0, shy = 0;
     const pw = Math.min(p, HOLD_FROM);          // motion that must freeze in the final frame uses pw
     const ar = isAr();
     const side = ar ? -1 : 1;
@@ -425,8 +539,10 @@
     if (covering !== wasCover) { document.body.classList.toggle("cn-on", covering); wasCover = covering; }
 
     /* ---- tunnel + intro (before / around p=0) ---- */
-    const tk = p > 0.036 || exitPx > 0 ? 0 : (1 - seg(p, 0, .036)) * E.out3(seg(enter, .1, .8));
-    if (tk > 0) paintTunnel(ctx.tunnel, el.tunnel.width, el.tunnel.height, enter * 5 + p * 60, tk);
+    const tk0 = p > 0.036 || exitPx > 0 || q > 0 ? 0 : (1 - seg(p, 0, .036)) * E.out3(seg(enter, .1, .8));
+    const spd = (q > 0 && exitPx <= 0) ? E.io3(seg(q, .66, .74)) * (1 - E.io3(seg(q, .86, .95))) * .9 : 0;
+    const tk = Math.max(tk0, spd);
+    if (tk > 0) paintTunnel(ctx.tunnel, el.tunnel.width, el.tunnel.height, spd > 0 ? q * 18 : enter * 5 + p * 60, tk);
     el.tunnel.style.opacity = tk > 0 ? "1" : "0";
     el.intro.style.opacity = String(E.out3(seg(enter, .5, .95)) * (1 - seg(p, 0, .02)));
     el.intro.style.transform = "translate(-50%,-50%) scale(" + lerp(1.35, 1, E.out3(seg(enter, .4, 1))) + ")";
@@ -476,17 +592,22 @@
       let ty = wW * (vh / 2 * (1 - S0)) + wA * (ct.face.ty - ct.face.S * ct.face.fy) + wN * (ct.nose.ty - ct.nose.S * ct.nose.fy);
       // when S carries the impact pulse, keep the centre fixed
       if (imp > 0) { const k = 1 + .035 * imp * act; tx = tx * k + (vw / 2) * (1 - k); ty = ty * k + (vh / 2) * (1 - k); }
+      const wh = E.io3(seg(q, 0, .05)) * (1 - E.io3(seg(q, .05, .10)));          // whip-zoom into the cut
+      if (wh > 0) { const k = 1 + .3 * wh; S *= k; tx = tx * k + (vw / 2) * (1 - k); ty = ty * k + (vh / 2) * (1 - k); }
+      const hmv = E.io3(seg(q, .03, .10));
       let shake = 0;
       for (let i = 0; i < SHAKES.length; i++) shake += SHAKES[i][1] * pulse(p, SHAKES[i][0], .011);
+      for (let i = 0; i < HM_SHAKE.length; i++) shake += HM_SHAKE[i][1] * pulse(q, HM_SHAKE[i][0], .011);
       shake = Math.min(shake, 1.6) * act;
-      const sx = (Math.sin(p * 9100) + Math.sin(p * 4310 + 1.3)) * .5 * shake * (port ? 5 : 9);
-      const sy = (Math.sin(p * 7700 + 2.1) + Math.sin(p * 5120)) * .5 * shake * (port ? 5 : 9);
+      const sx = (Math.sin(pr * 9100) + Math.sin(pr * 4310 + 1.3)) * .5 * shake * (port ? 5 : 9);
+      const sy = (Math.sin(pr * 7700 + 2.1) + Math.sin(pr * 5120)) * .5 * shake * (port ? 5 : 9);
+      shx = sx; shy = sy;
       el.world.style.transform = "translate3d(" + (tx + sx).toFixed(2) + "px," + (ty + sy).toFixed(2) + "px,0) scale(" + S.toFixed(4) + ")";
 
       /* backdrop */
       const W = el.bg.width, H = el.bg.height;
       paintBackdrop(ctx.bg, W, H, p);
-      const blurK = clamp(wA * .9 + wN * .55, 0, 1);
+      const blurK = clamp(wA * .9 + wN * .55 + hmv * .3, 0, 1);
       if (blurK > .04) {
         const f = 1 / (1 + blurK * 9);
         if (tmp.width !== Math.round(W * f)) { tmp.width = Math.round(W * f); tmp.height = Math.round(H * f); }
@@ -496,8 +617,8 @@
       }
       paintFuse(p);
       set("--sat", lerp(1, .38, Math.max(wA, wN * .7)).toFixed(3));
-      set("--bgb", lerp(.82, .62, Math.max(wA, wN)).toFixed(3));
-      set("--vig", Math.max(wA, wN).toFixed(3));
+      set("--bgb", (lerp(.82, .62, Math.max(wA, wN)) * (1 - .38 * hmv)).toFixed(3));
+      set("--vig", Math.max(wA, wN, hmv * .8).toFixed(3));
 
       /* rider */
       const ru = E.out3(seg(p, .225, .30));
@@ -534,9 +655,15 @@
       el.words.style.transformOrigin = (vw / 2) + "px " + (vh * .45) + "px";
       el.words.style.filter = re > .02 ? "blur(" + (re * 6).toFixed(1) + "px)" : "none";
       updWords(p, pw, act, side);
+      const cutOut = 1 - E.io3(seg(q, .02, .06));
+      el.rig.style.opacity = cutOut.toFixed(3); el.floor.style.opacity = cutOut.toFixed(3);
+      el.words.style.opacity = (parseFloat(el.words.style.opacity) * cutOut).toFixed(3);
+      el.ghost[0].style.opacity = String(parseFloat(el.ghost[0].style.opacity) * cutOut); el.ghost[1].style.opacity = el.ghost[0].style.opacity;
 
       /* floor reflection fades with the rider */
     }
+
+    updHM(q, pr, act, now, side, shx, shy);
 
     /* ---- caption (close-ups) ---- */
     const capA = E.out3(seg(p, .575, .60)) * (1 - seg(p, .625, .64));
@@ -545,26 +672,150 @@
     if (ci2 !== lastCap && ci2 >= 0) { const c2 = L().caps[ci2]; el.cap.querySelector("small").textContent = c2[0]; el.cap.querySelector("strong").textContent = c2[1]; lastCap = ci2; }
     set("--cap", Math.max(capA, capN).toFixed(3));
     const bw = Math.max(E.io3(seg(p, .55, .60)) * (1 - E.io3(seg(p, .70, .76))), 0);
+    const hbk = E.io3(seg(q, .01, .07));
     set("--bar", (Math.min(vh * .085, 78) * bw).toFixed(1));
+    set("--bart", (q > 0 ? hm.topBar * hbk : Math.min(vh * .085, 78) * bw).toFixed(1));
+    set("--barb", (q > 0 ? hm.botBar * hbk : Math.min(vh * .085, 78) * bw).toFixed(1));
 
     /* ---- flash ---- */
     let fv = 0;
     for (let i = 0; i < FLASHES.length; i++) fv += FLASHES[i][1] * Math.max(0, 1 - Math.abs(p - FLASHES[i][0]) / .012);
+    for (let i = 0; i < HM_FLASH.length; i++) fv += HM_FLASH[i][1] * Math.max(0, 1 - Math.abs(q - HM_FLASH[i][0]) / .012) * (q > 0 ? 1 : 0);
     el.flash.style.opacity = (Math.min(fv, .7) * act).toFixed(3);
 
     /* ---- HUD ---- */
     const hudV = E.out3(seg(p, .245, .28)) * (1 - E.io3(seg(exit, 0, .5)));
     set("--hud", hudV.toFixed(3));
-    set("--pp", p.toFixed(4));
-    set("--hint", (E.out3(seg(p, .80, .85)) * (1 - seg(exit, 0, .3))).toFixed(3));
-    const rv = E.out3(seg(p, .82, .87)) * (1 - seg(exit, 0, .25));
+    set("--pp", pr.toFixed(4));
+    set("--hint", (E.out3(seg(q, .94, .98)) * (1 - seg(exit, 0, .3))).toFixed(3));
+    const rv = E.out3(seg(q, .94, .98)) * (1 - seg(exit, 0, .25));
     el.replay.style.opacity = rv.toFixed(3);
     el.replay.style.pointerEvents = rv > .6 ? "auto" : "none";
-    const secs = p * 24, ss = Math.floor(secs), ff = Math.floor((secs - ss) * 24);
+    const secs = pr * 24, ss = Math.floor(secs), ff = Math.floor((secs - ss) * 24);
     el.hudR.textContent = "TC 00:00:" + pad(ss) + ":" + pad(ff);
 
-    if (act > 0 || p > 0.001 && p < 1) raf = requestAnimationFrame(frame);
+    if (act > 0 || pr > 0.001 && pr < 1) raf = requestAnimationFrame(frame);
     else if (!raf) raf = 0;
+  }
+
+  /* ------------------------------ helmet finale + launch ------------------------------ */
+  let hmIdx = -1, hmLastCut = 0, hmVisible = false;
+  function paintVisor(q, act, now) {
+    const c = ctx.hmv, W = 768, H = 594;
+    c.globalCompositeOperation = "source-over";
+    c.clearRect(0, 0, W, H);
+    if (!okImg(IM.visor)) return;
+    const N = 30, tf = seg(q, .52, .68) * N, target = Math.floor(tf);
+    if (hmIdx < 0) hmIdx = target;
+    if (target !== hmIdx && now - hmLastCut >= STROBE_MIN_MS) { hmIdx += Math.sign(target - hmIdx); hmLastCut = now; }
+    const t = clamp(tf - hmIdx, 0, 1);
+    const img = IM.strobe[(((hmIdx * 5) % N_STROBE) + N_STROBE) % N_STROBE];
+    if (okImg(img)) {
+      c.save(); c.setTransform(1, 0, -.11, 1, 46, 0);
+      cover(c, img, W, H, 1.3 + .12 * t, (hash(hmIdx) - .5) * W * .08, 0, 1);
+      c.restore();
+      c.save(); c.globalCompositeOperation = "screen"; cover(c, img, W, H, 1.34, W * .012, 0, .28); c.restore();
+    }
+    c.fillStyle = "rgba(70,255,90,.05)"; c.fillRect(0, 0, W, H);
+    const dg = c.createLinearGradient(0, 0, 0, H); dg.addColorStop(0, "rgba(0,0,0,.05)"); dg.addColorStop(1, "rgba(0,0,0,.55)"); c.fillStyle = dg; c.fillRect(0, 0, W, H);   // glass depth
+    const sx = lerp(-W * .3, W * 1.3, seg(q, .50, .70)), g = c.createLinearGradient(sx - 120, 0, sx + 120, H * .6);   // moving sheen
+    g.addColorStop(0, "rgba(255,255,255,0)"); g.addColorStop(.5, "rgba(230,255,220,.38)"); g.addColorStop(1, "rgba(255,255,255,0)");
+    c.fillStyle = g; c.fillRect(0, 0, W, H);
+    c.globalCompositeOperation = "destination-in"; c.drawImage(IM.visor, 0, 0, W, H);     // everything is cut to the glass shape
+    c.globalCompositeOperation = "source-over";
+  }
+
+  function updHM(q, pr, act, now, side, shx, shy) {
+    const on = q > 0;
+    if (on !== hmVisible) { el.hm.classList.toggle("is-on", on); hmVisible = on; }
+    if (!on) return;
+    const ar = isAr(), s = hm.s;
+    el.hm.style.transform = "translate3d(" + shx.toFixed(1) + "px," + shy.toFixed(1) + "px,0)";
+
+    /* the figure: slams in (face), slides to centre while the visor closes, then rushes past us */
+    const inA = E.out3(seg(q, .04, .10)), wp = E.io3(seg(q, .42, .52)), mv = E.io3(seg(q, .44, .58)), fx = E.io3(seg(q, .68, .78));
+    const cx = lerp(hm.cxA, hm.cxB, mv);
+    const sc = lerp(1.14, 1, inA) * lerp(1 + .04 * seg(q, .10, .42), 1, mv) * (1 + .7 * fx);
+    const tx = cx - hm.figW / 2 + (1 - inA) * (ar ? -90 : 90);
+    const vx = hm.cxB - hm.figW / 2 + 520 * s, vy = hm.figTop + 345 * s;
+    el.hmFig.style.transformOrigin = (vx - (cx - hm.figW / 2)) + "px " + (vy - hm.figTop) + "px";
+    el.hmFig.style.transform = "translate3d(" + tx.toFixed(1) + "px,0,0) scale(" + sc.toFixed(4) + ")";
+    el.hmFig.style.opacity = (inA * (1 - fx)).toFixed(3);
+    el.hmFig.style.visibility = (inA * (1 - fx)) > .003 ? "visible" : "hidden";
+
+    /* visor-close wipe: B (closed) is revealed from the top down, A (face) stays underneath */
+    const wy = wp * hm.hB;
+    el.hmA.style.clipPath = wp > 0 ? "inset(" + wy.toFixed(1) + "px 0 0 0)" : "none";
+    el.hmA.style.visibility = wp >= 1 ? "hidden" : "visible";
+    const bClip = wp <= 0 ? "inset(0 0 100% 0)" : "inset(0 0 " + Math.max(0, hm.hB - wy).toFixed(1) + "px 0)";
+    el.hmB.style.clipPath = bClip; el.hmVis.style.clipPath = bClip;
+    el.hmWipe.style.top = wy.toFixed(1) + "px";
+    el.hmWipe.style.opacity = (wp > 0 && wp < 1) ? "1" : "0";
+
+    /* reflections inside the visor glass (only while the closed helmet is on screen) */
+    const showVis = wp > .02 && fx < .98;
+    if (showVis) paintVisor(q, act, now);
+    set("--vis", (E.io3(seg(q, .50, .58)) * .72 * (1 - fx)).toFixed(3));
+    let beat = 0; for (let i = 0; i < HM_HITS.length; i++) beat += pulse(q, HM_HITS[i], .02);
+    const ign = pulse(q, .52, .03) + pulse(q, .66, .03);
+    el.hmB.style.filter = "brightness(" + (1 + .22 * (ign * act)) .toFixed(3) + ")";
+    el.hmA.style.filter = "brightness(" + (1 + .16 * Math.min(1, beat) * act).toFixed(3) + ")";
+
+    /* glow, rays, bloom */
+    stage.style.setProperty("--hx", cx + "px");
+    set("--hg", clamp(.55 * inA + .5 * Math.min(1, beat) * act + .35 * seg(q, .5, .8), 0, 1.4).toFixed(3));
+    set("--rayo", (E.io3(seg(q, .50, .66)) * (1 - E.io3(seg(q, .80, .90))) * .9).toFixed(3));
+    set("--ra", (Math.min(q, .9) * 260).toFixed(1) + "deg");
+    const bloom = E.io3(seg(q, .60, .68)) * (1 - E.io3(seg(q, .68, .80)));
+    el.hmBloom.style.opacity = (bloom * .85).toFixed(3);
+    el.hmBloom.style.transform = "scale(" + (1 + bloom * 1.3).toFixed(3) + ")";
+
+    /* headline words on the beats */
+    updHmWords(q, act, side);
+
+    /* LAUNCH: the bike bursts out of the visor, tyre running out of frame, wheel spinning with the scroll */
+    const u = seg(q, .68, .88), f = E.io3(u), L = hm.ln;
+    if (u <= 0) { el.hmLn.style.visibility = "hidden"; }
+    else {
+      const S0 = .05, scl = S0 * Math.pow(1 / S0, f) * (1 + .05 * Math.sin(Math.PI * seg(q, .80, .90)));
+      const ox = lerp(vx - L.cx, 0, Math.pow(f, .85)), oy = lerp(vy - L.cy, 0, Math.pow(f, .85));
+      const vel = Math.abs(E.io3(u) - E.io3(Math.max(0, u - .025))) * 60;
+      el.hmLn.style.visibility = "visible";
+      el.hmLn.style.opacity = clamp(u * 9, 0, 1).toFixed(3);
+      el.hmLn.style.transform = "translate3d(" + ox.toFixed(1) + "px," + oy.toFixed(1) + "px,0) rotate(" + lerp(-9, 0, f).toFixed(2) + "deg) scale(" + scl.toFixed(4) + ")";
+      el.hmL.style.filter = vel > .4 ? "blur(" + clamp(vel, 0, 9).toFixed(1) + "px)" : "none";
+      const spin = (q - .68) * 2400;                                   // degrees: tied to scroll, so it stops when you stop
+      el.hmWheel.style.transform = "rotate(" + spin.toFixed(1) + "deg)";
+      el.hmWheel.parentNode.style.opacity = (.35 + .55 * clamp(vel / 3, 0, 1)).toFixed(3);
+    }
+
+    /* lock-up beside the bike */
+    const lk = E.out3(seg(q, .90, .95));
+    el.hmLock.style.opacity = lk.toFixed(3);
+    el.hmLock.style.transform = "translate3d(" + ((1 - lk) * -50 * side).toFixed(1) + "px,0,0)";
+  }
+
+  function updHmWords(q, act, side) {
+    const ar = isAr(), dir = ar ? 1 : -1;     // the column sits on the right in Arabic, on the left in English
+    hmWords.forEach((w, i) => {
+      const t0 = HM_HITS[i], u = seg(q, t0, t0 + .045), ex = E.io3(seg(q, .44 + .012 * i, .50 + .012 * i));
+      let tx = 0, ty = 0, sc = 1, sk = 0, op = u > 0 ? 1 : 0, blur = 0, clip = "none", gl = false;
+      w.el.style.transformOrigin = ar ? "100% 50%" : "0% 50%";
+      if (i === 0) { const e = E.outExp(u); tx = dir * (w.w + vw * .3) * (1 - e); sk = dir * -18 * (1 - e) * -1; blur = (1 - e) * 10; gl = !SAFE && act > 0 && u > 0 && u < .9; }
+      else if (i === 1) { ty = -(w.y + w.h + 80) * (1 - E.bounce(u)); gl = !SAFE && act > 0 && u > 0 && u < .9; }
+      else if (i === 2) { const e = E.outExp(u); sc = lerp(3.4, 1, e); blur = (1 - e) * 12; gl = !SAFE && act > 0 && u > 0 && u < .8; }
+      else { op = u <= 0 ? 0 : (SAFE || u > .6 ? 1 : (hash(Math.floor(q * 900) + i) > .42 ? 1 : .1)); const rv = (1 - E.out3(u)) * 100; clip = "inset(0 " + (ar ? "0 0 " + rv + "%" : rv + "% 0 0") + ")"; gl = !SAFE && act > 0 && u > 0 && u < .8; }
+      const fill = E.io3(seg(q, t0 + .02, t0 + .09));
+      w.el.style.setProperty("--f", fill.toFixed(3));
+      // leave: slides out with a glitch when the visor closes
+      tx += -dir * ex * (w.w * .7); op *= (1 - ex); if (ex > 0 && ex < 1) gl = gl || (!SAFE && act > 0);
+      w.el.style.opacity = op.toFixed(3);
+      w.el.style.transform = "translate3d(" + tx.toFixed(1) + "px," + ty.toFixed(1) + "px,0) scale(" + sc.toFixed(3) + ") skewX(" + sk.toFixed(1) + "deg)";
+      w.el.style.filter = blur > .3 ? "blur(" + blur.toFixed(1) + "px)" : "none";
+      w.el.style.clipPath = clip;
+      w.el.classList.toggle("is-gl", gl);
+      if (gl) { w.el.style.setProperty("--gx", (10 * side) + "px"); const a1 = (hash(Math.floor(q * 700) + i) * 70) | 0; w.el.style.setProperty("--gc1", a1 + "% 0 " + (100 - a1 - 18) + "% 0"); w.el.style.setProperty("--gc2", (100 - a1 - 12) + "% 0 " + a1 + "% 0"); }
+    });
   }
 
   /* ------------------------------ words animation ------------------------------ */
@@ -657,3 +908,4 @@
 
   window.__cinema = { layout, wake, get p() { const r = sec.getBoundingClientRect(); return clamp(-r.top / T, 0, 1); }, T: () => T };
 })();
+

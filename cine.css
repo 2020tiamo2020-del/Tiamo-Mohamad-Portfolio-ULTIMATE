@@ -25,6 +25,7 @@
   visibility:hidden;background:transparent;direction:ltr;color:#eaffe0;
   font-family:"CN Anton","Inter",sans-serif;contain:layout paint}
 .cn-stage.is-on{visibility:visible}
+.cn-stage:not(.is-on),.cn-stage:not(.is-on) *{visibility:hidden!important}   /* a visible child would otherwise show through a hidden parent */
 .cn-stage[data-lang="ar"]{--wf:"CN Lalezar","Cairo",sans-serif}
 .cn-stage[data-lang="en"]{--wf:"CN Anton","Inter",sans-serif}
 .cn-stage *{box-sizing:border-box}
@@ -200,3 +201,41 @@ body.cn-on .st-rail:not(:hover):not(.st-flash) .st-lbl{max-width:0!important;opa
 .cn-intro small{display:block;font:600 11px/1 "Michroma","Inter",sans-serif;letter-spacing:.5em;color:#9bff72;margin-bottom:18px;text-shadow:0 0 18px rgba(80,255,80,.7)}
 .cn-intro b{display:block;font-family:var(--wf);font-weight:400;font-size:min(16vw,22vh);line-height:1.2;letter-spacing:.04em;color:#f1ffe4;text-shadow:0 0 40px rgba(80,255,80,.55),0 0 120px rgba(30,200,70,.5)}
 .cn-stage[data-lang="ar"] .cn-intro small{letter-spacing:.1em}
+
+
+
+/* ==========================================================================
+   Helmet finale + launch
+   ========================================================================== */
+.cn-bar.t{height:calc(var(--bart,var(--bar,0)) * 1px)}
+.cn-bar.b{height:calc(var(--barb,var(--bar,0)) * 1px)}
+.cn-hm{position:absolute;inset:0;z-index:3;visibility:hidden;will-change:transform}
+.cn-hm.is-on{visibility:visible}
+.cn-hm-glow{position:absolute;inset:0;background:radial-gradient(38% 52% at var(--hx,60%) 48%,rgba(90,255,70,calc(.34 * var(--hg,0))),transparent 72%)}
+.cn-hm-rays{position:absolute;inset:0;mix-blend-mode:screen;opacity:var(--rayo,0);
+  background:repeating-conic-gradient(from var(--ra,0deg) at var(--rx,50%) var(--ry,40%),rgba(140,255,100,.38) 0 1.1deg,transparent 1.1deg 6.4deg);
+  -webkit-mask-image:radial-gradient(circle at var(--rx,50%) var(--ry,40%),#000 6%,transparent 64%);mask-image:radial-gradient(circle at var(--rx,50%) var(--ry,40%),#000 6%,transparent 64%)}
+.cn-hm-words{position:absolute;inset:0}
+.cn-hm-fig{position:absolute;left:0;top:0;will-change:transform,opacity}
+.cn-hm-fig>img,.cn-hm-vis{position:absolute;left:0;top:0;width:100%;display:block;user-select:none;-webkit-user-drag:none}
+.cn-hm-vis{mix-blend-mode:screen;opacity:var(--vis,0)}
+.cn-hm .m{-webkit-mask-image:linear-gradient(90deg,transparent,#000 9%,#000 91%,transparent),linear-gradient(180deg,transparent,#000 5%,#000 93%,transparent);
+  -webkit-mask-composite:source-in;mask-image:linear-gradient(90deg,transparent,#000 9%,#000 91%,transparent),linear-gradient(180deg,transparent,#000 5%,#000 93%,transparent);mask-composite:intersect}
+.cn-hm-wipe{position:absolute;left:-6%;width:112%;height:3px;margin-top:-1.5px;opacity:0;pointer-events:none;
+  background:linear-gradient(90deg,transparent,#d6ffb8 12%,#fff 50%,#d6ffb8 88%,transparent);box-shadow:0 0 14px #fff,0 0 40px #6dff3c,0 0 90px #18c04a}
+.cn-hm-bloom{position:absolute;left:calc(var(--rx,50%) - 30vmax);top:calc(var(--ry,40%) - 30vmax);width:60vmax;height:60vmax;border-radius:50%;pointer-events:none;mix-blend-mode:screen;opacity:0;
+  background:radial-gradient(closest-side,rgba(235,255,225,.95),rgba(110,255,80,.55) 35%,transparent 70%)}
+.cn-hm-ln{position:absolute;visibility:hidden;transform-origin:50% 50%;will-change:transform,opacity;pointer-events:none}
+.cn-hm-l{position:absolute;inset:0;width:100%;height:100%;display:block;user-select:none;-webkit-user-drag:none}
+.cn-hm-wheel{position:absolute;inset:0;mix-blend-mode:screen;opacity:.4;overflow:hidden;
+  -webkit-mask-image:url("images/cine/wheel-mask.png");mask-image:url("images/cine/wheel-mask.png");-webkit-mask-size:100% 100%;mask-size:100% 100%}
+.cn-hm-wheel i{position:absolute;inset:0;transform-origin:53.2% 64.1%;filter:blur(1.4px);
+  background:repeating-conic-gradient(from 0deg at 53.2% 64.1%,rgba(200,255,170,.55) 0 3deg,rgba(0,0,0,0) 3deg 9deg)}
+.cn-hm-lock{position:absolute;opacity:0;white-space:nowrap;font-family:var(--wf);text-transform:uppercase;line-height:1.05;will-change:transform,opacity}
+.cn-hm-lock strong{display:block;font-weight:400;color:transparent;padding:.1em .2em;margin:-.1em -.2em;
+  background:linear-gradient(180deg,#f4ffe6 0%,#b8ff6b 40%,#3fe05a 75%,#0c7a2c 100%);-webkit-background-clip:text;background-clip:text;filter:drop-shadow(0 0 .1em rgba(80,255,80,.55))}
+.cn-stage[data-lang="ar"] .cn-hm-lock{text-transform:none;line-height:1.5;text-align:right}
+.cn-hw{will-change:transform,opacity,filter}
+
+.cn-replay.fin{bottom:auto;transform:none}
+.cn-replay.fin:hover,.cn-replay.fin:focus-visible{transform:scale(1.05)}
