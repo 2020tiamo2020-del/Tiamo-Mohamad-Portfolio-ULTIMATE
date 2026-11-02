@@ -46,6 +46,7 @@ BEFORE & AFTER (section 05, portrait 4:5):
 - A pair with a missing file is skipped automatically (no broken images).
 - The old dormant before/after module inside the Photoshop gallery (images/pm1-before.jpg) was removed.
 - Animations always run, ignoring the OS "reduce motion" setting (by design).
+  EXCEPTION: the 03.5 BEYOND cinematic scene (cine.js) honours it - strobing images, shake and flashes are replaced by calm cuts (photosensitivity safety).
 - Before & After is scroll-linked: while the frame travels up the screen the line glides from BEFORE to AFTER and settles at 50% (reversible with scrolling). The first touch/drag/key press switches it to manual control for good.
 - Services grid = 12 cards (11 Logo & Branding, 12 Video Editing & Montage).
 

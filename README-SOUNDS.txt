@@ -1,3 +1,5 @@
+NOTE: ui-sounds.js and the audio files named below are not in the project zip this README was checked against. Keep this file only if they exist in your repo.
+
 3 NEW SOUNDS - only the changed / new files (keep the same folders)
 
   index.html            (replace)  adds ui-sounds.js, prefetches the new intro sound instead of welcome.mp3

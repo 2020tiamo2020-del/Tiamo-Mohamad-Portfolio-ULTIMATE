@@ -105,6 +105,8 @@
           '<img class="cn-hm-a m" alt="" src="' + ASSET + 'helmet-face.webp" decoding="async">' +
           '<img class="cn-hm-b m" alt="" src="' + ASSET + 'helmet-closed.webp" decoding="async">' +
           '<img class="cn-hm-na m" alt="" src="' + ASSET + 'helmet-a-neon.webp" decoding="async">' +
+          '<img class="cn-hm-na2 m" alt="" src="' + ASSET + 'helmet-a-neon.webp" decoding="async">' +
+          '<div class="cn-hm-eyes"><i class="l"></i><i class="r"></i></div>' +
           '<img class="cn-hm-nb m" alt="" src="' + ASSET + 'helmet-b-neon.webp" decoding="async">' +
           '<img class="cn-hm-nb2" alt="" src="' + ASSET + 'helmet-b-neon.webp" decoding="async">' +
           '<canvas class="cn-hm-vis" width="768" height="594"></canvas><i class="cn-hm-wipe"></i>' +
@@ -139,7 +141,7 @@
     hlA: q(".cn-hl.a"), hlB: q(".cn-hl.b"), anam: q(".cn-anam"), beam: q(".cn-beam"),
     tunnel: q(".cn-tunnel"), intro: q(".cn-intro"), top: q(".cn-top"), bot: q(".cn-bot"), strobe: q(".cn-strobe"), count: q(".cn-count"),
     mini: q(".cn-mini"), card: q(".cn-card"), seam: q(".cn-seam"), cap: q(".cn-cap"), barT: q(".cn-bar.t"), barB: q(".cn-bar.b"),
-    flash: q(".cn-flash"), hud: q(".cn-hud"), hudL: q(".cn-hud .l"), hudR: q(".cn-hud .r"), hint: q(".cn-hint"), gate: q(".cn-gate"), replay: q(".cn-replay"), hm: q(".cn-hm"), hmWords: q(".cn-hm-words"), hmFig: q(".cn-hm-fig"), hmA: q(".cn-hm-a"), hmB: q(".cn-hm-b"), hmVis: q(".cn-hm-vis"), hmWipe: q(".cn-hm-wipe"), hmLock: q(".cn-hm-lock"), hmLn: q(".cn-hm-ln"), hmL: q(".cn-hm-l"), hmWheel: q(".cn-hm-wheel i"), hmBloom: q(".cn-hm-bloom"), hmNa: q(".cn-hm-na"), hmNb: q(".cn-hm-nb"), hmNb2: q(".cn-hm-nb2"), hmTrk: q(".cn-hm-trk"), hmPt: q(".cn-hm-pt"), hmRing: q(".cn-hm-ring"), snd: q(".cn-snd")
+    flash: q(".cn-flash"), hud: q(".cn-hud"), hudL: q(".cn-hud .l"), hudR: q(".cn-hud .r"), hint: q(".cn-hint"), gate: q(".cn-gate"), replay: q(".cn-replay"), hm: q(".cn-hm"), hmWords: q(".cn-hm-words"), hmFig: q(".cn-hm-fig"), hmA: q(".cn-hm-a"), hmB: q(".cn-hm-b"), hmVis: q(".cn-hm-vis"), hmWipe: q(".cn-hm-wipe"), hmLock: q(".cn-hm-lock"), hmLn: q(".cn-hm-ln"), hmL: q(".cn-hm-l"), hmWheel: q(".cn-hm-wheel i"), hmBloom: q(".cn-hm-bloom"), hmNa: q(".cn-hm-na"), hmNa2: q(".cn-hm-na2"), hmEyes: q(".cn-hm-eyes"), hmEyeL: q(".cn-hm-eyes .l"), hmEyeR: q(".cn-hm-eyes .r"), hmNb: q(".cn-hm-nb"), hmNb2: q(".cn-hm-nb2"), hmTrk: q(".cn-hm-trk"), hmPt: q(".cn-hm-pt"), hmRing: q(".cn-hm-ring"), snd: q(".cn-snd")
   };
   const ctx = {
     bg: el.bg.getContext("2d"), fuse: el.fuse.getContext("2d"), strobe: el.strobe.getContext("2d"), tunnel: el.tunnel.getContext("2d"), hmv: el.hmVis.getContext("2d"), hmpt: el.hmPt.getContext("2d")
@@ -215,7 +217,8 @@
     const f = el.hmFig.style;
     f.width = figW + "px"; f.height = hB + "px"; f.top = figTop + "px"; f.left = "0px";
     el.hmA.style.height = hA + "px"; el.hmB.style.height = hB + "px"; el.hmVis.style.height = hB + "px";
-    el.hmNa.style.height = hA + "px"; el.hmNb.style.height = hB + "px"; el.hmNb2.style.height = hB + "px";
+    el.hmNa.style.height = hA + "px"; el.hmNa2.style.height = hA + "px"; el.hmEyes.style.height = hA + "px";
+    [[el.hmEyeL, 517, 321], [el.hmEyeR, 615, 343]].forEach(([e, x, y]) => { const d = 34 * s; e.style.width = d + "px"; e.style.height = d + "px"; e.style.left = (x * s - d / 2) + "px"; e.style.top = (y * s - d / 2) + "px"; }); el.hmNb.style.height = hB + "px"; el.hmNb2.style.height = hB + "px";
     const tk = el.hmTrk.style; tk.left = (478 * s) + "px"; tk.top = (305 * s) + "px"; tk.width = (190 * s) + "px"; tk.height = (72 * s) + "px";
     const trkT = HMC[ar ? "ar" : "en"].trk; el.hmTrk.querySelector(".t1").textContent = trkT[0]; el.hmTrk.querySelector(".t2").textContent = trkT[1];
     el.hmPt.width = Math.round(vw * .6); el.hmPt.height = Math.round(vh * .6);
@@ -544,6 +547,8 @@
     if (on !== wasOn) {
       stage.classList.toggle("is-on", on); wasOn = on;
     }
+    if (on) { fire("enter", enter, ENTER_EV, .5); fire("p", p, P_EV, .15); fire("q", q, SND_EVENTS, .15); fire("exit", exit, EXIT_EV, .5); }
+    else { prevs.enter = prevs.p = prevs.q = prevs.exit = null; }
     if (!on) { el.world.classList.remove("is-on"); if (wasCover) { document.body.classList.remove("cn-on"); wasCover = false; } if (act > 0) raf = requestAnimationFrame(frame); return; }
 
     let shx = 0, shy = 0;
@@ -591,7 +596,7 @@
       const N = 56, tf = seg(p, .036, .205) * N, target = Math.floor(tf);
       if (strobeIdx < 0) { strobeIdx = target; strobeShown = -1; }
       if (target !== strobeIdx) pending = true;
-      if (target !== strobeIdx && now - lastCut >= STROBE_MIN_MS) { strobeIdx += Math.sign(target - strobeIdx); lastCut = now; strobeSeed = (hash(strobeIdx * 1.3) * 1000) | 0; }
+      if (target !== strobeIdx && now - lastCut >= STROBE_MIN_MS) { strobeIdx += Math.sign(target - strobeIdx); lastCut = now; if (act > 0) Snd.tick(); strobeSeed = (hash(strobeIdx * 1.3) * 1000) | 0; }
       const t = clamp(tf - strobeIdx, 0, 1);
       const img = IM.strobe[((strobeIdx % N_STROBE) + N_STROBE) % N_STROBE * 7 % N_STROBE];
       paintStrobe(ctx.strobe, el.strobe.width, el.strobe.height, img, t, strobeSeed);
@@ -599,7 +604,7 @@
 
       /* title cards on the bottom half */
       const cf = seg(p, .042, .2) * 5, ci = Math.min(4, Math.floor(cf)), ct = cf - ci;
-      if (ci !== lastCard) { el.card.textContent = L().cards[ci]; lastCard = ci; }
+      if (ci !== lastCard) { el.card.textContent = L().cards[ci]; if (lastCard !== -1 && act > 0) Snd.thump(); lastCard = ci; }
       const slam = E.outExp(Math.min(1, ct * 3.2));
       el.card.style.transform = "translate(-50%,-50%) scale(" + lerp(1.7, 1, slam).toFixed(3) + ") skewX(" + ((1 - slam) * -8 * side).toFixed(2) + "deg)";
       el.card.style.opacity = String(ct < .02 ? 0 : 1 - E.io3(seg(ct, .84, 1)));
@@ -754,6 +759,10 @@
       boom(v) { const a = get(); if (!a) return; const t = a.currentTime; osc(a, "sine", 90, 34, t, .75, .95 * (v || 1), .004); noise(a, t, .35, .5 * (v || 1), "lowpass", 900, 120); },
       thump() { const a = get(); if (!a) return; const t = a.currentTime; osc(a, "sine", 135, 46, t, .22, .9, .003); noise(a, t, .05, .35, "highpass", 3000, 6000); },
       clunk() { const a = get(); if (!a) return; const t = a.currentTime; osc(a, "square", 240, 90, t, .09, .22, .002); osc(a, "sine", 70, 40, t, .3, .8, .003); noise(a, t, .12, .45, "bandpass", 2400, 900); },
+      tick() { const a = get(); if (!a) return; const t = a.currentTime; noise(a, t, .02, .2, "highpass", 5200, 9000, .001); osc(a, "sine", 1900, 1200, t, .03, .07, .001); },
+      ping() { const a = get(); if (!a) return; const t = a.currentTime; osc(a, "sine", 1320, 1320, t, .55, .2, .004); osc(a, "sine", 1980, 1980, t, .4, .08, .004); },
+      charge() { const a = get(); if (!a) return; const t = a.currentTime; osc(a, "sine", 170, 1500, t, 1.2, .26, .5); osc(a, "triangle", 85, 750, t, 1.2, .2, .5); noise(a, t, 1.1, .16, "bandpass", 900, 5200, .6); },
+      crackle() { const a = get(); if (!a) return; const t = a.currentTime; for (let i = 0; i < 6; i++) noise(a, t + i * .045 + Math.random() * .03, .03, .22, "bandpass", 2500 + Math.random() * 3000, 1200, .001); },
       whoosh(d) { const a = get(); if (!a) return; const t = a.currentTime; noise(a, t, d || .7, .5, "bandpass", 300, 4200, (d || .7) * .55); },
       riser(d) { const a = get(); if (!a) return; const t = a.currentTime; noise(a, t, d, .55, "bandpass", 250, 6000, d * .9); osc(a, "sawtooth", 110, 760, t, d, .18, d * .9); },
       engine(d) {
@@ -763,12 +772,25 @@
       }
     };
   })();
+  const ENTER_EV = [[.05, () => Snd.whoosh(.9)], [.55, () => Snd.riser(1.2)]];
+  const P_EV = [
+    [.004, () => { Snd.boom(.55); Snd.whoosh(.5); }], [.19, () => Snd.riser(.9)], [.222, () => { Snd.boom(1); Snd.whoosh(.5); }],
+    [.23, () => Snd.whoosh(.9)], [.262, () => Snd.whoosh(.45)], [.285, () => Snd.thump()], [.30, () => Snd.whoosh(.5)], [.318, () => Snd.thump()],
+    [.346, () => Snd.whoosh(.5)], [.352, () => Snd.crackle()], [.392, () => Snd.whoosh(.5)], [.438, () => Snd.whoosh(.5)], [.484, () => Snd.whoosh(.5)], [.528, () => Snd.whoosh(.5)],
+    [.548, () => { Snd.whoosh(.6); Snd.thump(); }], [.628, () => Snd.whoosh(.6)], [.64, () => Snd.crackle()], [.70, () => Snd.riser(.9)], [.745, () => { Snd.boom(1); Snd.whoosh(.5); }]
+  ];
+  const EXIT_EV = [[.05, () => Snd.whoosh(.9)]];
+  const prevs = { enter: null, p: null, q: null, exit: null };
+  const fire = (dom, v, list, maxJump) => {
+    const pv = prevs[dom];
+    if (pv !== null) for (const [t, fn] of list) if (pv < t && v >= t && v - pv < maxJump) { try { fn(); } catch (_) {} }
+    prevs[dom] = v;
+  };
   const SND_EVENTS = [
     [.03, () => { Snd.boom(1); Snd.whoosh(.6); }],
     [HM_HITS[0], () => { Snd.thump(); }], [HM_HITS[1], () => { Snd.thump(); }], [HM_HITS[2], () => { Snd.thump(); }], [HM_HITS[3], () => { Snd.thump(); Snd.boom(.6); }],
-    [.45, () => Snd.whoosh(.7)], [.54, () => { Snd.clunk(); Snd.boom(.7); }], [.56, () => Snd.riser(2.3)], [.70, () => { Snd.engine(2.4); Snd.boom(1); }]
+    [.31, () => Snd.charge()], [.40, () => Snd.ping()], [.45, () => Snd.whoosh(.7)], [.54, () => { Snd.clunk(); Snd.boom(.7); }], [.56, () => Snd.riser(2.3)], [.70, () => { Snd.engine(2.4); Snd.boom(1); }]
   ];
-  let sndPrevQ = null;
 
   /* ------------------------------ helmet finale: face -> visor -> reflections -> launch ------------------------------ */
   const ORDER_VR = [0, 1, 3, 2, 5, 8, 7, 0, 1, 3, 2, 8, 5, 7, 3, 1, 2, 8];
@@ -782,7 +804,7 @@
     const N = 26, tf = seg(q, .56, .68) * N, target = Math.floor(tf);
     if (hmIdx < 0) hmIdx = target;
     if (target !== hmIdx) pending = true;
-    if (target !== hmIdx && now - hmLastCut >= STROBE_MIN_MS) { hmIdx += Math.sign(target - hmIdx); hmLastCut = now; }
+    if (target !== hmIdx && now - hmLastCut >= STROBE_MIN_MS) { hmIdx += Math.sign(target - hmIdx); hmLastCut = now; if (act > 0) Snd.tick(); }
     const t = clamp(tf - hmIdx, 0, 1), fin = q >= .68;
     const img = IM.vr[fin ? 9 : ORDER_VR[((hmIdx % ORDER_VR.length) + ORDER_VR.length) % ORDER_VR.length]];
     if (okImg(img)) {
@@ -831,9 +853,6 @@
   function updHM(q, pr, act, now, side, shx, shy) {
     const on = q > 0;
     if (on !== hmVisible) { el.hm.classList.toggle("is-on", on); hmVisible = on; }
-    /* sound cues fire when you scroll forward across them */
-    if (sndPrevQ !== null && on) { for (const [qq, fn] of SND_EVENTS) if (sndPrevQ < qq && q >= qq && q - sndPrevQ < .15) { try { fn(); } catch (_) {} } }
-    sndPrevQ = q;
     if (!on) { el.hmFig.style.visibility = "hidden"; el.hmLn.style.visibility = "hidden"; return; }
     const ar = isAr(), s = hm.s;
     el.hm.style.transform = "translate3d(" + shx.toFixed(1) + "px," + shy.toFixed(1) + "px,0)";
@@ -866,7 +885,12 @@
     /* neon: face lights pulse on the beats; after the visor shuts the whole helmet powers up in a sweep */
     let beat = 0; for (let i = 0; i < HM_HITS.length; i++) beat += pulse(q, HM_HITS[i], .02);
     beat = Math.min(1, beat) * act;
-    el.hmNa.style.opacity = (.30 + .7 * beat).toFixed(3);
+    const wake2 = E.io3(seg(q, .32, .42)), breathe = .85 + .15 * Math.sin(q * 90);
+    el.hmNa.style.opacity = clamp(.30 + .7 * beat + .55 * wake2 * breathe, 0, 1).toFixed(3);
+    el.hmNa2.style.opacity = (.85 * wake2 * breathe).toFixed(3);
+    const eyeStep = q < .345 ? (hash(Math.floor(q * 420)) > .4 ? 1 : .15) : 1;               // the eyes stutter on, then hold
+    el.hmEyes.style.opacity = (E.io3(seg(q, .31, .37)) * eyeStep * (.9 + .1 * Math.sin(q * 120)) * (1 + .5 * pulse(q, .40, .02))).toFixed(3);
+    el.hmEyes.style.clipPath = el.hmA.style.clipPath || "none";
     const pw2 = E.io3(seg(q, .54, .64)), sw = lerp(-20, 130, seg(q, .54, .66));
     el.hmNb.style.opacity = (.22 + .55 * pw2).toFixed(3);
     el.hmNb2.style.opacity = (Math.sin(Math.PI * seg(q, .54, .66)) * 1).toFixed(3);
@@ -886,7 +910,7 @@
 
     /* glow, rays, bloom, shock ring */
     stage.style.setProperty("--hx", cx + "px");
-    set("--hg", clamp(.5 * inA + .55 * beat + .35 * seg(q, .5, .8), 0, 1.4).toFixed(3));
+    set("--hg", clamp(.5 * inA + .55 * beat + .45 * wake2 + .35 * seg(q, .5, .8), 0, 1.5).toFixed(3));
     set("--rayo", (E.io3(seg(q, .52, .66)) * (1 - E.io3(seg(q, .84, .92))) * .9).toFixed(3));
     set("--ra", (Math.min(q, .9) * 260).toFixed(1) + "deg");
     const bloom = E.io3(seg(q, .62, .70)) * (1 - E.io3(seg(q, .70, .80)));

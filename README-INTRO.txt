@@ -1,3 +1,5 @@
+NOTE: this file describes an older intro (intro3d.*). The site now uses tm-intro.js / tm-intro.css; intro3d.* is not part of this project.
+
 INTRO 3D UPDATE - only the changed / new files. Upload them over your repo keeping the same folders:
 
   index.html          (replace)  new gate markup + 2 links (intro3d.css, intro3d.js). Based on your latest zip.
