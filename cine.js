@@ -131,7 +131,10 @@
       '<div class="cn-hint"><span></span><i></i></div>' +
       '<button type="button" class="cn-replay"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg><span></span></button>' +
     '</div>' +
-    '<div class="cn-gate"></div>';
+    '<div class="cn-gate"></div><i class="cn-edge l"></i><i class="cn-edge r"></i>';
+  const dim = document.createElement("div");
+  dim.className = "cn-dim";
+  document.body.appendChild(dim);
   document.body.appendChild(stage);
 
   const q = s => stage.querySelector(s);
@@ -141,7 +144,7 @@
     hlA: q(".cn-hl.a"), hlB: q(".cn-hl.b"), anam: q(".cn-anam"), beam: q(".cn-beam"),
     tunnel: q(".cn-tunnel"), intro: q(".cn-intro"), top: q(".cn-top"), bot: q(".cn-bot"), strobe: q(".cn-strobe"), count: q(".cn-count"),
     mini: q(".cn-mini"), card: q(".cn-card"), seam: q(".cn-seam"), cap: q(".cn-cap"), barT: q(".cn-bar.t"), barB: q(".cn-bar.b"),
-    flash: q(".cn-flash"), hud: q(".cn-hud"), hudL: q(".cn-hud .l"), hudR: q(".cn-hud .r"), hint: q(".cn-hint"), gate: q(".cn-gate"), replay: q(".cn-replay"), hm: q(".cn-hm"), hmWords: q(".cn-hm-words"), hmFig: q(".cn-hm-fig"), hmA: q(".cn-hm-a"), hmB: q(".cn-hm-b"), hmVis: q(".cn-hm-vis"), hmWipe: q(".cn-hm-wipe"), hmLock: q(".cn-hm-lock"), hmLn: q(".cn-hm-ln"), hmL: q(".cn-hm-l"), hmWheel: q(".cn-hm-wheel i"), hmBloom: q(".cn-hm-bloom"), hmNa: q(".cn-hm-na"), hmNa2: q(".cn-hm-na2"), hmEyes: q(".cn-hm-eyes"), hmEyeL: q(".cn-hm-eyes .l"), hmEyeR: q(".cn-hm-eyes .r"), hmNb: q(".cn-hm-nb"), hmNb2: q(".cn-hm-nb2"), hmTrk: q(".cn-hm-trk"), hmPt: q(".cn-hm-pt"), hmRing: q(".cn-hm-ring"), snd: q(".cn-snd")
+    flash: q(".cn-flash"), hud: q(".cn-hud"), hudL: q(".cn-hud .l"), hudR: q(".cn-hud .r"), hint: q(".cn-hint"), gate: q(".cn-gate"), replay: q(".cn-replay"), edgeL: q(".cn-edge.l"), edgeR: q(".cn-edge.r"), hm: q(".cn-hm"), hmWords: q(".cn-hm-words"), hmFig: q(".cn-hm-fig"), hmA: q(".cn-hm-a"), hmB: q(".cn-hm-b"), hmVis: q(".cn-hm-vis"), hmWipe: q(".cn-hm-wipe"), hmLock: q(".cn-hm-lock"), hmLn: q(".cn-hm-ln"), hmL: q(".cn-hm-l"), hmWheel: q(".cn-hm-wheel i"), hmBloom: q(".cn-hm-bloom"), hmNa: q(".cn-hm-na"), hmNa2: q(".cn-hm-na2"), hmEyes: q(".cn-hm-eyes"), hmEyeL: q(".cn-hm-eyes .l"), hmEyeR: q(".cn-hm-eyes .r"), hmNb: q(".cn-hm-nb"), hmNb2: q(".cn-hm-nb2"), hmTrk: q(".cn-hm-trk"), hmPt: q(".cn-hm-pt"), hmRing: q(".cn-hm-ring"), snd: q(".cn-snd")
   };
   const ctx = {
     bg: el.bg.getContext("2d"), fuse: el.fuse.getContext("2d"), strobe: el.strobe.getContext("2d"), tunnel: el.tunnel.getContext("2d"), hmv: el.hmVis.getContext("2d"), hmpt: el.hmPt.getContext("2d")
@@ -346,6 +349,8 @@
     port = vw <= 900 || vh > vw * 1.1;
     stage.style.width = vw + "px"; stage.style.height = vh + "px";
     T = Math.round(vh * (vw <= 900 ? TRAVEL_MOBILE : TRAVEL_DESKTOP));
+    const wk = document.getElementById("work");
+    sec.style.marginTop = (wk && wk.classList.contains("st-pin") ? -vh : 0) + "px";   // overlap the pinned dwell of the last Work card
     sec.style.height = (T + vh) + "px";
     const hd = document.querySelector(".site-header");
     const hb = hd ? hd.getBoundingClientRect().bottom : 0;
@@ -522,7 +527,7 @@
   }
 
   /* ------------------------------ frame ------------------------------ */
-  let pending = false;
+  let pending = false, wasGate = false;
   let lastCard = -1, lastCap = -1, lastY = null, lastMove = 0, raf = 0, wasOn = false, wasCover = false, curGhost = 0;
   const set = (n, v) => stage.style.setProperty(n, v);
 
@@ -549,27 +554,37 @@
     }
     if (on) { fire("enter", enter, ENTER_EV, .5); fire("p", p, P_EV, .15); fire("q", q, SND_EVENTS, .15); fire("exit", exit, EXIT_EV, .5); }
     else { prevs.enter = prevs.p = prevs.q = prevs.exit = null; }
-    if (!on) { el.world.classList.remove("is-on"); if (wasCover) { document.body.classList.remove("cn-on"); wasCover = false; } if (act > 0) raf = requestAnimationFrame(frame); return; }
+    if (!on) { dim.style.visibility = "hidden"; if (wasGate) { document.body.classList.remove("cn-gating"); wasGate = false; } el.world.classList.remove("is-on"); if (wasCover) { document.body.classList.remove("cn-on"); wasCover = false; } if (act > 0) raf = requestAnimationFrame(frame); return; }
 
     let shx = 0, shy = 0;
     const pw = Math.min(p, HOLD_FROM);          // motion that must freeze in the final frame uses pw
     const ar = isAr();
     const side = ar ? -1 : 1;
 
-    /* ---- entry / exit: the new section opens from the line under 03, and lifts away at the end ---- */
+    /* ---- entry / exit: GATE. A light seam appears in the middle, the old section darkens and blurs behind it,
+            then the seam splits and the new world opens outward. Leaving: the doors close again on a seam. ---- */
     const exitPx = clamp(y - T, 0, vh);
-    let clipV = "none", gateTop = -20, gateW = 0, gateO = 0;
-    if (y < 0 && r.top > .5) {                                   // entering: only the part below the line is the new world
-      clipV = "inset(" + r.top.toFixed(1) + "px 0 0 0)";
-      gateTop = r.top; gateW = 100 * E.out3(seg(enter, 0, .22)); gateO = 1 - seg(enter, .93, 1);
-    } else if (exitPx > .5) {                                    // leaving: the world is pushed up, the line rides its lower edge
-      clipV = "inset(0 0 " + exitPx.toFixed(1) + "px 0)";
-      gateTop = vh - exitPx; gateW = 100 * (1 - seg(exit, .85, 1)); gateO = 1;
+    let clipV = "none", seamH = 0, seamO = 0, open = 1, dimA = 0, dimB = 0;
+    if (y < 0 && p <= 0) {
+      open = E.io3(seg(enter, .38, .95));
+      seamH = 100 * E.out3(seg(enter, .08, .40)); seamO = 1 - E.io3(seg(enter, .40, .62));
+      dimA = .9 * E.out3(seg(enter, .04, .5)); dimB = 9 * E.out3(seg(enter, .04, .6));
+    } else if (exitPx > .5) {
+      open = 1 - E.io3(seg(exit, 0, .85));
+      seamH = 100 * (1 - seg(exit, .8, 1)); seamO = 1;
     }
+    if (open < .999) { const side = (1 - open) * 50; clipV = "inset(0 " + side.toFixed(2) + "% 0 " + side.toFixed(2) + "%)"; }
     el.clip.style.clipPath = clipV;
-    el.gate.style.top = gateTop.toFixed(1) + "px";
-    el.gate.style.width = gateW + "vw";
-    el.gate.style.opacity = String(gateO);
+    el.gate.style.height = seamH.toFixed(2) + "vh";
+    el.gate.style.opacity = String(seamO);
+    const edgeOn = open > .01 && open < .995 && (y < 0 || exitPx > 0);
+    el.edgeL.style.opacity = el.edgeR.style.opacity = edgeOn ? "1" : "0";
+    el.edgeL.style.left = (50 - open * 50) + "%"; el.edgeR.style.left = (50 + open * 50) + "%";
+    dim.style.opacity = dimA.toFixed(3);
+    dim.style.backdropFilter = dim.style.webkitBackdropFilter = dimB > .2 ? "blur(" + dimB.toFixed(1) + "px) saturate(.7)" : "none";
+    dim.style.visibility = dimA > .005 ? "visible" : "hidden";
+    const gating = on && y < 0 && p <= 0 && enter > .1;
+    if (gating !== wasGate) { document.body.classList.toggle("cn-gating", gating); wasGate = gating; }
     const covering = on && r.top < vh * .45 && r.bottom > vh * .55;
     if (covering !== wasCover) { document.body.classList.toggle("cn-on", covering); wasCover = covering; }
 
@@ -772,7 +787,7 @@
       }
     };
   })();
-  const ENTER_EV = [[.05, () => Snd.whoosh(.9)], [.55, () => Snd.riser(1.2)]];
+  const ENTER_EV = [[.05, () => Snd.whoosh(.9)], [.38, () => Snd.boom(.6)], [.5, () => Snd.riser(1.1)]];
   const P_EV = [
     [.004, () => { Snd.boom(.55); Snd.whoosh(.5); }], [.19, () => Snd.riser(.9)], [.222, () => { Snd.boom(1); Snd.whoosh(.5); }],
     [.23, () => Snd.whoosh(.9)], [.262, () => Snd.whoosh(.45)], [.285, () => Snd.thump()], [.30, () => Snd.whoosh(.5)], [.318, () => Snd.thump()],
@@ -1040,6 +1055,7 @@
     if (wasOn || raf || (y > topAbs - vh * 1.6 && y < topAbs + T + vh * 1.6)) wake();    /* otherwise: do nothing at all */
   };
   addEventListener("scroll", onScroll, { passive: true });
+  { const wk = document.getElementById("work"); if (wk && window.MutationObserver) new MutationObserver(() => layout()).observe(wk, { attributes: true, attributeFilter: ["class"] }); }
   if (window.ResizeObserver) { let rq = 0; new ResizeObserver(() => { cancelAnimationFrame(rq); rq = requestAnimationFrame(refreshTop); }).observe(document.documentElement); }
   addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(layout, 120); }, { passive: true });
   addEventListener("orientationchange", () => setTimeout(layout, 250));

@@ -92,7 +92,7 @@ html[lang="en"] :is(.hero h1,.section-title h2,.contact h2,.social-strip h2) em{
   scale:calc(var(--st-fit,1) * (1 - var(--st-cover,0) * .08));
   opacity:calc(1 - var(--st-cover,0));
   will-change:scale,opacity}
-#work.st-pin .gallery-card:last-child{margin-bottom:0}
+#work.st-pin .gallery-card:last-child{margin-bottom:130vh}   /* the last card stays pinned like the others (30vh of calm, then 100vh in which the gate to 03½ opens) */
 body.light #work.st-pin .gallery-card{background-color:#f3eefc}
 #work.st-pin .st-ghost{inset-inline-start:calc(-.62em);inset-inline-end:auto;inset-block-start:50%;
   font-size:clamp(220px,26vw,380px);color:rgba(255,255,255,.07);
