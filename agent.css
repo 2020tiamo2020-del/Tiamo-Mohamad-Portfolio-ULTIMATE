@@ -1,0 +1,38 @@
+.tma{position:fixed;inset-inline-end:22px;bottom:22px;z-index:9990;font-family:Inter,Cairo,sans-serif}
+.tma-orb{width:64px;height:64px;border-radius:50%;border:1px solid rgba(255,255,255,.18);cursor:pointer;position:relative;background:radial-gradient(circle at 35% 30%,#b983ff,#8b35ff 45%,#1a0b3a);box-shadow:0 0 28px rgba(139,53,255,.55),0 0 60px rgba(22,216,255,.18);display:grid;place-items:center;padding:0;transition:transform .4s cubic-bezier(.22,1,.36,1)}
+.tma-orb:hover{transform:scale(1.08)}.tma-orb:focus-visible{outline:2px solid #16d8ff;outline-offset:3px}
+.tma-orb::after{content:"";position:absolute;inset:-7px;border-radius:50%;border:1px solid rgba(22,216,255,.35);animation:tmaPulse 3s ease-out infinite}
+@keyframes tmaPulse{from{transform:scale(.9);opacity:.9}to{transform:scale(1.35);opacity:0}}
+.tma-eyes{display:flex;gap:9px}.tma-eye{width:13px;height:17px;border-radius:50%;background:#fff;position:relative;overflow:hidden;animation:tmaBlink 5s infinite}
+.tma-eye i{position:absolute;width:7px;height:9px;border-radius:50%;background:#05040a;left:3px;top:4px;transition:transform .08s linear}
+@keyframes tmaBlink{0%,94%,100%{transform:scaleY(1)}97%{transform:scaleY(.1)}}
+.tma-bubble{position:absolute;inset-inline-end:0;bottom:78px;max-width:250px;padding:10px 14px;border-radius:16px 16px 4px 16px;background:rgba(12,9,20,.88);backdrop-filter:blur(14px);border:1px solid rgba(139,53,255,.4);color:#f6f3ff;font-size:13px;line-height:1.5;opacity:0;transform:translateY(8px);pointer-events:none;transition:.4s}
+.tma-bubble.on{opacity:1;transform:none}
+.tma-panel{position:absolute;inset-inline-end:0;bottom:80px;width:min(380px,calc(100vw - 32px));height:min(540px,70vh);display:flex;flex-direction:column;border-radius:22px;background:rgba(12,9,20,.92);backdrop-filter:blur(22px);border:1px solid rgba(255,255,255,.1);box-shadow:0 20px 70px rgba(0,0,0,.6),0 0 40px rgba(139,53,255,.25);color:#f6f3ff;opacity:0;transform:translateY(16px) scale(.97);pointer-events:none;transition:.45s cubic-bezier(.22,1,.36,1)}
+.tma.open .tma-panel{opacity:1;transform:none;pointer-events:auto}.tma.open .tma-bubble{opacity:0}
+.tma-head{padding:14px 18px;border-bottom:1px solid rgba(255,255,255,.08);font-weight:600;font-size:14px;display:flex;justify-content:space-between;align-items:center}
+.tma-head small{color:#a7a1b7;font-weight:400}
+.tma-log{flex:1;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+.tma-m{max-width:86%;padding:9px 13px;border-radius:14px;font-size:13.5px;line-height:1.55;white-space:pre-wrap}
+.tma-m.b{background:rgba(139,53,255,.18);border:1px solid rgba(139,53,255,.3);align-self:flex-start}
+.tma-m.u{background:rgba(22,216,255,.14);border:1px solid rgba(22,216,255,.28);align-self:flex-end}
+.tma-card{align-self:stretch;border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:12px;background:rgba(255,255,255,.04);font-size:13px}
+.tma-card h4{margin:0 0 8px;font-size:13px}.tma-sw{display:flex;gap:6px;margin:8px 0}.tma-sw i{flex:1;height:22px;border-radius:6px}
+.tma-card ol{margin:6px 0 10px;padding-inline-start:18px;color:#cfc9e0}
+.tma-chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 10px}
+.tma-chip,.tma-btn{font:inherit;font-size:12px;padding:6px 11px;border-radius:99px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.05);color:#f6f3ff;cursor:pointer;text-decoration:none;display:inline-block}
+.tma-chip:hover,.tma-btn:hover{border-color:#16d8ff;background:rgba(22,216,255,.12)}
+.tma-btn{background:linear-gradient(135deg,#8b35ff,#16d8ff);border:0;color:#05040a;font-weight:700}
+.tma-form{display:flex;gap:8px;padding:12px 14px;border-top:1px solid rgba(255,255,255,.08)}
+.tma-form input{flex:1;min-width:0;border-radius:99px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:#f6f3ff;padding:10px 14px;font:inherit;font-size:13.5px}
+.tma-form input:focus{outline:none;border-color:#16d8ff}
+#tmgrade{position:fixed;inset:0;z-index:9980;pointer-events:none;opacity:0;transition:opacity 1.2s}
+#tmgrade.on{opacity:1}#tmgrade>*{position:absolute;inset:0}
+.g-tint{mix-blend-mode:color;opacity:.38}.g-vig{background:radial-gradient(ellipse at center,transparent 45%,rgba(0,0,0,.65))}
+.g-grain{opacity:.16;mix-blend-mode:overlay;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");animation:tmaGrain .5s steps(4) infinite}
+@keyframes tmaGrain{25%{transform:translate(-3%,2%)}50%{transform:translate(2%,-3%)}75%{transform:translate(-2%,-2%)}}
+.g-bar{height:0;background:#000;inset:auto 0;transition:height 1.2s cubic-bezier(.22,1,.36,1)}.g-bar.t{top:0}.g-bar.b{bottom:0;top:auto}
+#tmgrade.lb .g-bar{height:4.5vh}
+.tma-tag{position:fixed;left:50%;bottom:12vh;transform:translateX(-50%);z-index:9985;color:#fff;font:600 13px Inter,sans-serif;letter-spacing:.3em;text-transform:uppercase;opacity:0;transition:.8s;pointer-events:none;text-shadow:0 2px 12px #000}
+.tma-tag.on{opacity:.85}
+@media(prefers-reduced-motion:reduce){.g-grain,.tma-orb::after,.tma-eye{animation:none}}
