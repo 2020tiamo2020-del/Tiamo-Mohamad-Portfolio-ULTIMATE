@@ -778,6 +778,15 @@
       ping() { const a = get(); if (!a) return; const t = a.currentTime; osc(a, "sine", 1320, 1320, t, .55, .2, .004); osc(a, "sine", 1980, 1980, t, .4, .08, .004); },
       charge() { const a = get(); if (!a) return; const t = a.currentTime; osc(a, "sine", 170, 1500, t, 1.2, .26, .5); osc(a, "triangle", 85, 750, t, 1.2, .2, .5); noise(a, t, 1.1, .16, "bandpass", 900, 5200, .6); },
       crackle() { const a = get(); if (!a) return; const t = a.currentTime; for (let i = 0; i < 6; i++) noise(a, t + i * .045 + Math.random() * .03, .03, .22, "bandpass", 2500 + Math.random() * 3000, 1200, .001); },
+      rumble(d) { const a = get(); if (!a) return; const t = a.currentTime; noise(a, t, d, .6, "lowpass", 160, 55, d * .5); osc(a, "sine", 46, 38, t, d, .55, d * .4); },
+      zap() { const a = get(); if (!a) return; const t = a.currentTime; osc(a, "square", 900, 2600, t, .09, .12, .002); noise(a, t, .1, .25, "highpass", 4000, 8000, .002); },
+      shutter() { const a = get(); if (!a) return; const t = a.currentTime; [0, .055].forEach((d, i) => { noise(a, t + d, .014, .32 - i * .08, "bandpass", 3600 - i * 700, 2200, .001); osc(a, "sine", 190 - i * 40, 90, t + d, .05, .25, .001); }); },
+      glitch() { const a = get(); if (!a) return; const t = a.currentTime; for (let i = 0; i < 5; i++) { noise(a, t + i * .035, .025, .25, "bandpass", 1200 + Math.random() * 4500, 800, .001); osc(a, "square", 300 + Math.random() * 900, 120, t + i * .035, .03, .06, .001); } },
+      swell(d) { const a = get(); if (!a) return; const t = a.currentTime; osc(a, "sine", 90, 480, t, d, .32, d * .85); osc(a, "triangle", 135, 720, t, d, .16, d * .85); },
+      stab() { const a = get(); if (!a) return; const t = a.currentTime; [0, 4, 7].forEach(st => { const o = a.createOscillator(), f = a.createBiquadFilter(), g = a.createGain(); o.type = "sawtooth"; o.frequency.value = 110 * Math.pow(2, st / 12); f.type = "lowpass"; f.frequency.setValueAtTime(2600, t); f.frequency.exponentialRampToValueAtTime(300, t + .4); env(g, t, .006, .16, .42); o.connect(f); f.connect(g); g.connect(master); o.start(t); o.stop(t + .5); }); },
+      heartbeat() { const a = get(); if (!a) return; const t = a.currentTime; osc(a, "sine", 95, 42, t, .2, .8, .004); osc(a, "sine", 80, 38, t + .17, .24, .55, .004); },
+      rev() { const a = get(); if (!a) return; const t = a.currentTime, o = a.createOscillator(), f = a.createBiquadFilter(), g = a.createGain(); o.type = "sawtooth"; o.frequency.setValueAtTime(62, t); o.frequency.exponentialRampToValueAtTime(190, t + .26); o.frequency.exponentialRampToValueAtTime(75, t + .6); f.type = "lowpass"; f.frequency.value = 900; env(g, t, .08, .32, .55); o.connect(f); f.connect(g); g.connect(master); o.start(t); o.stop(t + .7); },
+      clack() { const a = get(); if (!a) return; const t = a.currentTime; osc(a, "square", 620, 300, t, .05, .2, .001); noise(a, t, .06, .3, "bandpass", 2200, 1500, .001); osc(a, "sine", 110, 70, t, .12, .35, .002); },
       whoosh(d) { const a = get(); if (!a) return; const t = a.currentTime; noise(a, t, d || .7, .5, "bandpass", 300, 4200, (d || .7) * .55); },
       riser(d) { const a = get(); if (!a) return; const t = a.currentTime; noise(a, t, d, .55, "bandpass", 250, 6000, d * .9); osc(a, "sawtooth", 110, 760, t, d, .18, d * .9); },
       engine(d) {
@@ -787,14 +796,14 @@
       }
     };
   })();
-  const ENTER_EV = [[.05, () => Snd.whoosh(.9)], [.38, () => Snd.boom(.6)], [.5, () => Snd.riser(1.1)]];
+  const ENTER_EV = [[.05, () => Snd.rumble(1.2)], [.2, () => Snd.zap()], [.38, () => Snd.boom(.6)], [.5, () => Snd.swell(1.1)]];
   const P_EV = [
-    [.004, () => { Snd.boom(.55); Snd.whoosh(.5); }], [.19, () => Snd.riser(.9)], [.222, () => { Snd.boom(1); Snd.whoosh(.5); }],
-    [.23, () => Snd.whoosh(.9)], [.262, () => Snd.whoosh(.45)], [.285, () => Snd.thump()], [.30, () => Snd.whoosh(.5)], [.318, () => Snd.thump()],
-    [.346, () => Snd.whoosh(.5)], [.352, () => Snd.crackle()], [.392, () => Snd.whoosh(.5)], [.438, () => Snd.whoosh(.5)], [.484, () => Snd.whoosh(.5)], [.528, () => Snd.whoosh(.5)],
-    [.548, () => { Snd.whoosh(.6); Snd.thump(); }], [.628, () => Snd.whoosh(.6)], [.64, () => Snd.crackle()], [.70, () => Snd.riser(.9)], [.745, () => { Snd.boom(1); Snd.whoosh(.5); }]
+    [.004, () => { Snd.boom(.55); Snd.clack(); }], [.19, () => Snd.swell(.9)], [.222, () => { Snd.boom(1); Snd.glitch(); }],
+    [.23, () => Snd.stab()], [.262, () => Snd.thump()], [.285, () => Snd.thump()], [.30, () => Snd.shutter()], [.318, () => Snd.clunk()],
+    [.346, () => Snd.shutter()], [.352, () => Snd.crackle()], [.392, () => Snd.shutter()], [.438, () => Snd.shutter()], [.484, () => Snd.shutter()], [.528, () => Snd.shutter()],
+    [.548, () => Snd.heartbeat()], [.628, () => Snd.rev()], [.64, () => Snd.crackle()], [.70, () => Snd.swell(.9)], [.745, () => { Snd.boom(1); Snd.clunk(); }]
   ];
-  const EXIT_EV = [[.05, () => Snd.whoosh(.9)]];
+  const EXIT_EV = [[.05, () => { Snd.boom(.5); Snd.clack(); }]];
   const prevs = { enter: null, p: null, q: null, exit: null };
   const fire = (dom, v, list, maxJump) => {
     const pv = prevs[dom];
@@ -802,9 +811,10 @@
     prevs[dom] = v;
   };
   const SND_EVENTS = [
-    [.03, () => { Snd.boom(1); Snd.whoosh(.6); }],
+    [.03, () => { Snd.boom(1); Snd.glitch(); }],
     [HM_HITS[0], () => { Snd.thump(); }], [HM_HITS[1], () => { Snd.thump(); }], [HM_HITS[2], () => { Snd.thump(); }], [HM_HITS[3], () => { Snd.thump(); Snd.boom(.6); }],
-    [.31, () => Snd.charge()], [.40, () => Snd.ping()], [.45, () => Snd.whoosh(.7)], [.54, () => { Snd.clunk(); Snd.boom(.7); }], [.56, () => Snd.riser(2.3)], [.70, () => { Snd.engine(2.4); Snd.boom(1); }]
+    [.31, () => Snd.charge()], [.40, () => Snd.ping()], [.45, () => Snd.clack()], [.54, () => { Snd.clunk(); Snd.boom(.7); }], [.56, () => Snd.swell(2.3)],
+    [.70, () => { Snd.engine(2.4); Snd.boom(1); }], [.72, () => Snd.whoosh(.9)]   // the ONLY whoosh: the bike launching
   ];
 
   /* ------------------------------ helmet finale: face -> visor -> reflections -> launch ------------------------------ */
