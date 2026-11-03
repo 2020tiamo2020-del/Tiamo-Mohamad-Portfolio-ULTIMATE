@@ -14,7 +14,7 @@ var G={
  gold:{k:/ذهب|gold|دافي|warm|sunset|غروب|luxury|فخم/i,n:{en:"Golden hour",ar:"الساعة الذهبية"},c:["#f9c74f","#f3722c","#3d1f0a"],p:"#f3722c",b:"#f9c74f",lb:1,grain:.12},
  alien:{k:/فضاء|space|alien|sci|خيال|fantasy|سحر|magic|green/i,n:{en:"Alien green",ar:"فضائي أخضر"},c:["#39ff88","#0ff","#031a12"],p:"#14d96a",b:"#39ff88",lb:1,grain:.16}
 };
-var layer,tag,cur=null,keep={p:getComputedStyle(H).getPropertyValue("--purple"),b:getComputedStyle(H).getPropertyValue("--blue")};
+var EXT=[],layer,tag,cur=null,keep={p:getComputedStyle(H).getPropertyValue("--purple"),b:getComputedStyle(H).getPropertyValue("--blue")};
 function build(){layer=D.createElement("div");layer.id="tmgrade";layer.setAttribute("aria-hidden","true");
  layer.innerHTML='<i class="g-tint"></i><i class="g-vig"></i><i class="g-grain"></i><i class="g-bar t"></i><i class="g-bar b"></i>';
  D.body.appendChild(layer);tag=D.createElement("div");tag.className="tma-tag";D.body.appendChild(tag)}
@@ -42,7 +42,7 @@ function brief(txt){
  grade(id);return c}
 /* ---------- brain ---------- */
 function think(q){
- var t=q.trim(),r;
+ var t=q.trim(),r;for(var i=0;i<EXT.length;i++){var x=EXT[i](t,lang());if(x)return x}
  if(/^(hi|hello|hey|اهلا|أهلا|مرحبا|سلام|هاي|ازيك)/i.test(t))return {t:T({en:"Hey! I'm Tiamo's twin. Ask me to show you work, change the mood of the whole site, or turn your idea into a brief.",ar:"أهلاً! أنا توأم تيامو. اطلب مني أوريك شغل، أغيّر مود الموقع كله، أو أحوّل فكرتك لبريف."})};
  if(/\b(reset|off)\b|رجع|رجّع|عادي|الغ|ألغ/i.test(t)){grade("off");return {t:T({en:"Back to the original look.",ar:"رجعت الشكل الأصلي."})}}
  if(/عربي|arabic|بالعربي/i.test(t)){click("#langBtn");return {t:"تمام."}}
@@ -64,9 +64,9 @@ function ui(){
  w.innerHTML='<div class="tma-bubble" role="status"></div><section class="tma-panel" aria-label="Tiamo Twin"><div class="tma-head"><span>Tiamo Twin <small></small></span><button class="tma-chip" type="button" data-x>✕</button></div><div class="tma-log" aria-live="polite"></div><div class="tma-chips"></div><form class="tma-form"><input type="text" autocomplete="off" maxlength="300"><button class="tma-btn" type="submit">↵</button></form></section><button class="tma-orb" type="button" aria-label="Tiamo Twin"><span class="tma-eyes"><span class="tma-eye"><i></i></span><span class="tma-eye"><i></i></span></span></button>';
  D.body.appendChild(w);
  var orb=$(".tma-orb",w),log=$(".tma-log",w),bub=$(".tma-bubble",w),inp=$("input",w),chips=$(".tma-chips",w);
- function say(c,txt){var m=D.createElement("div");m.className="tma-m "+c;m.textContent=txt;log.appendChild(m);log.scrollTop=log.scrollHeight}
+ function say(c,txt){var m=D.createElement("div");m.className="tma-m "+c;m.textContent=txt;log.appendChild(m);if(c==="b"&&API.onsay)API.onsay(txt);log.scrollTop=log.scrollHeight}
  function texts(){$(".tma-head small",w).textContent=T({en:"· your guide",ar:"· دليلك"});inp.placeholder=T({en:"Ask, or type a mood…",ar:"اسأل أو اكتب مود…"});
-  chips.innerHTML="";T({en:["Show reels","Mood: noir","Cyberpunk","I want an ad for my coffee shop","Reset"],ar:["وريني الريلز","مود: نوار","سايبربانك","عايز إعلان لمحل قهوة","رجّع"]}).forEach(function(x){var b=D.createElement("button");b.type="button";b.className="tma-chip";b.textContent=x;b.onclick=function(){send(x)};chips.appendChild(b)})}
+  chips.innerHTML="";T({en:["Show reels","Mood: noir","Cyberpunk","Edit photo: warmer","Roast: a cat in a city","Camera","Reset"],ar:["وريني الريلز","مود: نوار","سايبربانك","عدّل الصورة: أدفأ","Roast: قطة في مدينة","كاميرا","رجّع"]}).forEach(function(x){var b=D.createElement("button");b.type="button";b.className="tma-chip";b.textContent=x;b.onclick=function(){send(x)};chips.appendChild(b)})}
  function send(q){if(!q)return;say("u",q);ask(q).then(function(a){say("b",a.t);if(a.card){log.appendChild(a.card);log.scrollTop=log.scrollHeight}})}
  function open(v){w.classList.toggle("open",v);if(v){texts();if(!log.children.length)say("b",T({en:"Hi, I'm Tiamo's twin. What are we making today?",ar:"أهلاً، أنا توأم تيامو. هنعمل إيه النهارده؟"}));setTimeout(function(){inp.focus()},300)}}
  orb.onclick=function(){open(!w.classList.contains("open"))};$("[data-x]",w).onclick=function(){open(false)};
@@ -77,10 +77,10 @@ function ui(){
  addEventListener("pointermove",function(e){var r=orb.getBoundingClientRect(),dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2),d=Math.hypot(dx,dy)||1,k=Math.min(3,d/60);
   eyes.forEach(function(i){i.style.transform="translate("+dx/d*k+"px,"+dy/d*k+"px)"})},{passive:true});
  /* context whispers */
- var WH={about:{en:"That's the man himself. Ask me about his style.",ar:"ده تيامو نفسه. اسألني عن أسلوبه."},services:{en:"12 services. Want me to pick the right one for your idea?",ar:"12 خدمة. تحب أختار لك المناسبة لفكرتك؟"},work:{en:"Notice the lighting on these. Hover and take your time.",ar:"لاحظ الإضاءة في الشغل ده. خدّ وقتك."},cinema:{en:"Try 'mood: cyberpunk' while you watch these.",ar:"جرّب تكتب 'مود: سايبربانك' وانت بتتفرج."},creation:{en:"Every image here is AI. Which one is your favorite?",ar:"كل صورة هنا بالذكاء الاصطناعي. إيهم المفضلة عندك؟"},beforeafter:{en:"Drag the line. This is where the magic is.",ar:"حرّك الخط. هنا السحر."},brief:{en:"Skip the form: just tell me your idea in one line.",ar:"سيب الفورم: قولي فكرتك في سطر."}};
+ var WH={about:{en:"That's the man himself. Ask me about his style.",ar:"ده تيامو نفسه. اسألني عن أسلوبه."},services:{en:"12 services. Want me to pick the right one for your idea?",ar:"12 خدمة. تحب أختار لك المناسبة لفكرتك؟"},work:{en:"Notice the lighting on these. Hover and take your time.",ar:"لاحظ الإضاءة في الشغل ده. خدّ وقتك."},cinema:{en:"Try 'mood: cyberpunk' while you watch these.",ar:"جرّب تكتب 'مود: سايبربانك' وانت بتتفرج."},creation:{en:"Double-click any image and it will talk to you.",ar:"اضغط دوبل كليك على أي صورة وهتتكلم معاك."},beforeafter:{en:"Drag the line. This is where the magic is.",ar:"حرّك الخط. هنا السحر."},brief:{en:"Skip the form: just tell me your idea in one line.",ar:"سيب الفورم: قولي فكرتك في سطر."}};
  var seen={},tm,io=new IntersectionObserver(function(es){es.forEach(function(e){var id=e.target.id;if(e.isIntersecting&&WH[id]&&!seen[id]&&!w.classList.contains("open")){seen[id]=1;clearTimeout(tm);bub.textContent=T(WH[id]);bub.classList.add("on");tm=setTimeout(function(){bub.classList.remove("on")},4500)}})},{threshold:.45});
- Object.keys(WH).forEach(function(id){var s=D.getElementById(id);if(s)io.observe(s)})}
-function init(){build();ui()}
+ Object.keys(WH).forEach(function(id){var s=D.getElementById(id);if(s)io.observe(s)});API.send=send;API.say=say;API.open=open;API.form=$("form",w);API.log=log;API.inp=inp;API.orb=orb}
+var API={grade:grade,go:go,G:G,T:T,lang:lang,use:function(f){EXT.push(f)}};window.TiamoAgent=API;
+function init(){build();ui();var sc=D.createElement("script");sc.src="agent-plus.js?v=1";D.body.appendChild(sc)}
 if(D.readyState==="loading")D.addEventListener("DOMContentLoaded",init);else init();
-window.TiamoAgent={grade:grade,go:go,G:G};
 })();
