@@ -36,3 +36,14 @@
 .tma-tag{position:fixed;left:50%;bottom:12vh;transform:translateX(-50%);z-index:9985;color:#fff;font:600 13px Inter,sans-serif;letter-spacing:.3em;text-transform:uppercase;opacity:0;transition:.8s;pointer-events:none;text-shadow:0 2px 12px #000}
 .tma-tag.on{opacity:.85}
 @media(prefers-reduced-motion:reduce){.g-grain,.tma-orb::after,.tma-eye{animation:none}}
+
+/* character skin */
+.tma-orb{width:80px;height:66px;border:0;background:none;box-shadow:none;border-radius:0;filter:drop-shadow(0 6px 16px rgba(70,90,255,.6)) drop-shadow(0 0 22px rgba(139,53,255,.35))}
+.tma-orb::after{content:none}.tma-orb:hover{transform:translateY(-3px) scale(1.07)}
+.tma-cat{animation:tmaBob 4s ease-in-out infinite;overflow:visible}@keyframes tmaBob{50%{transform:translateY(-4px)}}
+.tma-blink{transform-box:fill-box;transform-origin:center;animation:tmaBlink 5s infinite}.tma-eyes{transition:transform .08s linear}
+.tma.think .tma-eyes{animation:tmaThink 1s ease-in-out infinite}@keyframes tmaThink{25%{transform:translate(-3px,-2px)}75%{transform:translate(3px,-2px)}}
+.tma-bubble{bottom:74px}.tma-panel{bottom:76px}
+.tma-hn{display:flex;align-items:center;gap:8px}.tma-hi{flex:none}
+@media(prefers-reduced-motion:reduce){.tma-cat,.tma-blink,.tma.think .tma-eyes{animation:none}}
+.tma{inset-inline-end:96px;bottom:16px}@media(max-width:700px){.tma{inset-inline-end:76px;bottom:12px}}
