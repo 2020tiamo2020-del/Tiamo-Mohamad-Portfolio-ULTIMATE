@@ -1,6 +1,0 @@
-name = "tiamo-twin"
-main = "worker.js"
-compatibility_date = "2025-01-01"
-
-[ai]
-binding = "AI"
