@@ -1,7 +1,7 @@
 (function(){
 "use strict";
 var D=document,H=D.documentElement,$=function(s,r){return(r||D).querySelector(s)};
-var WORKER_URL=""; // paste your Cloudflare Worker URL here, e.g. https://tiamo-twin.YOURNAME.workers.dev
+var WORKER_URL="https://tiamo-twin.2020tiamo2020.workers.dev"; // paste your Cloudflare Worker URL here, e.g. https://tiamo-twin.YOURNAME.workers.dev
 var ENDPOINT=window.TIAMO_AGENT_ENDPOINT||WORKER_URL; // optional Cloudflare Worker URL for a real LLM
 var WA="https://wa.me/201278536645?text=";
 function lang(){try{var l=localStorage.getItem("tiamo-lang");if(l)return l}catch(e){}return H.dir==="rtl"||H.lang==="ar"?"ar":"en"}
