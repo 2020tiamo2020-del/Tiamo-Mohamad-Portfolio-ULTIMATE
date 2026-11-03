@@ -36,10 +36,10 @@ function brief(txt){
  var shots=T({en:["Establishing wide shot, slow push-in","Hero close-up with rim light","Detail / texture macro","Closing frame with logo on negative space"],ar:["لقطة افتتاحية واسعة مع تقريب بطيء","كلوز أب للعنصر الرئيسي بإضاءة جانبية","لقطة تفاصيل ماكرو","لقطة ختامية واللوجو في مساحة فاضية"]});
  var msg=T({en:"Hi Tiamo, brief from your site agent:\n• Type: "+s+"\n• Mood: "+g.n.en+"\n• My idea: "+txt,ar:"أهلاً تيامو، بريف من وكيل موقعك:\n• النوع: "+s+"\n• المود: "+g.n.ar+"\n• فكرتي: "+txt});
  var c=D.createElement("div");c.className="tma-card";var h=D.createElement("h4");h.textContent=s+" · "+T(g.n);c.appendChild(h);
- var sw=D.createElement("div");sw.className="tma-sw";g.c.forEach(function(x){var i=D.createElement("i");i.style.background=x;sw.appendChild(i)});c.appendChild(sw);
+ var sw=D.createElement("div");sw.className="tma-sw";g.c.forEach(function(x){var i=D.createElement("i");i.style.background=x;sw.appendChild(i)});c.appendChild(sw);var mb=D.createElement("div");mb.className="tma-mb";c.appendChild(mb);
  var ol=D.createElement("ol");shots.forEach(function(x){var li=D.createElement("li");li.textContent=x;ol.appendChild(li)});c.appendChild(ol);
  var a=D.createElement("a");a.className="tma-btn";a.target="_blank";a.rel="noopener";a.href=WA+encodeURIComponent(msg);a.textContent=T({en:"Send this brief to Tiamo",ar:"ابعت البريف لتيامو"});c.appendChild(a);
- grade(id);return c}
+ grade(id);if(API.onbrief)API.onbrief(mb,g,id);return c}
 /* ---------- brain ---------- */
 function think(q){
  var t=q.trim(),r;for(var i=0;i<EXT.length;i++){var x=EXT[i](t,lang());if(x)return x}
