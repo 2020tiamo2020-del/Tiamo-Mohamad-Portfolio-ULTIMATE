@@ -8,6 +8,9 @@
    - arrows / ticks / swipe / click all just scroll the page to that card, so the
      scroll position stays the single source of truth
    - transforms + opacity only; the rAF loop runs only while the scene is visible
+   - the portrait card from About is card #0 of the carousel: while About scrolls away the real card
+     is swapped for a fixed "traveler" that descends (3D swing) into the centre slot, the other cards
+     fan out around it and the giant headline slides in (Synapse hero -> carousel hand-off)
    ===================================================================== */
 (() => {
   "use strict";
@@ -24,8 +27,7 @@
   const grid = sec && $(".service-grid", sec);
   if (!sec || !grid) return;
   const arts = $$(":scope > article", grid);
-  const N = arts.length;
-  if (N < 3) return;
+  if (arts.length < 3) return;
 
   /* ---------- data ---------- */
   const HUES = [268, 205, 325, 178, 285, 218, 342, 190, 258, 298, 208, 312];
@@ -38,6 +40,17 @@
       hue: HUES[i % HUES.length]
     };
   });
+  /* the About portrait: becomes card #0 (only if it exists on this page) */
+  const aboutPhoto = $("#about .about-photo");
+  const pic = aboutPhoto && $("picture", aboutPhoto);
+  const me = !!(pic && $("img", pic));
+  const svcCount = data.length;
+  if (me) {
+    const nb = $(".about-cap b", aboutPhoto);
+    data.unshift({ me: true, ico: "", num: "00", tEn: (nb && nb.dataset.en) || "Tiamo Mohamad", tAr: (nb && nb.dataset.ar) || "تيامو محمد", dEn: "", dAr: "", hue: 268 });
+  }
+  const off = me ? 1 : 0;                                              // services start at index `off`
+  const N = data.length;
   const h2 = $(".section-title h2", sec);
   const headEn = (h2 && h2.dataset.en) || "What I <em>create.</em>";
   const headAr = (h2 && h2.dataset.ar) || "ما <em>أُبدعه.</em>";
@@ -61,9 +74,19 @@
   const scene = el("div", "sv-scene");
   const group = el("div", "sv-group");
   const floor = el("i", "sv-floor"); floor.setAttribute("aria-hidden", "true");
+  /* a clone of the real portrait card (frame, photo, caption pill) that keeps every look rule of .about-photo */
+  const cloneMe = () => {
+    const c = aboutPhoto.cloneNode(true);
+    c.removeAttribute("id"); c.classList.remove("ab3d-on", "sv-away"); c.classList.add("show");
+    $$(".ab3d", c).forEach(n => n.remove());
+    $$("[loading]", c).forEach(n => n.removeAttribute("loading"));
+    c.setAttribute("aria-hidden", "true"); c.style.cssText = "";
+    const w = el("div", "sv-me-in"); w.appendChild(c); return w;
+  };
   const cards = data.map((d, i) => {
-    const c = el("article", "sv-card"); c.style.setProperty("--h", d.hue); c.setAttribute("aria-hidden", "true");
-    const top = el("div", "sv-top"); const ic = el("span", "sv-ico", d.ico); const nm = el("span", "sv-num", d.num + " / " + pad(N));
+    const c = el("article", "sv-card" + (d.me ? " sv-me" : "")); c.style.setProperty("--h", d.hue); c.setAttribute("aria-hidden", "true");
+    if (d.me) { c.appendChild(cloneMe()); c._i = i; c._v = true; group.appendChild(c); return c; }
+    const top = el("div", "sv-top"); const ic = el("span", "sv-ico", d.ico); const nm = el("span", "sv-num", d.num + " / " + pad(svcCount));
     top.append(ic, nm);
     const orb = el("i", "sv-orb"); orb.setAttribute("aria-hidden", "true");
     const body = el("div", "sv-body"); const h3 = i18n(el("h3"), d.tEn, d.tAr); const p = i18n(el("p"), d.dEn, d.dAr);
@@ -75,10 +98,10 @@
   scene.appendChild(group);
 
   const foot = el("div", "sv-foot");
-  const meta = el("div", "sv-meta"); const cnt = el("b"); const of = el("i"); of.style.fontStyle = "normal"; of.textContent = "/ " + pad(N); const nameEl = el("span");
+  const meta = el("div", "sv-meta"); const cnt = el("b"); const of = el("i"); of.style.fontStyle = "normal"; of.textContent = "/ " + pad(svcCount); const nameEl = el("span");
   meta.append(cnt, of, nameEl);
   const ticks = el("div", "sv-ticks");
-  const tickEls = data.map((d, i) => { const b = el("button", "sv-tick"); b.type = "button"; ticks.appendChild(b); b.addEventListener("click", () => goIndex(i, true)); return b; });
+  const tickEls = data.map((d, i) => { const b = el("button", "sv-tick" + (d.me ? " me" : "")); b.type = "button"; ticks.appendChild(b); b.addEventListener("click", () => goIndex(i, true)); return b; });
   const cta = el("a", "sv-cta"); cta.href = "#brief";
   cta.innerHTML = '<span></span><b aria-hidden="true">→</b>'; const ctaT = $("span", cta);
   i18n(ctaT, "Start a project", "ابدأ مشروعك");
@@ -86,6 +109,55 @@
   const live = el("div", "sv-live"); live.setAttribute("aria-live", "polite");
   pin.append(glow, tech, kick, text, scene, foot, live);
   root.appendChild(pin);
+
+  /* ---------- traveler: the card that flies from About into the carousel ---------- */
+  const travelOn = me && !reduce;
+  let tvWrap = null, tv = null;
+  if (travelOn) {
+    tvWrap = el("div", "sv-tv"); tvWrap.setAttribute("aria-hidden", "true");
+    tv = el("div", "sv-tv-card"); tv.appendChild(cloneMe()); tvWrap.appendChild(tv);
+    document.body.appendChild(tvWrap);
+  }
+  const GEOM = { fl: 4, fb: 4, fr: 0.14, rad: 16 };                    // frame offsets of the real card (read from its CSS)
+  const readGeom = () => {
+    if (!me) return;
+    try {
+      const cs = getComputedStyle(pic, "::before"), H = pic.getBoundingClientRect().height;
+      const t = parseFloat(cs.top), l = parseFloat(cs.left), b = parseFloat(cs.bottom), rd = parseFloat(cs.borderTopLeftRadius);
+      if (isFinite(t) && H > 20) GEOM.fr = clamp(t / H, 0, 0.4);
+      if (isFinite(l)) GEOM.fl = Math.abs(l);
+      if (isFinite(b)) GEOM.fb = Math.abs(b);
+      if (isFinite(rd)) GEOM.rad = rd;
+    } catch (_) {}
+    [root, tvWrap].forEach(n => { if (!n) return; n.style.setProperty("--fl", GEOM.fl + "px"); n.style.setProperty("--fb", GEOM.fb + "px"); n.style.setProperty("--fr", GEOM.fr.toFixed(4)); n.style.setProperty("--frad", GEOM.rad + "px"); });
+  };
+  let S0 = null, tvShown = false;
+  const ease3 = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+  const lerp = (a, b, t) => a + (b - a) * t;
+  /* returns q: 0 = card still sits in About, 1 = card has landed in the carousel */
+  function travel(r) {
+    if (!travelOn) return 1;
+    const pr = pic.getBoundingClientRect();
+    if (pr.width < 10 || pr.height < 10) { if (tvShown) { tvWrap.classList.remove("on"); tvShown = false; } aboutPhoto.classList.remove("sv-away"); return 1; }
+    const vh = innerHeight, y0 = vh * 0.12;
+    const dist = r.top - pr.top;
+    const q = clamp((y0 - pr.top) / Math.max(1, y0 + dist), 0, 1);       // 0 when the card top sits 12% down the screen, 1 when the scene pins
+    if (q <= 0) { S0 = { l: pr.left, w: pr.width, h: pr.height }; if (tvShown) { tvWrap.classList.remove("on"); tvShown = false; } aboutPhoto.classList.remove("sv-away"); return 0; }
+    if (q >= 1) { if (tvShown) { tvWrap.classList.remove("on"); tvShown = false; } return 1; }
+    if (!S0) S0 = { l: pr.left, w: pr.width, h: pr.height };
+    if (!tvShown) { tvWrap.classList.add("on"); tvShown = true; }
+    aboutPhoto.classList.add("sv-away");
+    const { fl, fb, fr } = GEOM, d = dir();
+    const a = { l: S0.l - fl, t: y0 + fr * S0.h, w: S0.w + 2 * fl, h: S0.h * (1 - fr) + fb };
+    const sr = scene.getBoundingClientRect(), pn = pin.getBoundingClientRect();
+    const eh = cards[0].offsetHeight * 1.06, ew = cards[0].offsetWidth * 1.06;
+    const b = { w: ew, h: eh, l: (innerWidth - ew) / 2, t: (sr.top - pn.top) + (sr.height - eh) / 2 };
+    const e = ease3(q), sw = Math.sin(Math.PI * q);
+    tv.style.width = lerp(a.w, b.w, e).toFixed(1) + "px";
+    tv.style.height = lerp(a.h, b.h, e).toFixed(1) + "px";
+    tv.style.transform = `translate3d(${lerp(a.l, b.l, e).toFixed(1)}px,${lerp(a.t, b.t, e).toFixed(1)}px,${(-sw * 140).toFixed(1)}px) rotateX(${(sw * -9).toFixed(2)}deg) rotateY(${(sw * 32 * d).toFixed(2)}deg) rotateZ(${(sw * -3.5 * d).toFixed(2)}deg)`;
+    return q;
+  }
 
   /* ---------- state ---------- */
   let cw = 240, S = 200, segW = 1, DEPTH = 150, ROT = 34;
@@ -137,32 +209,34 @@
 
   /* ---------- render ---------- */
   const eo = t => 1 - Math.pow(1 - t, 3);
-  function place(p, enter, leave) {
+  function place(p, enter, leave, q) {
+    const rv = (() => { const t = clamp((q - 0.55) / 0.45, 0, 1); return t * t * (3 - 2 * t); })();   // 0..1 once the card is almost home
     const d = dir();
     for (let i = 0; i < N; i++) {
       const c = cards[i], o = i - p, a = Math.abs(o);
-      if (a > vis) { if (c._v) { c.style.visibility = "hidden"; c._v = false; } continue; }
+      if (a > vis || (me && i === 0 && q < 0.999)) { if (c._v) { c.style.visibility = "hidden"; c._v = false; } continue; }
       if (!c._v) { c.style.visibility = ""; c._v = true; }
       const sg = o < 0 ? -1 : 1;
-      const x = (a <= 1 ? a * S : S + (a - 1) * S * 0.74) * sg * d;
+      const x = (a <= 1 ? a * S : S + (a - 1) * S * 0.74) * sg * d * (i === 0 && me ? 1 : 0.2 + 0.8 * rv);   // the other cards fan out from the landed card
       const ry = sg * d * Math.min(a, 1.6) / 1.6 * ROT * -1;
       const z = -Math.min(a, 3) * DEPTH;
       const s = 1 - Math.min(a, 2.2) * 0.075 + Math.max(0, 1 - a) * 0.06;
       const fade = a > vis - 0.8 ? clamp((vis - a) / 0.8, 0, 1) : 1;
       c.style.transform = `translate3d(${x.toFixed(1)}px,0,${z.toFixed(1)}px) rotateY(${ry.toFixed(2)}deg) scale(${s.toFixed(4)})`;
-      c.style.opacity = fade.toFixed(3);
+      c.style.opacity = (fade * (i === 0 && me ? 1 : rv)).toFixed(3);
       c.style.setProperty("--dim", (Math.min(a, 2.4) * 0.2).toFixed(3));
       c.style.zIndex = String(100 - Math.round(a * 10));
     }
     // hue follows the position between neighbouring cards
     const f = Math.floor(p), g = Math.min(N - 1, f + 1), t = p - f;
-    let h0 = HUES[f % HUES.length], h1 = HUES[g % HUES.length];
+    let h0 = data[f].hue, h1 = data[g].hue;
     if (h1 - h0 > 180) h1 -= 360; else if (h0 - h1 > 180) h1 += 360;
     root.style.setProperty("--hue", ((h0 + (h1 - h0) * t) % 360 + 360) % 360 + "");
     // giant headline slides sideways: one card = ~55% of the viewport, wraps seamlessly
     const m = ((p * innerWidth * 0.55) % Math.max(1, segW));
-    row.style.transform = `translate3d(${(reduce ? 0 : -m * d).toFixed(1)}px,0,0)`;
-    text.style.opacity = (enter * (1 - leave * 0.75)).toFixed(3);
+    row.style.transform = `translate3d(${(reduce ? 0 : (-m + (1 - rv) * innerWidth * 0.3) * d).toFixed(1)}px,0,0)`;   // slides in as the card lands
+    text.style.opacity = (enter * rv * (1 - leave * 0.75)).toFixed(3);
+    glow.style.opacity = (0.15 + 0.85 * rv).toFixed(3); foot.style.opacity = rv.toFixed(3); kick.style.opacity = rv.toFixed(3);
     // group: parallax with the pointer + intro rise / outro dissolve
     const iy = (1 - enter) * innerHeight * 0.16 - leave * innerHeight * 0.05;
     const sc = (0.9 + 0.1 * enter) * (1 - leave * 0.06);
@@ -172,10 +246,10 @@
   function paintMeta(k) {
     activeIdx = k;
     cards.forEach((c, i) => { const on = i === k; c.classList.toggle("on", on); on ? c.removeAttribute("aria-hidden") : c.setAttribute("aria-hidden", "true"); });
-    tickEls.forEach((b, i) => { b.setAttribute("aria-current", i === k ? "true" : "false"); b.setAttribute("aria-label", (isAr() ? "الخدمة " : "Service ") + (i + 1)); });
-    cnt.textContent = pad(k + 1);
+    tickEls.forEach((b, i) => { b.setAttribute("aria-current", i === k ? "true" : "false"); b.setAttribute("aria-label", data[i].me ? (isAr() ? "البطاقة الشخصية" : "Profile") : (isAr() ? "الخدمة " : "Service ") + (i + 1 - off)); });
+    cnt.textContent = data[k].me ? "00" : pad(k + 1 - off);
     const nm = isAr() ? data[k].tAr : data[k].tEn;
-    nameEl.innerHTML = nm; live.textContent = (isAr() ? "الخدمة " : "Service ") + (k + 1) + " / " + N + ": " + nameEl.textContent;
+    nameEl.innerHTML = nm; live.textContent = (data[k].me ? "" : (isAr() ? "الخدمة " : "Service ") + (k + 1 - off) + " / " + svcCount + ": ") + nameEl.textContent;
     const act = tickEls[k];
     if (act) ticks.scrollTo({ left: act.offsetLeft - ticks.clientWidth / 2 + act.offsetWidth / 2, behavior: "auto" });
   }
@@ -185,6 +259,8 @@
     raf = 0;
     const dt = Math.min(0.12, (now - last) / 1000 || 0.016); last = now;
     const r = rect();
+    const q = reduce ? 1 : travel(r);
+    if (r.top >= innerHeight * 1.02 && q <= 0) { if (inView) raf = requestAnimationFrame(frame); return; }   // scene still below the fold, card still in About
     pS = scrollP(r);
     const idle = now - lastScroll > 170 && !dragging;                  // scrolling stopped -> settle on the nearest card
     const target = dragging ? clamp(pS + dragOff, 0, N - 1) : idle ? Math.round(pS) : pS;
@@ -193,7 +269,7 @@
     px += (tpx - px) * (reduce ? 0 : 0.08); py += (tpy - py) * (reduce ? 0 : 0.08);
     const enter = reduce ? 1 : eo(clamp((innerHeight - r.top) / (innerHeight * 0.85), 0, 1));
     const leave = reduce ? 0 : clamp(1 - r.bottom / innerHeight, 0, 1);
-    place(cur, enter, leave);
+    place(cur, enter, leave, q);
     const a = clamp(Math.round(cur), 0, N - 1);
     if (a !== activeIdx) paintMeta(a);
     if (inView) raf = requestAnimationFrame(frame);
@@ -251,19 +327,19 @@
   };
 
   /* ---------- lifecycle ---------- */
-  const relayout = () => { measure(); loop(); };
+  const relayout = () => { measure(); readGeom(); loop(); };
   addEventListener("resize", relayout);
   new MutationObserver(() => { setTimeout(() => { measure(); paintMeta(activeIdx < 0 ? 0 : activeIdx); }, 120); }).observe(document.documentElement, { attributes: true, attributeFilter: ["lang"] });
   if ("IntersectionObserver" in window) {
-    new IntersectionObserver(es => { inView = es[0].isIntersecting; if (inView) loop(); }, { rootMargin: "20% 0px 20% 0px" }).observe(root);
+    new IntersectionObserver(es => { inView = es[0].isIntersecting; if (inView) loop(); }, { rootMargin: "20% 0px 140% 0px" }).observe(root);   // starts early: the card leaves About before the scene is on screen
   } else inView = true;
 
   grid.after(root);
   sec.classList.add("sv-on");
-  measure();
+  measure(); readGeom();
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(relayout);
   paintMeta(0);
   const r0 = rect(); cur = scrollP(r0);
-  place(cur, 1, 0);
+  place(cur, 1, 0, me && !reduce ? 0 : 1);
   window.__svDebug = { go: goIndex, get state() { return { cur: +cur.toFixed(2), pS: +pS.toFixed(2), active: activeIdx, inView }; } };
 })();

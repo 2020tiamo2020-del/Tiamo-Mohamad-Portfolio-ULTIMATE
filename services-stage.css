@@ -95,3 +95,33 @@ html[lang="ar"] .sv-body h3{letter-spacing:0}
   .sv-tick{width:17px}
 }
 @media (prefers-reduced-motion:reduce){.sv-card.on .sv-orb{animation:none}}
+
+/* ===== portrait card from About = card #0, plus the card that travels there ===== */
+#services.sv-on .section-heading-scroll{height:0;margin:0;padding:0;overflow:hidden;visibility:hidden}   /* the giant headline in the scene replaces it */
+#about .about-photo.sv-away{visibility:hidden !important}
+
+.sv-me{padding:0;overflow:visible;background:none;border:0;box-shadow:none;border-radius:var(--frad,16px);
+  filter:brightness(calc(1 - var(--dim,0))) drop-shadow(0 26px 30px rgba(0,0,0,.45))}
+.sv-me::after{display:none}
+/* opaque backing so the giant headline never shows through the (translucent) portrait frame */
+.sv-me::before,.sv-tv-card::before{content:"";display:block;position:absolute;inset:0;z-index:-2;pointer-events:none;border-radius:var(--frad,16px);background:linear-gradient(165deg,#150d2c,#08060f);-webkit-mask:none;mask:none}
+.sv-me.on{border:0;box-shadow:none;filter:brightness(calc(1 - var(--dim,0))) drop-shadow(0 26px 30px rgba(0,0,0,.45)) drop-shadow(0 0 34px hsla(var(--h),95%,62%,.42))}
+/* inner box = the portrait's own box; its frame (picture::before/::after) lands exactly on the card rectangle, the head pops out above it */
+.sv-me-in{position:absolute;left:var(--fl,4px);right:var(--fl,4px);bottom:var(--fb,4px);height:calc((100% - var(--fb,4px)) / (1 - var(--fr,.14)));pointer-events:none}
+.sv-me-in .about-photo{position:absolute !important;inset:0 !important;width:100% !important;height:100% !important;max-width:none !important;margin:0 !important;
+  opacity:1 !important;transform:none !important;translate:none !important;transition:none !important;aspect-ratio:auto !important;right:auto !important;bottom:auto !important;pointer-events:none}
+.sv-me-in .about-photo::before{display:none}
+
+.sv-tv{position:fixed;inset:0;z-index:23;pointer-events:none;perspective:1500px;display:none;overflow:hidden}
+.sv-tv.on{display:block}
+.sv-tv-card{position:absolute;left:0;top:0;transform-style:preserve-3d;will-change:transform,width,height;backface-visibility:hidden;filter:drop-shadow(0 30px 40px rgba(0,0,0,.5))}
+
+.sv-tick.me::before{width:60%;margin-inline:auto;background:rgba(255,255,255,.34)}
+.sv-tick.me[aria-current="true"]::before{width:100%;background:linear-gradient(90deg,var(--purple),var(--blue))}
+
+/* caption pill of the portrait scales with the card width (container units), so it never wraps when the card shrinks */
+.sv-me-in{container-type:inline-size}
+.sv-me-in .about-cap{white-space:nowrap !important;width:max-content !important;max-width:94cqw !important;padding:2.6cqw 5cqw !important;bottom:4cqw !important;gap:2.2cqw !important}
+.sv-me-in .about-cap b{font-size:3.5cqw !important}
+.sv-me-in .about-cap em{font-size:3.1cqw !important}
+.sv-me-in .about-cap .cap-dot{width:2.2cqw !important;height:2.2cqw !important}
