@@ -57,8 +57,8 @@
       const active = s.hover && now - s.last < 2500;
       if (!active) {                       // idle: the light slowly circles the sphere rim
         const t = now / 1000 + s.ph;
-        s.tx = w * (.76 + .12 * Math.cos(t * .45));
-        s.ty = h * (.70 + .14 * Math.sin(t * .35));
+        s.tx = w * (.84 + .07 * Math.cos(t * .45));
+        s.ty = Math.max(h * .15, h - w * (.10 + .05 * Math.sin(t * .35)));
       }
       if (!s.init) { s.x = s.tx; s.y = s.ty; s.init = true; }
       s.x += (s.tx - s.x) * (active ? .16 : .035);
