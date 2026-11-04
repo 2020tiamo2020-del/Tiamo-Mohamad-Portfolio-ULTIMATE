@@ -285,7 +285,7 @@
       rail.style.setProperty("--st-prog", clamp(y / max, 0, 1).toFixed(4));
       aura.style.setProperty("--st-y", Math.round(y));
 
-      const pin = !!grid && cards.length > 1 && pinMQ.matches && !reduce;
+      const pin = !!grid && cards.length > 1 && pinMQ.matches && !reduce && !(work && work.classList.contains("ws-on"));
       work && work.classList.toggle("st-pin", pin);
       if (pin) {
         cards.forEach((c, i) => {
