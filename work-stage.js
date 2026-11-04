@@ -168,6 +168,7 @@
       m.addEventListener("loadeddata", () => { if (ch === cur() && ch.at === idx) glowFrom(m); });
       m.addEventListener("timeupdate", () => { if (ch === cur() && ch.at === idx) tc(m.currentTime); });
       m.addEventListener("error", () => s.classList.add("bad"));
+      if (ch.posters) m.poster = posterUrl(it);
       m.src = it.src;
     } else {
       m = document.createElement("img"); m.decoding = "async"; m.draggable = false; m.alt = T("Work " + ch.key + (idx + 1), "عمل " + ch.key + (idx + 1));
@@ -276,24 +277,43 @@
     });
     v.src = it.src;
   });
+  /* Posters: if a .webp with the same name sits next to the video (Cinematic/cinematic0.webp), it is used for the thumbnail AND as the
+     video's poster (instant first paint, nothing downloaded from the videos). Only the first video is probed; no posters -> frame capture above. */
+  const posterUrl = it => it.src.replace(/\.(webm|mp4)(\?.*)?$/i, ".webp");
+  const probePoster = url => new Promise(res => { const im = new Image(); im.onload = () => res(im.naturalWidth > 0); im.onerror = () => res(false); im.src = url; });
   function captureThumbs(ch) {
     const tok = ++thumbTok;
-    const todo = ch.items.map((it, k) => [it, k]).filter(([it]) => it.t === "v" && !it.thumbURL && !it.thumbTried);
-    let idx = 0;
-    const run = () => {
-      if (tok !== thumbTok || idx >= todo.length) return;
-      const [it, k] = todo[idx++]; it.thumbTried = true;
-      grab(it).then(url => {
-        if (!url) return;
-        it.thumbURL = url;
+    const vids = ch.items.filter(it => it.t === "v");
+    if (!vids.length) return;
+    const withPosters = () => {
+      ch.items.forEach((it, k) => {
+        if (it.t !== "v") return;
+        it.thumbURL = it.thumbURL || posterUrl(it);
         const b = $$(".ws-th", rail)[k];
-        if (b && ch === cur()) {
-          const im = el("img"); im.alt = ""; im.src = url; b.prepend(im);
-          b.style.setProperty("--r", thumbRatio(it).toFixed(3));
-        }
-      }).then(() => setTimeout(run, 40));
+        if (b && ch === cur() && !$("img", b)) { const im = el("img"); im.alt = ""; im.loading = "lazy"; im.decoding = "async"; im.src = it.thumbURL; b.prepend(im); }
+      });
+      ch.els.forEach((sl, k) => { if (sl && sl._m && sl._m.tagName === "VIDEO" && !sl._m.poster && ch.items[k]) sl._m.poster = posterUrl(ch.items[k]); });
     };
-    run(); run();
+    const withCapture = () => {
+      const todo = ch.items.map((it, k) => [it, k]).filter(([it]) => it.t === "v" && !it.thumbURL && !it.thumbTried);
+      let idx = 0;
+      const run = () => {
+        if (tok !== thumbTok || idx >= todo.length) return;
+        const [it, k] = todo[idx++]; it.thumbTried = true;
+        grab(it).then(url => {
+          if (!url) return;
+          it.thumbURL = url;
+          const b = $$(".ws-th", rail)[k];
+          if (b && ch === cur()) {
+            const im = el("img"); im.alt = ""; im.src = url; b.prepend(im);
+            b.style.setProperty("--r", thumbRatio(it).toFixed(3));
+          }
+        }).then(() => setTimeout(run, 40));
+      };
+      run(); run();
+    };
+    const go = () => { if (tok !== thumbTok) return; ch.posters ? withPosters() : withCapture(); };
+    if (ch.posters === undefined) probePoster(posterUrl(vids[0])).then(ok => { ch.posters = ok; go(); }); else go();
   }
 
   /* ---------- show an item (crossfade inside the frame) ---------- */
