@@ -454,6 +454,7 @@ nav?.querySelectorAll("a").forEach(a => a.addEventListener("click", closeMenu));
     if (id === "contact") return frameContact();
     if (id === "cinema") { const c = document.getElementById("cinema"); if (c) { scrollYTo(absTop(c) + 2); setTimeout(() => { try { window.__updateActiveNav && window.__updateActiveNav(); } catch (_) {} }, 400); } return; }
     if (id === "home") { scrollYTo(0); setTimeout(() => { try { window.__updateActiveNav && window.__updateActiveNav(); } catch (_) {} }, 350); return; }
+    if (id === "work" && typeof window.__frameWork === "function" && document.getElementById("ws")) return window.__frameWork();   /* new Work stage: land with the stage pinned under the header */
     const el = document.getElementById(id);
     if (!el) return;
     frameUnderHeader(el);
