@@ -1,0 +1,97 @@
+/* =====================================================================
+   SERVICES STAGE — scroll-scrubbed 3D card carousel + giant kinetic headline
+   Progressive enhancement: the old .service-grid stays in the page as the data
+   source / fallback until services-stage.js builds the scene and adds .sv-on.
+   Everything animated is transform / opacity; one rAF loop runs only while the
+   scene is on screen.
+   ===================================================================== */
+#services.sv-on .service-grid{display:none !important}
+
+.sv{--n:12;--step:34svh;--hue:268;position:relative;width:100vw;margin-inline:calc(50% - 50vw);margin-top:4px;
+  height:calc(100svh + (var(--n) - 1) * var(--step))}
+.sv-pin{position:sticky;top:0;height:100svh;min-height:540px;display:grid;grid-template-rows:auto minmax(0,1fr) auto;overflow:hidden;isolation:isolate;
+  padding:clamp(96px,13svh,122px) 0 clamp(14px,2.8svh,26px);contain:layout paint;font-family:Inter,Cairo,sans-serif}
+
+/* ambient */
+.sv-glow{position:absolute;inset:-10%;z-index:-3;pointer-events:none;
+  background:radial-gradient(46% 42% at 50% 50%,hsla(var(--hue),90%,58%,.34),transparent 72%),
+             radial-gradient(30% 26% at 14% 82%,rgba(22,216,255,.14),transparent 70%),
+             radial-gradient(30% 26% at 88% 18%,hsla(calc(var(--hue) + 40),90%,60%,.16),transparent 70%);filter:blur(30px)}
+.sv-grid{position:absolute;inset:0;z-index:-2;pointer-events:none;opacity:.5;
+  background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);background-size:56px 56px;
+  -webkit-mask-image:radial-gradient(70% 62% at 50% 50%,#000 20%,transparent 78%);mask-image:radial-gradient(70% 62% at 50% 50%,#000 20%,transparent 78%)}
+.sv-kick{text-align:center;font:700 10px/1 ui-monospace,Menlo,Consolas,monospace;letter-spacing:2.4px;color:var(--muted)}
+@media (max-height:700px){.sv-kick{display:none}}
+
+/* giant kinetic headline (moves with the scroll, behind the cards) */
+.sv-text{position:absolute;inset:0;z-index:-1;display:flex;align-items:center;pointer-events:none;will-change:opacity}
+.sv-row{display:flex;flex:0 0 auto;white-space:nowrap;will-change:transform;translate:0 -2%}
+.sv-seg{flex:0 0 auto;font-size:clamp(120px,23vw,360px);font-weight:800;line-height:.95;letter-spacing:-.055em;padding-inline:.18em;
+  background:linear-gradient(100deg,#fff 0%,hsl(var(--hue) 92% 84%) 55%,rgba(255,255,255,.7) 100%);-webkit-background-clip:text;background-clip:text;color:transparent;
+  opacity:.85;font-family:Inter,Cairo,sans-serif}
+.sv-seg em{font-style:italic;font-weight:500;font-family:"Instrument Serif",Georgia,serif;letter-spacing:-.04em}
+html[lang="ar"] .sv-seg{font-family:Cairo,Inter,sans-serif;letter-spacing:0;font-weight:800}
+html[lang="ar"] .sv-seg em{font-family:Cairo,Inter,sans-serif;font-style:normal}
+.sv-seg::after{content:"✦";font-size:.32em;vertical-align:.5em;padding-inline-start:.5em;-webkit-text-fill-color:hsl(var(--hue) 90% 70%);opacity:.9}
+
+/* 3D scene */
+.sv-scene{position:relative;min-height:0;perspective:1500px;perspective-origin:50% 42%;touch-action:pan-y;cursor:grab;
+  --ch:clamp(300px,52svh,470px);--cw:calc(var(--ch) / 1.4);user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
+.sv-scene:active{cursor:grabbing}
+.sv-group{position:absolute;inset:0;transform-style:preserve-3d;will-change:transform}
+.sv-floor{position:absolute;left:50%;bottom:2%;width:calc(var(--cw) * 1.5);height:calc(var(--cw) * .32);translate:-50% 0;border-radius:50%;pointer-events:none;
+  background:radial-gradient(closest-side,hsla(var(--hue),95%,62%,.5),transparent);filter:blur(14px)}
+
+.sv-card{position:absolute;left:50%;top:50%;width:var(--cw);height:var(--ch);margin:calc(var(--ch) / -2) 0 0 calc(var(--cw) / -2);padding:clamp(14px,1.5vw,20px);
+  display:flex;flex-direction:column;border-radius:26px;color:#fff;overflow:hidden;backface-visibility:hidden;-webkit-backface-visibility:hidden;will-change:transform,opacity;
+  background:radial-gradient(95% 58% at 28% 6%,hsla(var(--h),90%,66%,.6),transparent 70%),radial-gradient(70% 50% at 88% 96%,hsla(calc(var(--h) + 55),90%,60%,.32),transparent 70%),
+             linear-gradient(165deg,hsl(var(--h) 48% 17%),hsl(calc(var(--h) + 25) 52% 7%));
+  border:1px solid rgba(255,255,255,.16);
+  box-shadow:0 34px 80px -26px rgba(0,0,0,.85),inset 0 1px 0 rgba(255,255,255,.3),inset 0 0 0 1px rgba(255,255,255,.03);
+  transition:box-shadow .6s var(--ease,ease),border-color .6s}
+.sv-card::before{content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;
+  background:linear-gradient(118deg,rgba(255,255,255,.2),rgba(255,255,255,0) 30%),linear-gradient(0deg,rgba(255,255,255,.06),transparent 22%)}
+.sv-card::after{content:"";position:absolute;inset:0;z-index:6;border-radius:inherit;pointer-events:none;background:#06040d;opacity:var(--dim,0)}
+.sv-card.on{border-color:rgba(255,255,255,.34);box-shadow:0 40px 90px -24px rgba(0,0,0,.9),0 0 90px -14px hsla(var(--h),95%,62%,.65),inset 0 1px 0 rgba(255,255,255,.4)}
+.sv-top{position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between}
+.sv-ico{display:grid;place-items:center;width:38px;height:38px;border-radius:12px;font-size:17px;font-weight:700;color:#fff;
+  background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);box-shadow:inset 0 1px 0 rgba(255,255,255,.28)}
+.sv-ico svg{width:1.05em;height:1.05em}
+.sv-num{font:700 11px/1 ui-monospace,Menlo,Consolas,monospace;letter-spacing:1.5px;color:rgba(255,255,255,.7)}
+.sv-orb{position:absolute;left:14%;top:17%;width:72%;aspect-ratio:1;border-radius:50%;pointer-events:none;filter:blur(9px);opacity:.9;
+  background:radial-gradient(circle at 36% 30%,hsla(var(--h),100%,88%,.95),hsla(var(--h),92%,62%,.55) 36%,transparent 70%)}
+.sv-card.on .sv-orb{animation:svOrb 7s ease-in-out infinite alternate}
+@keyframes svOrb{to{transform:translate3d(6%,5%,0) scale(1.08)}}
+.sv-body{position:relative;z-index:2;margin-top:auto}
+.sv-body h3{margin:0 0 8px;font-size:clamp(19px,1.85vw,25px);line-height:1.12;letter-spacing:-.02em;color:#fff;text-shadow:0 2px 18px rgba(0,0,0,.45)}
+.sv-body p{margin:0;font-size:clamp(11.5px,.95vw,13.5px);line-height:1.5;color:rgba(255,255,255,.78);display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+html[lang="ar"] .sv-body h3{letter-spacing:0}
+
+/* footer: counter + ticks + cta */
+.sv-foot{display:grid;justify-items:center;gap:10px;padding-top:clamp(6px,1.4svh,14px)}
+.sv-meta{display:flex;align-items:baseline;gap:10px;font:700 12px/1 ui-monospace,Menlo,Consolas,monospace;letter-spacing:1.4px;color:var(--muted)}
+.sv-meta b{color:var(--blue);font-size:15px}
+.sv-meta span{font-family:Inter,Cairo,sans-serif;letter-spacing:0;font-size:14px;font-weight:700;color:var(--text)}
+.sv-ticks{display:flex;gap:6px;align-items:center;max-width:94vw;overflow-x:auto;scrollbar-width:none;padding:4px 2px}
+.sv-ticks::-webkit-scrollbar{display:none}
+.sv-tick{all:unset;box-sizing:border-box;cursor:pointer;flex:0 0 auto;width:22px;height:18px;display:grid;place-items:center}
+.sv-tick::before{content:"";width:100%;height:3px;border-radius:3px;background:rgba(255,255,255,.2);transition:background .35s,transform .35s,box-shadow .35s}
+.sv-tick:hover::before{background:rgba(255,255,255,.5)}
+.sv-tick:focus-visible{outline:2px solid var(--blue);outline-offset:1px;border-radius:4px}
+.sv-tick[aria-current="true"]::before{background:linear-gradient(90deg,var(--purple),var(--blue));transform:scaleY(1.7);box-shadow:0 0 14px hsla(var(--hue),95%,62%,.8)}
+.sv-cta{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;gap:9px;padding:12px 22px;border-radius:999px;font-size:12.5px;font-weight:800;letter-spacing:.3px;color:#fff;
+  background:linear-gradient(100deg,#7d2cff,#1bbfff);box-shadow:0 0 30px rgba(139,53,255,.32),inset 0 1px 0 rgba(255,255,255,.3);transition:transform .3s,filter .3s}
+.sv-cta:hover{transform:translateY(-2px);filter:brightness(1.1)}
+.sv-cta:focus-visible{outline:2px solid #fff;outline-offset:3px}
+.sv-live{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+@media (max-width:760px){
+  .sv{--step:27svh}
+  .sv-pin{padding-top:84px}
+  .sv-scene{--ch:clamp(290px,50svh,430px);perspective:1100px}
+  .sv-seg{font-size:clamp(110px,34vw,200px)}
+  .sv-card{border-radius:22px}
+  .sv-cta{padding:11px 18px}
+  .sv-tick{width:17px}
+}
+@media (prefers-reduced-motion:reduce){.sv-card.on .sv-orb{animation:none}}

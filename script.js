@@ -407,6 +407,7 @@ nav?.querySelectorAll("a").forEach(a => a.addEventListener("click", closeMenu));
   const frameServices = () => {
     const sec = document.getElementById("services");
     if (!sec) return;
+    if (typeof window.__frameServices === "function" && document.getElementById("sv")) return window.__frameServices();   /* new Services scene: land with it pinned under the header */
     try { window.__servicesReset && window.__servicesReset(); } catch (_) {}
     /* Pin section so "02 / SERVICES" + title sit just under the nav — never under it */
     const kicker = sec.querySelector(".section-kicker") || sec.querySelector(".section-heading-scroll") || sec;
