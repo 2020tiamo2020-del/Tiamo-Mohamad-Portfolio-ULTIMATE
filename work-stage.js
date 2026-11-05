@@ -385,7 +385,9 @@
   }
 
   /* ---------- scroll -> chapter ---------- */
-  let ticking = false;
+  let ticking = false, navTarget = null, navT = 0;
+  const endNav = () => { clearTimeout(navT); if (navTarget == null) return; navTarget = null; onScroll(); };
+  ["wheel", "touchstart", "pointerdown"].forEach(ev => addEventListener(ev, e => { if (navTarget != null && !(e.target.closest && e.target.closest(".ws-tabs,.ws-tab"))) endNav(); }, { passive: true }));
   const chapterFromScroll = () => {
     const r = root.getBoundingClientRect(), span = Math.max(1, root.offsetHeight - innerHeight);
     const p = clamp(-r.top / span, 0, 0.9999);
@@ -399,6 +401,7 @@
       const inView = r.top < innerHeight * 0.9 && r.bottom > innerHeight * 0.1;
       if (inView !== live) { live = inView; playCurrent(); if (live && !hintShown) root.classList.add("hint"); }
       if (!live) return;
+      if (navTarget != null) return;                                  // a tab / arrow-key jump is travelling: don't show the chapters it flies past
       const t = chapterFromScroll();
       if (t !== ci) goChapter(t, t < ci);
     });
@@ -420,6 +423,8 @@
     requestAnimationFrame(step);
   };
   const scrollToChapter = k => {
+    navTarget = k; clearTimeout(navT); navT = setTimeout(endNav, 1800);   // jump straight to the chosen chapter, ignore the ones in between
+    goChapter(k, k < ci);
     const top = root.getBoundingClientRect().top + scrollY, span = root.offsetHeight - innerHeight;
     scrollYTo(top + (k + 0.5) / chapters.length * span);
   };
