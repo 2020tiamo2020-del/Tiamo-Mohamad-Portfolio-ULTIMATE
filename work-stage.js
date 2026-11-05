@@ -163,7 +163,7 @@
       m.setAttribute("muted", ""); m.setAttribute("playsinline", ""); m.setAttribute("disablepictureinpicture", ""); m.draggable = false;
       m.setAttribute("aria-label", T("Video " + (idx + 1), "فيديو " + (idx + 1)));
       m.addEventListener("loadedmetadata", () => {
-        if (m.videoWidth) { it.ratio = m.videoWidth / m.videoHeight; if (ch === cur() && ch.at === idx) fit(); }
+        if (m.videoWidth && !ch.posters) { it.ratio = m.videoWidth / m.videoHeight; if (ch === cur() && ch.at === idx) fit(); }
       });
       m.addEventListener("loadeddata", () => { if (ch === cur() && ch.at === idx) glowFrom(m); });
       m.addEventListener("timeupdate", () => { if (ch === cur() && ch.at === idx) tc(m.currentTime); });
@@ -288,11 +288,14 @@
     const withPosters = () => {
       ch.items.forEach((it, k) => {
         if (it.t !== "v") return;
+        it.ratio = 1;   /* posters are square crops -> square frame + square thumbs */
+        { const bb = $$(".ws-th", rail)[k]; if (bb && ch === cur()) bb.style.setProperty("--r", "1"); }
         it.thumbURL = it.thumbURL || posterUrl(it);
         const b = $$(".ws-th", rail)[k];
         if (b && ch === cur() && !$("img", b)) { const im = el("img"); im.alt = ""; im.loading = "lazy"; im.decoding = "async"; im.src = it.thumbURL; b.prepend(im); }
       });
       ch.els.forEach((sl, k) => { if (sl && sl._m && sl._m.tagName === "VIDEO" && !sl._m.poster && ch.items[k]) sl._m.poster = posterUrl(ch.items[k]); });
+      if (ch === cur()) fit();
     };
     const withCapture = () => {
       const todo = ch.items.map((it, k) => [it, k]).filter(([it]) => it.t === "v" && !it.thumbURL && !it.thumbTried);
