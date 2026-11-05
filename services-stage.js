@@ -41,6 +41,7 @@
     };
   });
   /* the About portrait: becomes card #0 (only if it exists on this page) */
+  const sec_about = document.getElementById("about");
   const aboutPhoto = $("#about .about-photo");
   const pic = aboutPhoto && $("picture", aboutPhoto);
   const me = !!(pic && $("img", pic));
@@ -146,7 +147,12 @@
     if (!travelOn) return 1;
     const pr = pic.getBoundingClientRect();
     if (pr.width < 10 || pr.height < 10) { if (tvShown) { tvWrap.classList.remove("on"); tvShown = false; } aboutPhoto.classList.remove("sv-away"); return 1; }
-    const vh = innerHeight, y0 = vh * 0.12;
+    const vh = innerHeight;
+    let y0 = vh * 0.12;
+    if (window.__abPin && window.__abPin.on) {                          // About is pinned: never start before the pinned card position (hand-off continues right after the pin releases)
+      const sr = sec_about.getBoundingClientRect();
+      y0 = Math.min(y0, window.__abPin.top + (pr.top - sr.top));
+    }
     const dist = r.top - pr.top;
     const q = clamp((y0 - pr.top) / Math.max(1, y0 + dist), 0, 1);       // 0 when the card top sits 12% down the screen, 1 when the scene pins
     if (q <= 0) { S0 = { l: pr.left, w: pr.width, h: pr.height }; if (tvShown) { tvWrap.classList.remove("on"); tvShown = false; } aboutPhoto.classList.remove("sv-away"); return 0; }

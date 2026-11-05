@@ -431,6 +431,7 @@ nav?.querySelectorAll("a").forEach(a => a.addEventListener("click", closeMenu));
     const sec = document.getElementById("about");
     if (!sec) return;
     try { window.__fillAboutBA && window.__fillAboutBA(); } catch (_) {}
+    if (typeof window.__frameAbout === "function" && window.__frameAbout()) return;   /* pinned About: land where the two cards have met */
     const kicker = sec.querySelector(".section-kicker");
     // Sit a bit lower under the bar (user request)
     scrollYTo(absTop(kicker || sec) - headerPad() - 40);

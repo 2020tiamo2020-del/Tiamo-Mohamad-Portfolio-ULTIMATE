@@ -279,8 +279,17 @@
   });
   /* Posters: if a .webp with the same name sits next to the video (Cinematic/cinematic0.webp), it is used for the thumbnail AND as the
      video's poster (instant first paint, nothing downloaded from the videos). Only the first video is probed; no posters -> frame capture above. */
-  const posterUrl = it => it.src.replace(/\.(webm|mp4)(\?.*)?$/i, ".webp");
-  const probePoster = url => new Promise(res => { const im = new Image(); im.onload = () => res(im.naturalWidth > 0); im.onerror = () => res(false); im.src = url; });
+  const POSTER_EXTS = [".jpg", ".webp", ".jpeg", ".png"];
+  let posterExt = ".jpg";                                              // set to whichever extension is found next to the videos
+  const posterUrl = it => it.src.replace(/\.(webm|mp4)(\?.*)?$/i, posterExt);
+  const probeImg = url => new Promise(res => { const im = new Image(); im.onload = () => res(im.naturalWidth > 0); im.onerror = () => res(false); im.src = url; });
+  const probePoster = async first => {                                 // tries the extensions in order on the first video of the chapter
+    for (const ext of POSTER_EXTS) {
+      const url = first.src.replace(/\.(webm|mp4)(\?.*)?$/i, ext);
+      if (await probeImg(url)) { posterExt = ext; return true; }
+    }
+    return false;
+  };
   function captureThumbs(ch) {
     const tok = ++thumbTok;
     const vids = ch.items.filter(it => it.t === "v");
@@ -290,7 +299,7 @@
         if (it.t !== "v") return;
         it.thumbURL = it.thumbURL || posterUrl(it);
         const b = $$(".ws-th", rail)[k];
-        if (b && ch === cur() && !$("img", b)) { const im = el("img"); im.alt = ""; im.loading = "lazy"; im.decoding = "async"; im.src = it.thumbURL; b.prepend(im); }
+        if (b && ch === cur() && !$("img", b)) { const im = el("img"); im.alt = ""; im.decoding = "async"; im.addEventListener("load", () => b.style.setProperty("--r", clamp(im.naturalWidth / im.naturalHeight, 0.56, 1.78).toFixed(3))); im.src = it.thumbURL; b.prepend(im); }
       });
       ch.els.forEach((sl, k) => { if (sl && sl._m && sl._m.tagName === "VIDEO" && !sl._m.poster && ch.items[k]) sl._m.poster = posterUrl(ch.items[k]); });
     };
@@ -313,7 +322,7 @@
       run(); run();
     };
     const go = () => { if (tok !== thumbTok) return; ch.posters ? withPosters() : withCapture(); };
-    if (ch.posters === undefined) probePoster(posterUrl(vids[0])).then(ok => { ch.posters = ok; go(); }); else go();
+    if (ch.posters === undefined) probePoster(vids[0]).then(ok => { ch.posters = ok; go(); }); else go();
   }
 
   /* ---------- show an item (crossfade inside the frame) ---------- */
