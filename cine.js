@@ -131,10 +131,7 @@
       '<div class="cn-hint"><span></span><i></i></div>' +
       '<button type="button" class="cn-replay"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg><span></span></button>' +
     '</div>' +
-    '<div class="cn-gate"></div><i class="cn-edge l"></i><i class="cn-edge r"></i>';
-  const dim = document.createElement("div");
-  dim.className = "cn-dim";
-  document.body.appendChild(dim);
+    '<div class="cn-gate"></div>';
   document.body.appendChild(stage);
 
   const q = s => stage.querySelector(s);
@@ -144,7 +141,7 @@
     hlA: q(".cn-hl.a"), hlB: q(".cn-hl.b"), anam: q(".cn-anam"), beam: q(".cn-beam"),
     tunnel: q(".cn-tunnel"), intro: q(".cn-intro"), top: q(".cn-top"), bot: q(".cn-bot"), strobe: q(".cn-strobe"), count: q(".cn-count"),
     mini: q(".cn-mini"), card: q(".cn-card"), seam: q(".cn-seam"), cap: q(".cn-cap"), barT: q(".cn-bar.t"), barB: q(".cn-bar.b"),
-    flash: q(".cn-flash"), hud: q(".cn-hud"), hudL: q(".cn-hud .l"), hudR: q(".cn-hud .r"), hint: q(".cn-hint"), gate: q(".cn-gate"), replay: q(".cn-replay"), edgeL: q(".cn-edge.l"), edgeR: q(".cn-edge.r"), hm: q(".cn-hm"), hmWords: q(".cn-hm-words"), hmFig: q(".cn-hm-fig"), hmA: q(".cn-hm-a"), hmB: q(".cn-hm-b"), hmVis: q(".cn-hm-vis"), hmWipe: q(".cn-hm-wipe"), hmLock: q(".cn-hm-lock"), hmLn: q(".cn-hm-ln"), hmL: q(".cn-hm-l"), hmWheel: q(".cn-hm-wheel i"), hmBloom: q(".cn-hm-bloom"), hmNa: q(".cn-hm-na"), hmNa2: q(".cn-hm-na2"), hmEyes: q(".cn-hm-eyes"), hmEyeL: q(".cn-hm-eyes .l"), hmEyeR: q(".cn-hm-eyes .r"), hmNb: q(".cn-hm-nb"), hmNb2: q(".cn-hm-nb2"), hmTrk: q(".cn-hm-trk"), hmPt: q(".cn-hm-pt"), hmRing: q(".cn-hm-ring"), snd: q(".cn-snd")
+    flash: q(".cn-flash"), hud: q(".cn-hud"), hudL: q(".cn-hud .l"), hudR: q(".cn-hud .r"), hint: q(".cn-hint"), gate: q(".cn-gate"), replay: q(".cn-replay"), hm: q(".cn-hm"), hmWords: q(".cn-hm-words"), hmFig: q(".cn-hm-fig"), hmA: q(".cn-hm-a"), hmB: q(".cn-hm-b"), hmVis: q(".cn-hm-vis"), hmWipe: q(".cn-hm-wipe"), hmLock: q(".cn-hm-lock"), hmLn: q(".cn-hm-ln"), hmL: q(".cn-hm-l"), hmWheel: q(".cn-hm-wheel i"), hmBloom: q(".cn-hm-bloom"), hmNa: q(".cn-hm-na"), hmNa2: q(".cn-hm-na2"), hmEyes: q(".cn-hm-eyes"), hmEyeL: q(".cn-hm-eyes .l"), hmEyeR: q(".cn-hm-eyes .r"), hmNb: q(".cn-hm-nb"), hmNb2: q(".cn-hm-nb2"), hmTrk: q(".cn-hm-trk"), hmPt: q(".cn-hm-pt"), hmRing: q(".cn-hm-ring"), snd: q(".cn-snd")
   };
   const ctx = {
     bg: el.bg.getContext("2d"), fuse: el.fuse.getContext("2d"), strobe: el.strobe.getContext("2d"), tunnel: el.tunnel.getContext("2d"), hmv: el.hmVis.getContext("2d"), hmpt: el.hmPt.getContext("2d")
@@ -163,6 +160,7 @@
     for (let i = 0; i < N_STROBE; i++) IM.strobe[i] = loadImg(ASSET + "s" + pad(i) + ".webp");
     IM.mask = loadImg(ASSET + "fuse-mask.png");
     IM.visor = loadImg(ASSET + "visor-mask.png");
+    Aud.load();
     for (let i = 0; i < 10; i++) IM.vr[i] = loadImg(ASSET + "vr" + pad(i) + ".webp");
   }
 
@@ -349,8 +347,6 @@
     port = vw <= 900 || vh > vw * 1.1;
     stage.style.width = vw + "px"; stage.style.height = vh + "px";
     T = Math.round(vh * (vw <= 900 ? TRAVEL_MOBILE : TRAVEL_DESKTOP));
-    const wk = document.getElementById("work");
-    sec.style.marginTop = (wk && wk.classList.contains("st-pin") ? -vh : 0) + "px";   // overlap the pinned dwell of the last Work card
     sec.style.height = (T + vh) + "px";
     const hd = document.querySelector(".site-header");
     const hb = hd ? hd.getBoundingClientRect().bottom : 0;
@@ -527,7 +523,7 @@
   }
 
   /* ------------------------------ frame ------------------------------ */
-  let pending = false, wasGate = false;
+  let pending = false;
   let lastCard = -1, lastCap = -1, lastY = null, lastMove = 0, raf = 0, wasOn = false, wasCover = false, curGhost = 0;
   const set = (n, v) => stage.style.setProperty(n, v);
 
@@ -552,39 +548,30 @@
     if (on !== wasOn) {
       stage.classList.toggle("is-on", on); wasOn = on;
     }
+    { const dts = Math.max(1, now - (frame.t || now - 16)); const spd = Math.abs(y - (frame.y == null ? y : frame.y)) / dts * 1000 / 1800; frame.t = now; frame.y = y; Aud.motion(pr, spd, act > 0, now, on); }
     if (on) { fire("enter", enter, ENTER_EV, .5); fire("p", p, P_EV, .15); fire("q", q, SND_EVENTS, .15); fire("exit", exit, EXIT_EV, .5); }
     else { prevs.enter = prevs.p = prevs.q = prevs.exit = null; }
-    if (!on) { dim.style.visibility = "hidden"; if (wasGate) { document.body.classList.remove("cn-gating"); wasGate = false; } el.world.classList.remove("is-on"); if (wasCover) { document.body.classList.remove("cn-on"); wasCover = false; } if (act > 0) raf = requestAnimationFrame(frame); return; }
+    if (!on) { Aud.stop(); el.world.classList.remove("is-on"); if (wasCover) { document.body.classList.remove("cn-on"); wasCover = false; } if (act > 0) raf = requestAnimationFrame(frame); return; }
 
     let shx = 0, shy = 0;
     const pw = Math.min(p, HOLD_FROM);          // motion that must freeze in the final frame uses pw
     const ar = isAr();
     const side = ar ? -1 : 1;
 
-    /* ---- entry / exit: GATE. A light seam appears in the middle, the old section darkens and blurs behind it,
-            then the seam splits and the new world opens outward. Leaving: the doors close again on a seam. ---- */
+    /* ---- entry / exit: the new section opens from the line under 03, and lifts away at the end ---- */
     const exitPx = clamp(y - T, 0, vh);
-    let clipV = "none", seamH = 0, seamO = 0, open = 1, dimA = 0, dimB = 0;
-    if (y < 0 && p <= 0) {
-      open = E.io3(seg(enter, .38, .95));
-      seamH = 100 * E.out3(seg(enter, .08, .40)); seamO = 1 - E.io3(seg(enter, .40, .62));
-      dimA = .9 * E.out3(seg(enter, .04, .5)); dimB = 9 * E.out3(seg(enter, .04, .6));
-    } else if (exitPx > .5) {
-      open = 1 - E.io3(seg(exit, 0, .85));
-      seamH = 100 * (1 - seg(exit, .8, 1)); seamO = 1;
+    let clipV = "none", gateTop = -20, gateW = 0, gateO = 0;
+    if (y < 0 && r.top > .5) {                                   // entering: only the part below the line is the new world
+      clipV = "inset(" + r.top.toFixed(1) + "px 0 0 0)";
+      gateTop = r.top; gateW = 100 * E.out3(seg(enter, 0, .22)); gateO = 1 - seg(enter, .93, 1);
+    } else if (exitPx > .5) {                                    // leaving: the world is pushed up, the line rides its lower edge
+      clipV = "inset(0 0 " + exitPx.toFixed(1) + "px 0)";
+      gateTop = vh - exitPx; gateW = 100 * (1 - seg(exit, .85, 1)); gateO = 1;
     }
-    if (open < .999) { const side = (1 - open) * 50; clipV = "inset(0 " + side.toFixed(2) + "% 0 " + side.toFixed(2) + "%)"; }
     el.clip.style.clipPath = clipV;
-    el.gate.style.height = seamH.toFixed(2) + "vh";
-    el.gate.style.opacity = String(seamO);
-    const edgeOn = open > .01 && open < .995 && (y < 0 || exitPx > 0);
-    el.edgeL.style.opacity = el.edgeR.style.opacity = edgeOn ? "1" : "0";
-    el.edgeL.style.left = (50 - open * 50) + "%"; el.edgeR.style.left = (50 + open * 50) + "%";
-    dim.style.opacity = dimA.toFixed(3);
-    dim.style.backdropFilter = dim.style.webkitBackdropFilter = dimB > .2 ? "blur(" + dimB.toFixed(1) + "px) saturate(.7)" : "none";
-    dim.style.visibility = dimA > .005 ? "visible" : "hidden";
-    const gating = on && y < 0 && p <= 0 && enter > .1;
-    if (gating !== wasGate) { document.body.classList.toggle("cn-gating", gating); wasGate = gating; }
+    el.gate.style.top = gateTop.toFixed(1) + "px";
+    el.gate.style.width = gateW + "vw";
+    el.gate.style.opacity = String(gateO);
     const covering = on && r.top < vh * .45 && r.bottom > vh * .55;
     if (covering !== wasCover) { document.body.classList.toggle("cn-on", covering); wasCover = covering; }
 
@@ -611,7 +598,7 @@
       const N = 56, tf = seg(p, .036, .205) * N, target = Math.floor(tf);
       if (strobeIdx < 0) { strobeIdx = target; strobeShown = -1; }
       if (target !== strobeIdx) pending = true;
-      if (target !== strobeIdx && now - lastCut >= STROBE_MIN_MS) { strobeIdx += Math.sign(target - strobeIdx); lastCut = now; if (act > 0) Snd.tick(); strobeSeed = (hash(strobeIdx * 1.3) * 1000) | 0; }
+      if (target !== strobeIdx && now - lastCut >= STROBE_MIN_MS) { strobeIdx += Math.sign(target - strobeIdx); lastCut = now; if (act > 0) Aud.tick(strobeIdx); strobeSeed = (hash(strobeIdx * 1.3) * 1000) | 0; }
       const t = clamp(tf - strobeIdx, 0, 1);
       const img = IM.strobe[((strobeIdx % N_STROBE) + N_STROBE) % N_STROBE * 7 % N_STROBE];
       paintStrobe(ctx.strobe, el.strobe.width, el.strobe.height, img, t, strobeSeed);
@@ -619,7 +606,7 @@
 
       /* title cards on the bottom half */
       const cf = seg(p, .042, .2) * 5, ci = Math.min(4, Math.floor(cf)), ct = cf - ci;
-      if (ci !== lastCard) { el.card.textContent = L().cards[ci]; if (lastCard !== -1 && act > 0) Snd.thump(); lastCard = ci; }
+      if (ci !== lastCard) { el.card.textContent = L().cards[ci]; if (lastCard !== -1 && act > 0) Aud.card(ci); lastCard = ci; }
       const slam = E.outExp(Math.min(1, ct * 3.2));
       el.card.style.transform = "translate(-50%,-50%) scale(" + lerp(1.7, 1, slam).toFixed(3) + ") skewX(" + ((1 - slam) * -8 * side).toFixed(2) + "deg)";
       el.card.style.opacity = String(ct < .02 ? 0 : 1 - E.io3(seg(ct, .84, 1)));
@@ -750,51 +737,118 @@
     else if (!raf) raf = 0;
   }
 
-  /* ------------------------------ sound (synthesised, no files; respects the viewer's mute switch) ------------------------------ */
-  const Snd = (() => {
-    let ac = null, master = null, nbuf = null;
+  /* ------------------------------ sound: pre-rendered kit + a scroll-driven score ------------------------------
+     audio/cine/*.mp3 are real recordings of a synthesised kit (F minor, 124 BPM) built offline; score.json holds the arrangement.
+     While you scroll, a sequencer plays the groove for the section you are in (more layers when you scroll fast, a filtered pad
+     follows your speed); stop scrolling and it fades out. Hits and risers are cued to exact moments of the picture. */
+  const Aud = (() => {
+    const BASE = ASSET.replace("images/cine/", "audio/cine/");
+    let ac = null, master = null, fxBus = null, grBus = null, padG = null, padF = null, score = null, loading = false, ready = false;
+    const buf = {}, tracked = {};
+    let seqOn = false, nextT = 0, k = 0, timer = 0, lastMoveT = 0, curPr = 0, vel = 0, gOn = false;
+    const NOTE = { f1: "bass_f1", ab1: "bass_ab1", c2: "bass_c2", eb2: "bass_eb2", db2: "bass_db2" };
+    const ARP = { f3: "pl_f3", ab3: "pl_ab3", c4: "pl_c4", eb4: "pl_eb4", f4: "pl_f4", ab4: "pl_ab4", c5: "pl_c5" };
     const muted = () => !!window.CINE_MUTE || (() => { try { return localStorage.getItem("cine-mute") === "1"; } catch (_) { return false; } })();
-    const get = () => {
-      if (muted()) return null;
+    const ctx = () => {
       if (!ac) {
         try {
           const C = window.AudioContext || window.webkitAudioContext; ac = new C();
-          const comp = ac.createDynamicsCompressor(); master = ac.createGain(); master.gain.value = .62; master.connect(comp); comp.connect(ac.destination);
-          nbuf = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate); const d = nbuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-        } catch (_) { ac = null; return null; }
+          const comp = ac.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 5; comp.attack.value = .004; comp.release.value = .2;
+          master = ac.createGain(); master.gain.value = .9; master.connect(comp); comp.connect(ac.destination);
+          fxBus = ac.createGain(); fxBus.connect(master); grBus = ac.createGain(); grBus.connect(master);
+        } catch (_) { ac = null; }
       }
-      if (ac.state === "suspended") ac.resume().catch(() => {});
+      if (ac && ac.state === "suspended") ac.resume().catch(() => {});
       return ac;
     };
-    const env = (g, t, a, peak, d) => { g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + d); };
-    const osc = (a, type, f0, f1, t, d, peak, att) => { const o = a.createOscillator(), g = a.createGain(); o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(Math.max(1, f1), t + d); env(g, t, att || .005, peak, d); o.connect(g); g.connect(master); o.start(t); o.stop(t + d + .05); };
-    const noise = (a, t, d, peak, type, f0, f1, att) => { const s = a.createBufferSource(); s.buffer = nbuf; const f = a.createBiquadFilter(); f.type = type; f.frequency.setValueAtTime(f0, t); f.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + d); const g = a.createGain(); env(g, t, att || .004, peak, d); s.connect(f); f.connect(g); g.connect(master); s.start(t); s.stop(t + d + .05); };
+    const load = () => {
+      if (loading || muted()) return; loading = true;
+      const a = ctx(); if (!a) return;
+      const dec = (ab, n) => { const ok = b => { buf[n] = b; }; const p = a.decodeAudioData(ab, ok, () => {}); if (p && p.catch) p.catch(() => {}); };
+      fetch(BASE + "score.json").then(r => r.json()).then(d => {
+        score = d.score;
+        let left = d.names.length;
+        d.names.forEach(n => fetch(BASE + n + ".mp3").then(r => r.arrayBuffer()).then(ab => { dec(ab, n); if (--left === 0) ready = true; }).catch(() => { if (--left === 0) ready = true; }));
+      }).catch(() => {});
+    };
+    const play = (n, vol, rate, when, bus, track) => {
+      if (muted() || !ac || !buf[n]) return null;
+      const s = ac.createBufferSource(); s.buffer = buf[n]; if (rate) s.playbackRate.value = rate;
+      const g = ac.createGain(); g.gain.value = vol == null ? 1 : vol; s.connect(g); g.connect(bus || fxBus);
+      s.start(when || 0);
+      if (track) { tracked[track] = { s, g }; }
+      return { s, g };
+    };
+    const stopTracked = name => { const t = tracked[name]; if (!t || !ac) return; try { t.g.gain.setTargetAtTime(0, ac.currentTime, .03); t.s.stop(ac.currentTime + .2); } catch (_) {} delete tracked[name]; };
+    const duck = (depth, dur) => { if (!ac) return; const t = ac.currentTime; grBus.gain.cancelScheduledValues(t); grBus.gain.setTargetAtTime(depth, t, .01); grBus.gain.setTargetAtTime(1, t + .12, dur / 3); };
+    /* ---- the groove ---- */
+    const sectionAt = pr => { const s = score.sections; for (let i = 0; i < s.length; i++) if (pr >= s[i][0] && pr < s[i][1]) return s[i]; return s[s.length - 1]; };
+    const step = (t, kk, sec) => {
+      const st = kk % 16, bar = (kk / 16) | 0, lv = sec[10] * (.75 + .35 * vel), V = (n, v, r) => play(n, v, r, t, grBus);
+      if (sec[3][st] === "x") V("kick", .95 * lv);
+      if (sec[4][st] === "x") V("snare", .8 * lv);
+      if (sec[5][st] === "x") V("clap", .7 * lv);
+      if (sec[6][st] === "x") V("hat_c", (st % 2 ? .5 : .42) * lv); else if (vel > .55 && st % 2 === 1 && sec[10] > .7) V("hat_c", .24 * lv);
+      if (sec[7][st] === "x") V("hat_o", .45 * lv);
+      let [pat, notes] = sec[8].split(";"); let nl = (notes || "").split(",").filter(Boolean);
+      if (pat && pat[st] === "x" && nl.length) V(NOTE[nl[(bar + ((st / 8) | 0)) % nl.length]], .9 * lv);
+      [pat, notes] = sec[9].split(";"); nl = (notes || "").split(",").filter(Boolean);
+      if (pat && pat[st] === "x" && nl.length) V(ARP[nl[((kk / 2) | 0) % nl.length]], .6 * lv);
+    };
+    const seq = () => {
+      if (!ac || !ready || !score) return;
+      if (performance.now() - lastMoveT > 900 || muted()) { seqOn = false; clearInterval(timer); timer = 0; return; }
+      const dt = 60 / score.bpm / 4;
+      if (nextT < ac.currentTime) nextT = ac.currentTime + .05;
+      while (nextT < ac.currentTime + .13) { if (curPr > .003) step(nextT, k, sectionAt(curPr)); k++; nextT += dt; }
+    };
+    /* ---- pad drone that opens with your scroll speed ---- */
+    const pad = () => {
+      if (padG || !ac) return;
+      padG = ac.createGain(); padG.gain.value = 0; padF = ac.createBiquadFilter(); padF.type = "lowpass"; padF.frequency.value = 300; padF.Q.value = 3;
+      [[87.31, "sawtooth", 0], [130.81, "sawtooth", 6], [43.65, "sine", 0], [174.61, "triangle", -5]].forEach(([f, type, det]) => { const o = ac.createOscillator(); o.type = type; o.frequency.value = f; o.detune.value = det; const g = ac.createGain(); g.gain.value = type === "sine" ? .8 : .3; o.connect(g); g.connect(padF); o.start(); });
+      padF.connect(padG); padG.connect(master);
+    };
     return {
-      muted, toggle() { try { localStorage.setItem("cine-mute", muted() ? "0" : "1"); } catch (_) { window.CINE_MUTE = !window.CINE_MUTE; } },
-      boom(v) { const a = get(); if (!a) return; const t = a.currentTime; osc(a, "sine", 90, 34, t, .75, .95 * (v || 1), .004); noise(a, t, .35, .5 * (v || 1), "lowpass", 900, 120); },
-      thump() { const a = get(); if (!a) return; const t = a.currentTime; osc(a, "sine", 135, 46, t, .22, .9, .003); noise(a, t, .05, .35, "highpass", 3000, 6000); },
-      clunk() { const a = get(); if (!a) return; const t = a.currentTime; osc(a, "square", 240, 90, t, .09, .22, .002); osc(a, "sine", 70, 40, t, .3, .8, .003); noise(a, t, .12, .45, "bandpass", 2400, 900); },
-      tick() { const a = get(); if (!a) return; const t = a.currentTime; noise(a, t, .02, .2, "highpass", 5200, 9000, .001); osc(a, "sine", 1900, 1200, t, .03, .07, .001); },
-      ping() { const a = get(); if (!a) return; const t = a.currentTime; osc(a, "sine", 1320, 1320, t, .55, .2, .004); osc(a, "sine", 1980, 1980, t, .4, .08, .004); },
-      charge() { const a = get(); if (!a) return; const t = a.currentTime; osc(a, "sine", 170, 1500, t, 1.2, .26, .5); osc(a, "triangle", 85, 750, t, 1.2, .2, .5); noise(a, t, 1.1, .16, "bandpass", 900, 5200, .6); },
-      crackle() { const a = get(); if (!a) return; const t = a.currentTime; for (let i = 0; i < 6; i++) noise(a, t + i * .045 + Math.random() * .03, .03, .22, "bandpass", 2500 + Math.random() * 3000, 1200, .001); },
-      whoosh(d) { const a = get(); if (!a) return; const t = a.currentTime; noise(a, t, d || .7, .5, "bandpass", 300, 4200, (d || .7) * .55); },
-      riser(d) { const a = get(); if (!a) return; const t = a.currentTime; noise(a, t, d, .55, "bandpass", 250, 6000, d * .9); osc(a, "sawtooth", 110, 760, t, d, .18, d * .9); },
-      engine(d) {
-        const a = get(); if (!a) return; const t = a.currentTime;
-        [0, 1.012].forEach(k => { const o = a.createOscillator(), f = a.createBiquadFilter(), g = a.createGain(); o.type = "sawtooth"; o.frequency.setValueAtTime(48 * (k || 1), t); o.frequency.exponentialRampToValueAtTime(230 * (k || 1), t + d * .8); f.type = "lowpass"; f.frequency.setValueAtTime(500, t); f.frequency.exponentialRampToValueAtTime(3200, t + d * .8); env(g, t, d * .5, .3, d * .55); o.connect(f); f.connect(g); g.connect(master); o.start(t); o.stop(t + d + .1); });
-        noise(a, t, d, .38, "bandpass", 500, 3000, d * .4);
-      }
+      muted, load, ready: () => ready, dbg: () => ({ seqOn, curPr, vel, k, ready, moving: performance.now() - lastMoveT, ctx: ac && ac.state, sec: score && sectionAt(curPr)[2] }),
+      toggle() { try { localStorage.setItem("cine-mute", muted() ? "0" : "1"); } catch (_) { window.CINE_MUTE = !window.CINE_MUTE; } if (master) master.gain.setTargetAtTime(muted() ? 0 : .9, ac.currentTime, .05); },
+      /* called every frame with the scroll position inside the scene and how fast you are moving */
+      motion(pr, speed, moving, now, onStage) {
+        if (!ac || !ready || muted()) return;
+        curPr = pr; vel += (clamp(speed, 0, 1) - vel) * .12;
+        if (moving) lastMoveT = now;
+        if (onStage && moving && !seqOn && pr > .003) { seqOn = true; nextT = ac.currentTime + .05; timer = setInterval(seq, 25); }
+        pad();
+        const sec = score ? sectionAt(pr) : null, active = onStage && (now - lastMoveT < 1100);
+        if (padG) {
+          padG.gain.setTargetAtTime(active && sec ? .05 + .09 * sec[10] : 0, ac.currentTime, .25);
+          padF.frequency.setTargetAtTime(260 + 2600 * vel + 900 * (sec ? sec[10] : 0), ac.currentTime, .12);
+        }
+      },
+      stop() { if (padG && ac) padG.gain.setTargetAtTime(0, ac.currentTime, .15); seqOn = false; clearInterval(timer); timer = 0; Object.keys(tracked).forEach(stopTracked); },
+      /* one-shots */
+      hit(n, v, r) { return play(n, v, r); },
+      riser(n, track) { return play(n, .85, 1, 0, fxBus, track || "riser"); },
+      stopRiser() { stopTracked("riser"); },
+      impact(n, v, depth) { play(n, v == null ? 1 : v); duck(depth || .35, .55); },
+      tick(i) { play("tick", .55, [1, 1.12, 1.26, 1.5, 1.26, 1.12][((i % 6) + 6) % 6]); },
+      card(i) { play("imp_small", .85, 1 + i * .06); play(["bass_f1", "bass_ab1", "bass_c2", "bass_eb2", "bass_f1"][i % 5], .9); },
+      thump() { play("imp_small", .6); }
     };
   })();
-  const ENTER_EV = [[.05, () => Snd.whoosh(.9)], [.38, () => Snd.boom(.6)], [.5, () => Snd.riser(1.1)]];
+  const Snd = Aud;   // the sound button in the HUD talks to the same engine
+
+  /* cue tables: [position, action]. Risers are cut by the impact that resolves them, like in a real mix. */
+  const ENTER_EV = [[.04, () => Aud.hit("rumble", .9)], [.18, () => Aud.hit("zap", .7)], [.5, () => Aud.riser("riser_s")]];
   const P_EV = [
-    [.004, () => { Snd.boom(.55); Snd.whoosh(.5); }], [.19, () => Snd.riser(.9)], [.222, () => { Snd.boom(1); Snd.whoosh(.5); }],
-    [.23, () => Snd.whoosh(.9)], [.262, () => Snd.whoosh(.45)], [.285, () => Snd.thump()], [.30, () => Snd.whoosh(.5)], [.318, () => Snd.thump()],
-    [.346, () => Snd.whoosh(.5)], [.352, () => Snd.crackle()], [.392, () => Snd.whoosh(.5)], [.438, () => Snd.whoosh(.5)], [.484, () => Snd.whoosh(.5)], [.528, () => Snd.whoosh(.5)],
-    [.548, () => { Snd.whoosh(.6); Snd.thump(); }], [.628, () => Snd.whoosh(.6)], [.64, () => Snd.crackle()], [.70, () => Snd.riser(.9)], [.745, () => { Snd.boom(1); Snd.whoosh(.5); }]
+    [.004, () => { Aud.stopRiser(); Aud.impact("imp_small", .9, .5); Aud.hit("shutter", .8); }], [.14, () => Aud.riser("riser_s")],
+    [.222, () => { Aud.stopRiser(); Aud.impact("imp_big", 1, .3); Aud.hit("glitch", .8); }], [.23, () => Aud.hit("stab", .8)],
+    [.262, () => Aud.hit("imp_small", .8)], [.285, () => Aud.hit("imp_small", .9, .9)], [.30, () => Aud.hit("shutter", .7)], [.318, () => Aud.hit("clunk", .8)],
+    [.346, () => Aud.hit("shutter", .7)], [.352, () => Aud.hit("zap", .5)], [.392, () => Aud.hit("shutter", .7)], [.438, () => Aud.hit("shutter", .7)],
+    [.484, () => Aud.hit("shutter", .7)], [.528, () => Aud.hit("shutter", .7)], [.548, () => Aud.hit("heart", 1)], [.628, () => Aud.hit("tom", .8)],
+    [.69, () => Aud.riser("riser_s")], [.745, () => { Aud.stopRiser(); Aud.impact("imp_mid", .95, .4); Aud.hit("clunk", .6); }]
   ];
-  const EXIT_EV = [[.05, () => Snd.whoosh(.9)]];
+  const EXIT_EV = [[.05, () => { Aud.impact("imp_small", .8, .5); Aud.hit("clunk", .6); }]];
   const prevs = { enter: null, p: null, q: null, exit: null };
   const fire = (dom, v, list, maxJump) => {
     const pv = prevs[dom];
@@ -802,9 +856,14 @@
     prevs[dom] = v;
   };
   const SND_EVENTS = [
-    [.03, () => { Snd.boom(1); Snd.whoosh(.6); }],
-    [HM_HITS[0], () => { Snd.thump(); }], [HM_HITS[1], () => { Snd.thump(); }], [HM_HITS[2], () => { Snd.thump(); }], [HM_HITS[3], () => { Snd.thump(); Snd.boom(.6); }],
-    [.31, () => Snd.charge()], [.40, () => Snd.ping()], [.45, () => Snd.whoosh(.7)], [.54, () => { Snd.clunk(); Snd.boom(.7); }], [.56, () => Snd.riser(2.3)], [.70, () => { Snd.engine(2.4); Snd.boom(1); }]
+    [.03, () => { Aud.stopRiser(); Aud.impact("imp_big", 1, .3); Aud.hit("glitch", .8); }],
+    [HM_HITS[0], () => { Aud.hit("pl_f3", 1); Aud.hit("imp_small", .8); Aud.tick(0); }],
+    [HM_HITS[1], () => { Aud.hit("pl_ab3", 1); Aud.hit("imp_small", .8); Aud.tick(1); }],
+    [HM_HITS[2], () => { Aud.hit("pl_c4", 1); Aud.hit("imp_small", .8); Aud.tick(2); }],
+    [HM_HITS[3], () => { Aud.hit("pl_eb4", 1); Aud.impact("imp_mid", .8, .5); Aud.tick(3); }],
+    [.31, () => Aud.hit("charge", .8)], [.40, () => { Aud.hit("powerup", .8); Aud.hit("ping", .7); }], [.45, () => Aud.hit("clunk", .7)],
+    [.54, () => { Aud.impact("imp_mid", .9, .45); Aud.hit("clunk", .8); }], [.56, () => Aud.riser("riser_l")],
+    [.70, () => { Aud.stopRiser(); Aud.impact("imp_big", 1, .25); Aud.hit("engine", 1); }], [.72, () => Aud.hit("whoosh", .9)]   // the bike launching: engine + the only whoosh
   ];
 
   /* ------------------------------ helmet finale: face -> visor -> reflections -> launch ------------------------------ */
@@ -819,7 +878,7 @@
     const N = 26, tf = seg(q, .56, .68) * N, target = Math.floor(tf);
     if (hmIdx < 0) hmIdx = target;
     if (target !== hmIdx) pending = true;
-    if (target !== hmIdx && now - hmLastCut >= STROBE_MIN_MS) { hmIdx += Math.sign(target - hmIdx); hmLastCut = now; if (act > 0) Snd.tick(); }
+    if (target !== hmIdx && now - hmLastCut >= STROBE_MIN_MS) { hmIdx += Math.sign(target - hmIdx); hmLastCut = now; if (act > 0) Aud.tick(hmIdx); }
     const t = clamp(tf - hmIdx, 0, 1), fin = q >= .68;
     const img = IM.vr[fin ? 9 : ORDER_VR[((hmIdx % ORDER_VR.length) + ORDER_VR.length) % ORDER_VR.length]];
     if (okImg(img)) {
@@ -1037,7 +1096,7 @@
 
   /* ------------------------------ wiring ------------------------------ */
   const syncSnd = () => { el.snd.classList.toggle("off", Snd.muted()); el.snd.setAttribute("aria-pressed", String(!Snd.muted())); };
-  el.snd.addEventListener("click", () => { Snd.toggle(); syncSnd(); if (!Snd.muted()) Snd.thump(); });
+  el.snd.addEventListener("click", () => { Snd.toggle(); syncSnd(); if (!Snd.muted()) Aud.thump(); });
   syncSnd();
   el.replay.addEventListener("click", () => {
     const top = sec.getBoundingClientRect().top + scrollY;
@@ -1055,7 +1114,6 @@
     if (wasOn || raf || (y > topAbs - vh * 1.6 && y < topAbs + T + vh * 1.6)) wake();    /* otherwise: do nothing at all */
   };
   addEventListener("scroll", onScroll, { passive: true });
-  { const wk = document.getElementById("work"); if (wk && window.MutationObserver) new MutationObserver(() => layout()).observe(wk, { attributes: true, attributeFilter: ["class"] }); }
   if (window.ResizeObserver) { let rq = 0; new ResizeObserver(() => { cancelAnimationFrame(rq); rq = requestAnimationFrame(refreshTop); }).observe(document.documentElement); }
   addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(layout, 120); }, { passive: true });
   addEventListener("orientationchange", () => setTimeout(layout, 250));
@@ -1073,6 +1131,6 @@
     addEventListener("load", () => { layout(); });
   });
 
-  window.__cinema = { layout, wake, get p() { const r = sec.getBoundingClientRect(); return clamp(-r.top / T, 0, 1); }, T: () => T };
+  window.__cinema = { aud: Aud, layout, wake, get p() { const r = sec.getBoundingClientRect(); return clamp(-r.top / T, 0, 1); }, T: () => T };
 })();
 
