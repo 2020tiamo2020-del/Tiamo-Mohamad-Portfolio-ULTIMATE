@@ -9,13 +9,13 @@ If your LIVE index.html is different from the one here, do not overwrite it — 
   <head>, after your existing stylesheet links:
     <link rel="stylesheet" href="about-link.css?v=1">
     <link rel="stylesheet" href="about-pin.css?v=1">
-    <link rel="stylesheet" href="work-stage.css?v=1">
+    <link rel="stylesheet" href="work-stage.css?v=2">
     <link rel="stylesheet" href="services-stage.css?v=2">
     <link rel="stylesheet" href="services-scenes.css?v=1">
   end of <body>, after story.js (and before cine.js):
     <script src="about-pin.js?v=1" defer></script>
     <script src="about-link.js?v=1" defer></script>
-    <script src="work-stage.js?v=2" defer></script>
+    <script src="work-stage.js?v=3" defer></script>
     <script src="services-scenes.js?v=1" defer></script>
     <script src="services-stage.js?v=3" defer></script>
   and make sure story.js is the NEW one (v=8).
@@ -24,5 +24,7 @@ What each part does
 - about-pin      : About stays pinned while the portrait + certificate glide in and meet, then dwells a little, then the page moves on
 - services-stage : 02 / SERVICES scene (3D cards, portrait card flies in from About, 12 animated mini-scenes)
 - work-stage     : 03 / SELECTED WORK chapters (uses Cinematic/*.jpg and VFX/*.jpg thumbnails automatically)
+Thumbnails: every <video> in section 03 now carries data-poster="Cinematic/cinematicN.jpg" (or VFX/rmN.jpg) in index.html, so the site shows YOUR images and
+  never takes a frame from the video. If you use your own index.html, add that attribute to each video (same name as the video, .jpg).
 To switch a part off: delete its <script> line (the old section comes back).
 After uploading, hard-refresh the page (Ctrl+F5) so the browser does not keep the old files.

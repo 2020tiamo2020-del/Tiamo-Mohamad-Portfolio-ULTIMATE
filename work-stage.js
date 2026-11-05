@@ -43,7 +43,7 @@
         if (!src || seen.has(src)) return;
         seen.add(src);
         const a = $("a", f);
-        ch.items.push({ t: "v", src, ratio: +v.dataset.ratio || DEF_RATIO[ch.i], link: a ? a.href : "" });
+        ch.items.push({ t: "v", src, ratio: +v.dataset.ratio || DEF_RATIO[ch.i], link: a ? a.href : "", poster: v.dataset.poster || "" });
       } else {
         const im = $("img", f); if (!im) return;
         const thumb = im.getAttribute("src") || im.dataset.src || "";
@@ -168,7 +168,7 @@
       m.addEventListener("loadeddata", () => { if (ch === cur() && ch.at === idx) glowFrom(m); });
       m.addEventListener("timeupdate", () => { if (ch === cur() && ch.at === idx) tc(m.currentTime); });
       m.addEventListener("error", () => s.classList.add("bad"));
-      if (ch.posters) m.poster = posterUrl(it);
+      if (it.poster) m.poster = it.poster; else if (ch.posters) m.poster = posterUrl(it);
       m.src = it.src;
     } else {
       m = document.createElement("img"); m.decoding = "async"; m.draggable = false; m.alt = T("Work " + ch.key + (idx + 1), "عمل " + ch.key + (idx + 1));
@@ -247,7 +247,13 @@
         im.addEventListener("load", () => b.style.setProperty("--r", clamp(im.naturalWidth / im.naturalHeight, 0.56, 1.78).toFixed(3)));
         b.appendChild(im);
       } else {
-        if (it.thumbURL) { const im = el("img"); im.alt = ""; im.src = it.thumbURL; b.appendChild(im); }
+        const pu = it.poster || it.thumbURL;
+        if (pu) {
+          const im = el("img"); im.alt = ""; im.decoding = "async";
+          im.addEventListener("load", () => b.style.setProperty("--r", clamp(im.naturalWidth / im.naturalHeight, 0.56, 1.78).toFixed(3)));
+          im.addEventListener("error", () => { im.remove(); it.poster = ""; it.thumbURL = ""; ch.posters = false; captureThumbs(ch); });   // image missing -> fall back to a frame from the video
+          im.src = pu; b.appendChild(im);
+        }
         b.appendChild(el("em", null, pad(k + 1)));
       }
       b.addEventListener("click", () => goItem(k, true));
@@ -297,7 +303,7 @@
     const withPosters = () => {
       ch.items.forEach((it, k) => {
         if (it.t !== "v") return;
-        it.thumbURL = it.thumbURL || posterUrl(it);
+        it.thumbURL = it.thumbURL || it.poster || posterUrl(it);
         const b = $$(".ws-th", rail)[k];
         if (b && ch === cur() && !$("img", b)) { const im = el("img"); im.alt = ""; im.decoding = "async"; im.addEventListener("load", () => b.style.setProperty("--r", clamp(im.naturalWidth / im.naturalHeight, 0.56, 1.78).toFixed(3))); im.src = it.thumbURL; b.prepend(im); }
       });
@@ -322,6 +328,7 @@
       run(); run();
     };
     const go = () => { if (tok !== thumbTok) return; ch.posters ? withPosters() : withCapture(); };
+    if (vids.every(it => it.poster)) ch.posters = true;                // every video names its poster in index.html (data-poster): no probing needed
     if (ch.posters === undefined) probePoster(vids[0]).then(ok => { ch.posters = ok; go(); }); else go();
   }
 
