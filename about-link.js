@@ -34,7 +34,8 @@ new MutationObserver(keepShow).observe(photo, { attributes: true, attributeFilte
 const target = () => {
   const r = sec.getBoundingClientRect(), vh = innerHeight || 1;
   const leaving = clamp((vh * 0.78 - r.bottom) / (vh * 0.6), 0, 1);   /* bottom edge rising off the top */
-  const arriving = clamp((r.top - vh * 0.42) / (vh * 0.5), 0, 1);     /* top edge still low on the screen */
+  const pin = window.__abArrive && window.__abArrive();                /* About is pinned: cards meet while it stays on screen */
+  const arriving = pin != null ? pin : clamp((r.top - vh * 0.42) / (vh * 0.5), 0, 1);     /* top edge still low on the screen */
   return ease(Math.max(leaving, arriving));
 };
 
