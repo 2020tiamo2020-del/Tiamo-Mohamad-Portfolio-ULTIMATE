@@ -115,19 +115,46 @@ html[dir="rtl"] .ws-nav.prev svg{transform:scaleX(-1)}html[dir="rtl"] .ws-nav.ne
 .ws-fb:focus-visible{outline:2px solid #fff;outline-offset:2px}
 @media (max-width:760px){.ws-fb{font-size:10.5px;padding:6px 12px 6px 6px}}
 
-/* chapter wipe */
-.ws-wipe{position:absolute;inset:0;z-index:6;pointer-events:none;display:grid;place-items:center;visibility:hidden;
-  background:linear-gradient(100deg,#05040a,#0d0820 60%,#05040a);clip-path:polygon(0 0,0 0,-25% 100%,-25% 100%)}
-.ws-wipe span{font:800 clamp(14px,2.2vw,22px)/1.2 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.32em;color:#fff;text-transform:uppercase;
-  text-shadow:2px 0 var(--blue),-2px 0 var(--purple);opacity:0}
-.ws-wipe.go{visibility:visible;animation:wsWipe .78s cubic-bezier(.7,0,.2,1) both}
-.ws-wipe.go span{animation:wsWL .78s linear both}
-.ws-wipe.back{transform:scaleX(-1)}
-.ws-wipe.back span{display:inline-block;transform:scaleX(-1)}
-@keyframes wsWipe{0%{clip-path:polygon(0 0,0 0,-25% 100%,-25% 100%)}46%,54%{clip-path:polygon(0 0,125% 0,100% 100%,0 100%)}100%{clip-path:polygon(125% 0,125% 0,100% 100%,100% 100%)}}
-@keyframes wsWL{0%,30%{opacity:0}45%,56%{opacity:1}72%,100%{opacity:0}}
-.ws-frame.glitch{animation:wsGl .42s steps(2,jump-none) 1}
-@keyframes wsGl{0%{translate:0}25%{translate:-5px 0;filter:drop-shadow(4px 0 rgba(22,216,255,.7)) drop-shadow(-4px 0 rgba(139,53,255,.7))}55%{translate:4px 0}100%{translate:0;filter:none}}
+/* chapter change: HUD lock (brackets close in -> letter rolls -> lock opens) */
+.ws-lock{position:absolute;inset:0;z-index:6;pointer-events:none;border-radius:inherit;visibility:hidden}
+.ws-lock.go{visibility:visible}
+.ws-lock .lk-v{position:absolute;inset:0;border-radius:inherit;opacity:0;
+  background:
+    repeating-linear-gradient(0deg,rgba(255,255,255,.035) 0 1px,transparent 1px 4px),
+    linear-gradient(rgba(22,216,255,.07) 1px,transparent 1px) 0 0/46px 46px,
+    linear-gradient(90deg,rgba(22,216,255,.07) 1px,transparent 1px) 0 0/46px 46px,
+    radial-gradient(circle at 50% 50%,rgba(13,8,32,.78),rgba(5,4,10,.94));
+  -webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px)}
+.ws-lock .lk-c{position:absolute;width:30px;height:30px;border:2px solid #fff;opacity:0}
+.ws-lock .tl{top:6px;left:6px;border-right:0;border-bottom:0}.ws-lock .tr{top:6px;right:6px;border-left:0;border-bottom:0}
+.ws-lock .bl{bottom:6px;left:6px;border-right:0;border-top:0}.ws-lock .br{bottom:6px;right:6px;border-left:0;border-top:0}
+.ws-lock .lk-mid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;opacity:0}
+.ws-lock .lk-roll{position:relative;height:1.05em;width:1.2em;overflow:hidden;font:800 clamp(40px,7vw,72px)/1.05 ui-monospace,Menlo,Consolas,monospace;color:#fff;text-align:center;
+  text-shadow:0 0 22px rgba(22,216,255,.55),0 0 46px rgba(139,53,255,.45)}
+.ws-lock .lk-roll span{position:absolute;inset:0;display:block}
+.ws-lock .lk-name{font:700 clamp(10px,1.3vw,12px)/1 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.34em;text-transform:uppercase;color:#cfc8e6;white-space:nowrap}
+[dir=rtl] .ws-lock .lk-name{letter-spacing:.06em}
+.ws-lock .lk-bar{display:block;position:relative;width:min(150px,40%);height:2px;background:rgba(255,255,255,.14);overflow:hidden;border-radius:2px}
+.ws-lock .lk-bar b{position:absolute;inset:0;background:linear-gradient(90deg,var(--purple),var(--blue));transform-origin:0 50%;transform:scaleX(0);box-shadow:0 0 10px var(--blue)}
+.ws-lock.go .lk-v{animation:lkV .8s linear both}
+.ws-lock.go .lk-mid{animation:lkM .8s linear both}
+.ws-lock.go .lk-bar b{animation:lkBar .8s cubic-bezier(.6,0,.3,1) both}
+.ws-lock.go .lk-a{animation:lkA .8s cubic-bezier(.7,0,.2,1) both}
+.ws-lock.go .lk-b{animation:lkB .8s cubic-bezier(.7,0,.2,1) both}
+.ws-lock.go.back .lk-a{animation-name:lkAb}.ws-lock.go.back .lk-b{animation-name:lkBb}
+.ws-lock.go .tl{animation:lkTL .8s cubic-bezier(.2,.8,.2,1) both}.ws-lock.go .tr{animation:lkTR .8s cubic-bezier(.2,.8,.2,1) both}
+.ws-lock.go .bl{animation:lkBL .8s cubic-bezier(.2,.8,.2,1) both}.ws-lock.go .br{animation:lkBR .8s cubic-bezier(.2,.8,.2,1) both}
+@keyframes lkV{0%{opacity:0}34%,62%{opacity:1}100%{opacity:0}}
+@keyframes lkM{0%,22%{opacity:0}36%,60%{opacity:1}76%,100%{opacity:0}}
+@keyframes lkBar{0%,18%{transform:scaleX(0)}56%,100%{transform:scaleX(1)}}
+@keyframes lkA{0%,34%{transform:translateY(0);opacity:1}54%,100%{transform:translateY(-100%);opacity:0}}
+@keyframes lkB{0%,34%{transform:translateY(100%);opacity:0}54%,100%{transform:translateY(0);opacity:1}}
+@keyframes lkAb{0%,34%{transform:translateY(0);opacity:1}54%,100%{transform:translateY(100%);opacity:0}}
+@keyframes lkBb{0%,34%{transform:translateY(-100%);opacity:0}54%,100%{transform:translateY(0);opacity:1}}
+@keyframes lkTL{0%{opacity:0;transform:translate(-40px,-40px)}36%{opacity:1;transform:none;border-color:#fff;filter:none}44%{border-color:#16d8ff;filter:drop-shadow(0 0 8px #16d8ff)}62%{opacity:1;transform:none;border-color:#16d8ff;filter:drop-shadow(0 0 4px #16d8ff)}100%{opacity:0;transform:translate(-40px,-40px)}}
+@keyframes lkTR{0%{opacity:0;transform:translate(40px,-40px)}36%{opacity:1;transform:none;border-color:#fff;filter:none}44%{border-color:#16d8ff;filter:drop-shadow(0 0 8px #16d8ff)}62%{opacity:1;transform:none;border-color:#16d8ff;filter:drop-shadow(0 0 4px #16d8ff)}100%{opacity:0;transform:translate(40px,-40px)}}
+@keyframes lkBL{0%{opacity:0;transform:translate(-40px,40px)}36%{opacity:1;transform:none;border-color:#fff;filter:none}44%{border-color:#16d8ff;filter:drop-shadow(0 0 8px #16d8ff)}62%{opacity:1;transform:none;border-color:#16d8ff;filter:drop-shadow(0 0 4px #16d8ff)}100%{opacity:0;transform:translate(-40px,40px)}}
+@keyframes lkBR{0%{opacity:0;transform:translate(40px,40px)}36%{opacity:1;transform:none;border-color:#fff;filter:none}44%{border-color:#16d8ff;filter:drop-shadow(0 0 8px #16d8ff)}62%{opacity:1;transform:none;border-color:#16d8ff;filter:drop-shadow(0 0 4px #16d8ff)}100%{opacity:0;transform:translate(40px,40px)}}
 
 /* footer: info + rail + cta */
 .ws-foot{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:6px 18px;padding-top:clamp(6px,1.4svh,14px);
@@ -184,5 +211,5 @@ html[dir="rtl"] .ws-nav.prev svg{transform:scaleX(-1)}html[dir="rtl"] .ws-nav.ne
 @media (prefers-reduced-motion:reduce){
   .ws-frame{-webkit-box-reflect:none}
   .ws-frame,.ws-slide,.ws-glow i,.ws-prog i,.ws-ghost span{transition-duration:.01s !important}
-  .ws-wipe.go,.ws-frame.glitch,.ws-rec::before{animation:none !important}
+  .ws-lock{display:none !important}.ws-rec::before{animation:none !important}
 }

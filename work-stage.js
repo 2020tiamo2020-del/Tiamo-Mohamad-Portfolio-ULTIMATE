@@ -2,7 +2,7 @@
    WORK STAGE — builds the cinematic "chapters" view for 03 / SELECTED WORK
    from the media already listed in the old .gallery-grid (that markup stays
    in the page as the data source + the fallback if this script fails).
-   Scroll       -> switches chapter (A photo / B reels / C ads / D VFX) with a wipe
+   Scroll       -> switches chapter (A photo / B reels / C ads / D VFX) with a HUD-lock transition
    Swipe/arrows -> switches item inside a chapter
    The frame morphs to each item's own ratio; a colour glow sampled from the
    media fills the rest of the stage. Only the visible video ever plays.
@@ -98,8 +98,13 @@
   fb.innerHTML = '<b aria-hidden="true">f</b><span></span>';
   const fbT = $("span", fb);
   frame.append(media, hud, fb);
-  const wipe = el("div", "ws-wipe"); wipe.setAttribute("aria-hidden", "true"); const wipeL = el("span"); wipe.appendChild(wipeL);
-  area.append(ghost, frame, prev, next, wipe);
+  /* chapter change = "HUD lock": camera brackets close in on the frame, the chapter letter rolls A -> B, then the lock opens on the new chapter */
+  const lock = el("div", "ws-lock"); lock.setAttribute("aria-hidden", "true");
+  lock.innerHTML = '<i class="lk-v"></i><i class="lk-c tl"></i><i class="lk-c tr"></i><i class="lk-c bl"></i><i class="lk-c br"></i>' +
+    '<div class="lk-mid"><div class="lk-roll"><span class="lk-a"></span><span class="lk-b"></span></div><small class="lk-name"></small><i class="lk-bar"><b></b></i></div>';
+  const lkA = $(".lk-a", lock), lkB = $(".lk-b", lock), wipeL = $(".lk-name", lock);
+  frame.appendChild(lock);
+  area.append(ghost, frame, prev, next);
 
   const foot = el("div", "ws-foot");
   const info = el("div", "ws-info");
@@ -351,7 +356,7 @@
   }
   const goItem = (k, sound) => { const ch = cur(); if (k < 0 || k >= ch.items.length || k === ch.at) return; hintShown = true; root.classList.remove("hint"); if (sound !== false) sfx(); showItem(k); };
 
-  /* ---------- chapter switch with wipe ---------- */
+  /* ---------- chapter switch with HUD lock ---------- */
   function swapChapter(n) {
     ci = n;
     media.textContent = ""; chapters.forEach(c => (c.els = []));
@@ -367,14 +372,14 @@
     if (busy) { want = n; return; }
     if (reduce) { swapChapter(n); return; }
     busy = true; want = null;
-    wipeL.textContent = chapters[n].key + " / " + T(chapters[n].en, chapters[n].ar);
-    wipe.classList.toggle("back", !!back);
-    wipe.classList.remove("go"); void wipe.offsetWidth; wipe.classList.add("go");
+    lkA.textContent = cur().key; lkB.textContent = chapters[n].key;
+    wipeL.textContent = T(chapters[n].en, chapters[n].ar);
+    lock.classList.toggle("back", !!back);
+    lock.classList.remove("go"); void lock.offsetWidth; lock.classList.add("go");
     ghostS.classList.add("sw");
-    frame.classList.remove("glitch"); void frame.offsetWidth; frame.classList.add("glitch");
     setTimeout(() => swapChapter(n), 360);
     setTimeout(() => {
-      wipe.classList.remove("go"); busy = false;
+      lock.classList.remove("go"); busy = false;
       if (want != null && want !== ci) { const w = want; want = null; goChapter(w, w < ci); }
     }, 800);
   }
