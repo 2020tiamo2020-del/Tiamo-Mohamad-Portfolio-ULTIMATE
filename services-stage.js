@@ -91,7 +91,14 @@
     const orb = el("i", "sv-orb"); orb.setAttribute("aria-hidden", "true");
     const body = el("div", "sv-body"); const h3 = i18n(el("h3"), d.tEn, d.tAr); const p = i18n(el("p"), d.dEn, d.dAr);
     body.append(h3, p);
-    c.append(orb, top, body); c._i = i; c._v = true;
+    const sc = (window.__svScenes || [])[i - off];                      // animated mini-scene for this service (services-scenes.js)
+    if (sc) {
+      const art = el("div", "sv-art sc" + (i - off + 1), sc.html); art.dataset.p = sc.p; art.dataset.f = sc.f; art.setAttribute("aria-hidden", "true");
+      c.classList.add("has-art"); c.append(art, top, body);
+      const v = $("video[data-src]", art);
+      if (v) v.addEventListener("loadeddata", () => art.classList.add("ok"));
+    } else c.append(orb, top, body);
+    c._i = i; c._v = true;
     group.appendChild(c); return c;
   });
   group.prepend(floor);
@@ -243,8 +250,30 @@
     group.style.transform = `translate3d(0,${iy.toFixed(1)}px,0) scale(${sc.toFixed(4)}) rotateX(${(py * -3).toFixed(2)}deg) rotateY(${(px * 5).toFixed(2)}deg)`;
     group.style.opacity = (enter * (1 - leave * 0.55)).toFixed(3);
   }
+  /* mini-scenes: every scene rests on its "poster" frame; only the card in the middle plays (from the start) */
+  const artOf = c => c.querySelector(".sv-art");
+  const anims = a => (a._an || (a._an = a.getAnimations({ subtree: true })));
+  const freeze = a => { if (!a) return; const f = +a.dataset.f || 0; anims(a).forEach(an => { try { an.pause(); an.currentTime = f; } catch (_) {} }); };
+  const play = a => { if (!a || reduce) return; anims(a).forEach(an => { try { an.currentTime = 0; an.play(); } catch (_) {} }); };
+  let playing = -1;
+  function setScene(k) {
+    if (k === playing) return;
+    if (playing >= 0 && cards[playing]) freeze(artOf(cards[playing]));
+    playing = k;
+    if (cards[k]) play(artOf(cards[k]));
+  }
+  function syncVideos(k) {                                             // only neighbours of the active card hold a video source; only the active one plays
+    cards.forEach((c, i) => {
+      const v = $("video[data-src]", c); if (!v) return;
+      const near = Math.abs(i - k) <= 1, art = artOf(c);
+      if (near && !v.getAttribute("src")) { v.src = v.dataset.src; try { v.load(); } catch (_) {} }
+      else if (!near && v.getAttribute("src")) { v.pause(); v.removeAttribute("src"); try { v.load(); } catch (_) {} art.classList.remove("ok"); }
+      if (i === k && !document.hidden && !reduce) { const pr = v.play(); pr && pr.catch && pr.catch(() => {}); } else v.pause();
+    });
+  }
   function paintMeta(k) {
     activeIdx = k;
+    setScene(k); syncVideos(k);
     cards.forEach((c, i) => { const on = i === k; c.classList.toggle("on", on); on ? c.removeAttribute("aria-hidden") : c.setAttribute("aria-hidden", "true"); });
     tickEls.forEach((b, i) => { b.setAttribute("aria-current", i === k ? "true" : "false"); b.setAttribute("aria-label", data[i].me ? (isAr() ? "البطاقة الشخصية" : "Profile") : (isAr() ? "الخدمة " : "Service ") + (i + 1 - off)); });
     cnt.textContent = data[k].me ? "00" : pad(k + 1 - off);
@@ -336,6 +365,8 @@
 
   grid.after(root);
   sec.classList.add("sv-on");
+  cards.forEach(c => freeze(artOf(c)));                                // every scene starts on its poster frame
+  document.addEventListener("visibilitychange", () => { if (activeIdx >= 0) syncVideos(activeIdx); });
   measure(); readGeom();
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(relayout);
   paintMeta(0);
