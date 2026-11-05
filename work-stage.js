@@ -56,6 +56,7 @@
     });
   };
   chapters.forEach(harvest);
+  chapters.forEach(ch => { const mine = it => it.t === "v" && /^(Cinematic|VFX)\//.test(it.src); if (ch.items.some(mine)) { ch.posters = true; ch.items.forEach(it => { if (mine(it)) it.ratio = 1; }); } });
   if (!chapters.some(c => c.items.length)) return;
 
   /* ---------- build DOM ---------- */
@@ -168,7 +169,7 @@
       m.addEventListener("loadeddata", () => { if (ch === cur() && ch.at === idx) glowFrom(m); });
       m.addEventListener("timeupdate", () => { if (ch === cur() && ch.at === idx) tc(m.currentTime); });
       m.addEventListener("error", () => s.classList.add("bad"));
-      if (ch.posters) m.poster = posterUrl(it);
+      resolvePoster(it).then(u => { if (u) m.poster = u; });
       m.src = it.src;
     } else {
       m = document.createElement("img"); m.decoding = "async"; m.draggable = false; m.alt = T("Work " + ch.key + (idx + 1), "عمل " + ch.key + (idx + 1));
@@ -247,7 +248,8 @@
         im.addEventListener("load", () => b.style.setProperty("--r", clamp(im.naturalWidth / im.naturalHeight, 0.56, 1.78).toFixed(3)));
         b.appendChild(im);
       } else {
-        if (it.thumbURL) { const im = el("img"); im.alt = ""; im.src = it.thumbURL; b.appendChild(im); }
+        b.style.setProperty("--r", "1");
+        resolvePoster(it).then(u => { if (u && !$("img", b)) { const im = el("img"); im.alt = ""; im.decoding = "async"; im.src = u; b.prepend(im); } });
         b.appendChild(el("em", null, pad(k + 1)));
       }
       b.addEventListener("click", () => goItem(k, true));
@@ -281,7 +283,16 @@
      video's poster (instant first paint, nothing downloaded from the videos). Only the first video is probed; no posters -> frame capture above. */
   const posterUrl = it => it.src.replace(/\.(webm|mp4)(\?.*)?$/i, ".webp");
   const probePoster = url => new Promise(res => { const im = new Image(); im.onload = () => res(im.naturalWidth > 0); im.onerror = () => res(false); im.src = url; });
-  function captureThumbs(ch) {
+  /* the images you upload next to each video (same name; webp first, then jpg / jpeg / png) are the ONLY thumbnails - no frame is ever grabbed from the video */
+  const resolvePoster = it => {
+    if (it._p) return it._p;
+    const base = it.src.replace(/\.(webm|mp4)(\?.*)?$/i, "");
+    const cands = [".webp", ".jpg", ".jpeg", ".png", ".JPG", ".PNG", ".WEBP"].map(x => base + x);
+    it._p = cands.reduce((pr, u) => pr.then(found => found || probePoster(u).then(ok => (ok ? u : null))), Promise.resolve(null));
+    return it._p;
+  };
+  function captureThumbs() { /* disabled: thumbnails come from resolvePoster() */ }
+  function captureThumbsOld(ch) {
     const tok = ++thumbTok;
     const vids = ch.items.filter(it => it.t === "v");
     if (!vids.length) return;
