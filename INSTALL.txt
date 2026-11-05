@@ -5,3 +5,7 @@ If your live index.html is different, do not overwrite it. Add this in <head>, a
   <link rel="stylesheet" href="contact-fx.css?v=1">
 and change work-stage.css?v=2 -> ?v=3 and work-stage.js?v=3 -> ?v=5. Then hard refresh (Ctrl+F5).
 To switch the Contact backdrop off: remove the contact-fx.css line.
+
+ROUND 3: photo "click to enlarge" hint (A / C), visitor counter +2000
+Changed: work-stage.css (v=4)  work-stage.js (v=6)  script.js (v=12)  index.html
+If your live index.html differs: change work-stage.css?v=3 -> ?v=4, work-stage.js -> ?v=6, script.js?v=11 -> ?v=12.

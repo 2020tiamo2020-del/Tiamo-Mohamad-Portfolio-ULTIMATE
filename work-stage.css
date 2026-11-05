@@ -213,3 +213,20 @@ html[dir="rtl"] .ws-nav.prev svg{transform:scaleX(-1)}html[dir="rtl"] .ws-nav.ne
   .ws-frame,.ws-slide,.ws-glow i,.ws-prog i,.ws-ghost span{transition-duration:.01s !important}
   .ws-lock{display:none !important}.ws-rec::before{animation:none !important}
 }
+
+/* "click to enlarge" hint on photos (A / C) */
+.ws-zoom{position:absolute;left:var(--zx,50%);top:var(--zy,50%);z-index:5;pointer-events:none;display:flex;align-items:center;gap:8px;white-space:nowrap;
+  padding:9px 15px 9px 12px;border-radius:999px;color:#fff;font:700 12px/1 Inter,Cairo,system-ui,sans-serif;letter-spacing:.3px;
+  background:rgba(10,7,22,.58);border:1px solid rgba(255,255,255,.22);box-shadow:0 8px 30px rgba(0,0,0,.45),0 0 22px rgba(139,53,255,.35);
+  -webkit-backdrop-filter:blur(12px) saturate(1.5);backdrop-filter:blur(12px) saturate(1.5);
+  opacity:0;transform:translate(-50%,-50%) scale(.86);transition:opacity .28s,transform .28s var(--ease,ease),left .14s linear,top .14s linear}
+.ws-zoom svg{color:var(--blue,#16d8ff);filter:drop-shadow(0 0 6px rgba(22,216,255,.7))}
+.ws-frame.is-still:hover .ws-zoom{opacity:1;transform:translate(-50%,-50%) scale(1)}
+.ws-frame.is-still{cursor:zoom-in}.ws-frame.is-still:active{cursor:zoom-in}
+.ws-frame.is-still:hover .ws-hud .c{border-color:var(--blue,#16d8ff);opacity:1}
+.ws-frame.is-still:hover .ws-slide.on img,.ws-frame.is-still:hover .ws-slide.on canvas{filter:brightness(1.06)}
+@media (hover:none),(pointer:coarse){
+  .ws-frame.is-still .ws-zoom{left:auto;top:auto;right:14px;bottom:14px;opacity:.92;transform:none;padding:8px 11px;font-size:0;gap:0}
+  .ws-frame.is-still .ws-zoom span{display:none}
+}
+@media (prefers-reduced-motion:reduce){.ws-zoom{transition:opacity .01s}}

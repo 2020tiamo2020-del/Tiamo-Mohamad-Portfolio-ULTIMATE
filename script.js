@@ -1960,7 +1960,7 @@ updateScrollOrbit(true);
 
   /* Growing display counter (not linked to real GoatCounter numbers)
      Formula: base + days*daily + hours*hourly  → changes every hour, smooth over days */
-  const BASE = 3141;  // display counter: +1500 earlier, +357 on 2026-10-22; growth formula unchanged
+  const BASE = 5141;  // display counter: +1500 earlier, +357 on 2026-10-22, +2000 on 2026-11-06; growth formula unchanged
   const PER_DAY = 17;   // ~17 visits/day average look
   const PER_HOUR = 1;   // small hourly drift
   const START = Date.UTC(2026, 9, 1); // Oct 1, 2026

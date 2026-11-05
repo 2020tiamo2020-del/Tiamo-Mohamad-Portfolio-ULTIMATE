@@ -97,7 +97,11 @@
   const fb = el("button", "ws-fb"); fb.type = "button";
   fb.innerHTML = '<b aria-hidden="true">f</b><span></span>';
   const fbT = $("span", fb);
-  frame.append(media, hud, fb);
+  /* "click to enlarge" hint for photos: a small glass chip that follows the pointer (a fixed badge on touch screens) */
+  const zoomChip = el("div", "ws-zoom"); zoomChip.setAttribute("aria-hidden", "true");
+  zoomChip.innerHTML = '<svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15.2 15.2 20 20M10.5 8v5M8 10.5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span></span>';
+  i18n($("span", zoomChip), "Click to enlarge", "اضغط للتكبير");
+  frame.append(media, hud, zoomChip, fb);
   /* chapter change = "HUD lock": camera brackets close in on the frame, the chapter letter rolls A -> B, then the lock opens on the new chapter */
   const lock = el("div", "ws-lock"); lock.setAttribute("aria-hidden", "true");
   lock.innerHTML = '<i class="lk-v"></i><i class="lk-c tl"></i><i class="lk-c tr"></i><i class="lk-c bl"></i><i class="lk-c br"></i>' +
@@ -229,6 +233,7 @@
     rec.textContent = it && it.t === "v" ? "REC" : ch.key + " · STILL";
     if (!it || it.t !== "v") tc(0), $(".ws-tc", hud).textContent = pad(ch.at + 1) + "/" + pad(ch.items.length);
     const isV = !!it && it.t === "v";
+    frame.classList.toggle("is-still", !!it && it.t === "i");
     fb.hidden = !isV;
     fbT.dataset.en = "Tap to watch the full video on Facebook"; fbT.dataset.ar = "اضغط لمشاهدة الفيديو كاملاً على فيسبوك";
     fbT.textContent = T(fbT.dataset.en, fbT.dataset.ar);
@@ -456,6 +461,11 @@
   }, { passive: false });
   prev.addEventListener("click", () => goItem(cur().at - 1));
   next.addEventListener("click", () => goItem(cur().at + 1));
+  frame.addEventListener("pointermove", e => {
+    if (e.pointerType === "touch") return;
+    const r = frame.getBoundingClientRect(), x = Math.max(64, Math.min(r.width - 64, e.clientX - r.left)), y = Math.max(34, Math.min(r.height - 34, e.clientY - r.top));
+    zoomChip.style.setProperty("--zx", x.toFixed(0) + "px"); zoomChip.style.setProperty("--zy", y.toFixed(0) + "px");
+  });
   const tap = () => {
     const it = curItem(), s = cur().els[cur().at];
     if (!it) return;
