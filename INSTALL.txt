@@ -9,3 +9,9 @@ To switch the Contact backdrop off: remove the contact-fx.css line.
 ROUND 3: photo "click to enlarge" hint (A / C), visitor counter +2000
 Changed: work-stage.css (v=4)  work-stage.js (v=6)  script.js (v=12)  index.html
 If your live index.html differs: change work-stage.css?v=3 -> ?v=4, work-stage.js -> ?v=6, script.js?v=11 -> ?v=12.
+
+ROUND 4: new top nav (morphing pill + magnifying dock), desktop only
+New: nav-dock.css  nav-dock.js     Changed: index.html
+If your live index.html differs, add in <head> after contact-fx.css:  <link rel="stylesheet" href="nav-dock.css?v=1">
+and before </body>:  <script src="nav-dock.js?v=1" defer></script>
+To go back to the old bar: remove those two lines.
