@@ -24,3 +24,7 @@ About extra hold: about-pin.js, "vh * 0.24" (raise for a longer hold).
 
 ROUND 6: Arabic contact backdrop on the left (mirrored)
 Changed: contact-fx.css (v=2)  index.html   (live index.html: contact-fx.css?v=1 -> ?v=2)
+
+ROUND 7: Selected Work — top "peek at next chapter" + bottom magnetic filmstrip
+Changed: work-stage.css (v=5)  work-stage.js (v=7)  index.html   (live index.html: work-stage.css?v=4->5, work-stage.js?v=6->7)
+Magnet strength: work-stage.js  const MAG = 0.5 (growth), MAG_SIG = 56 (reach in px), MAG_ACT = 1.14 (size of the current thumbnail).

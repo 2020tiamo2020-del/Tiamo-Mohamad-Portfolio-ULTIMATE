@@ -243,7 +243,11 @@
     $$(".ws-th", rail).forEach((b, k) => b.setAttribute("aria-current", k === ch.at ? "true" : "false"));
     const act = $$(".ws-th", rail)[ch.at];
     if (act) rail.scrollTo({ left: act.offsetLeft - rail.clientWidth / 2 + act.offsetWidth / 2, behavior: reduce ? "auto" : "smooth" });
-    tabEls.forEach((b, k) => { b.setAttribute("aria-selected", k === ci ? "true" : "false"); b.tabIndex = k === ci ? 0 : -1; });
+    tabEls.forEach((b, k) => {
+      b.setAttribute("aria-selected", k === ci ? "true" : "false"); b.tabIndex = k === ci ? 0 : -1;
+      const d = k - ci; b.dataset.rel = d === 0 ? "cur" : d === -1 ? "prev" : d === 1 ? "next" : "far";   /* current chapter + a peek at its neighbours */
+      b.setAttribute("aria-label", chapters[k].key + " · " + T(chapters[k].en, chapters[k].ar));
+    });
     frame.setAttribute("aria-label", T(ch.en, ch.ar) + " — " + (ch.at + 1) + "/" + ch.items.length);
   }
   const thumbRatio = it => clamp(it.ratio || 0, 0.56, 1.78) || 1;
@@ -270,7 +274,43 @@
       rail.appendChild(b);
     });
     captureThumbs(ch);
+    indexRail();
   }
+  /* ---------- magnetic filmstrip: thumbnails near the pointer grow and push their neighbours apart; drag the strip to scroll it ---------- */
+  let thEls = [], magX = null, magRaf = 0, dragS = null, dragSuppress = false;
+  const MAG = 0.5, MAG_SIG = 56, MAG_ACT = 1.14;
+  const magKick = () => { if (!magRaf) magRaf = requestAnimationFrame(magFrame); };
+  function indexRail() { thEls = $$(".ws-th", rail).map(b => ({ b, s: MAG_ACT, tx: 0, w: 0, c: 0 })); magKick(); }
+  function magFrame() {
+    magRaf = 0; const act = cur().at; let moving = false;
+    thEls.forEach((o, k) => {
+      o.w = o.b.offsetWidth; o.c = o.b.offsetLeft + o.w / 2;
+      let t = k === act ? MAG_ACT : 1;
+      if (magX != null) { const d = magX - o.c; if (Math.abs(d) < MAG_SIG * 3.2) t = Math.max(t, 1 + MAG * Math.exp(-(d * d) / (2 * MAG_SIG * MAG_SIG))); }
+      o.s += (t - o.s) * 0.26; if (Math.abs(t - o.s) > 0.002) moving = true; else o.s = t;
+    });
+    const E = thEls.reduce((n, o) => n + (o.s - 1) * o.w, 0); let acc = 0;
+    thEls.forEach(o => {
+      const ex = (o.s - 1) * o.w, tx = -E / 2 + acc + ex / 2; acc += ex;
+      if (Math.abs(tx - o.tx) > 0.2) moving = true; o.tx += (tx - o.tx) * 0.5;
+      o.b.style.setProperty("--s", o.s.toFixed(3)); o.b.style.setProperty("--tx", o.tx.toFixed(1) + "px");
+    });
+    if (moving || magX != null) magRaf = requestAnimationFrame(magFrame);
+  }
+  rail.addEventListener("pointermove", e => {
+    if (e.pointerType === "touch" || dragS) return;
+    const r = rail.getBoundingClientRect(), rtl = getComputedStyle(rail).direction === "rtl";
+    magX = e.clientX - r.left + rail.scrollLeft + (rtl ? rail.scrollWidth - rail.clientWidth : 0); magKick();
+  });
+  rail.addEventListener("pointerleave", () => { magX = null; magKick(); });
+  rail.addEventListener("pointerdown", e => { if (e.pointerType === "mouse" && e.button === 0) dragS = { x: e.clientX, sl: rail.scrollLeft, moved: false }; });
+  addEventListener("pointermove", e => {
+    if (!dragS) return; const dx = e.clientX - dragS.x;
+    if (!dragS.moved && Math.abs(dx) > 6) { dragS.moved = true; rail.classList.add("drag"); magX = null; }
+    if (dragS.moved) rail.scrollLeft = dragS.sl - dx;
+  });
+  addEventListener("pointerup", () => { if (dragS && dragS.moved) { dragSuppress = true; setTimeout(() => { dragSuppress = false; }, 0); } dragS = null; rail.classList.remove("drag"); });
+  rail.addEventListener("click", e => { if (dragSuppress) { e.stopPropagation(); e.preventDefault(); } }, true);
   /* first-frame previews for video thumbnails: hidden <video> seeks to ~0.6 s, a tiny canvas keeps the frame (2 at a time, current chapter only) */
   let thumbTok = 0;
   const grab = it => new Promise(res => {
