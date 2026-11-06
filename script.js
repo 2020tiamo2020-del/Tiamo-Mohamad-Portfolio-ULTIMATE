@@ -219,6 +219,7 @@ function updateScrollOrbit(force = false) {
 scrollOrbit?.addEventListener("click", () => {
   window.__scrollOrbitDir = orbitUp ? "up" : "down";
   try { window.playScrollOrbitSound && window.playScrollOrbitSound(); } catch (_) {}
+  window.__tmJumpUntil = performance.now() + 2200;
   window.scrollTo({ top: orbitUp ? 0 : document.documentElement.scrollHeight, behavior: reduceMotion ? "auto" : "smooth" });
 });
 addEventListener("scroll", () => {
@@ -387,6 +388,7 @@ nav?.querySelectorAll("a").forEach(a => a.addEventListener("click", closeMenu));
   const scrollYTo = (y) => {
     const max = Math.max(0, document.documentElement.scrollHeight - innerHeight);
     const top = Math.max(0, Math.min(Math.round(y), max));
+    if (Math.abs(top - (window.scrollY || 0)) > innerHeight * 0.9) window.__tmJumpUntil = performance.now() + 1500;   /* a menu jump flies past sections: they must not play their scroll sounds */
     if (window.__lenis && typeof window.__lenis.scrollTo === "function") {
       window.__lenis.scrollTo(top, { duration: 1.15, immediate: false });
     } else {

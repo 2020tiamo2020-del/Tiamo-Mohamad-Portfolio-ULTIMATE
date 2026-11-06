@@ -272,7 +272,7 @@ body.cn-on .st-rail:not(:hover):not(.st-flash) .st-lbl{max-width:0!important;opa
 .cn-hm-na2{mix-blend-mode:screen;filter:blur(9px) brightness(1.7);opacity:0;pointer-events:none}
 .cn-hm-eyes{position:absolute;left:0;top:0;width:100%;opacity:0;pointer-events:none}
 .cn-hm-eyes i{position:absolute;border-radius:50%;mix-blend-mode:screen;
-  background:radial-gradient(circle,rgba(235,255,210,.95) 0,rgba(120,255,70,.85) 22%,rgba(60,220,60,.35) 48%,transparent 72%)}
+  background:radial-gradient(closest-side,rgba(235,255,210,.95) 0,rgba(120,255,70,.85) 30%,rgba(60,220,60,.38) 62%,transparent 100%)}
 
 /* keep the HUD clear of the site's round scroll button (bottom-right) */
 .cn-hud .r{right:max(5vw,112px)}

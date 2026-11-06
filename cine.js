@@ -31,6 +31,8 @@
   const HM_FLASH = SAFE ? [] : [[0.03, 0.6], [0.54, 0.35], [0.70, 0.55]];                         // [q, strength]
   const HM_SHAKE = SAFE ? [] : [[0.03, 1.2], [0.12, 0.8], [0.20, 0.9], [0.28, 1.0], [0.36, 1.1], [0.54, 1.0], [0.70, 1.5], [0.84, 0.8]];
   const STROBE_MIN_MS = SAFE ? 420 : 85;   // hard cap on how fast the top-half images may cut (≈11 per second)
+  /* eye glow: centre of each iris in the 1024-wide face image, and the size of the lit patch (an ellipse that fits the eye opening, so nothing spills onto the lid or brow) */
+  const EYES = { L: [517, 322], R: [617, 345], w: 27, h: 16 };
   const HOLD_FROM = 0.79;                  // from here on, the final frame is frozen
   const N_STROBE = 23;
   const PLAN = ["p16", "p07", "p04", "p10", "p19", "p21", "p03", "p09"];   // backdrops behind the rider, in order
@@ -221,7 +223,7 @@
     f.width = figW + "px"; f.height = hB + "px"; f.top = figTop + "px"; f.left = "0px";
     el.hmA.style.height = hA + "px"; el.hmB.style.height = hB + "px"; el.hmVis.style.height = hB + "px";
     el.hmNa.style.height = hA + "px"; el.hmNa2.style.height = hA + "px"; el.hmEyes.style.height = hA + "px";
-    [[el.hmEyeL, 517, 321], [el.hmEyeR, 615, 343]].forEach(([e, x, y]) => { const d = 34 * s; e.style.width = d + "px"; e.style.height = d + "px"; e.style.left = (x * s - d / 2) + "px"; e.style.top = (y * s - d / 2) + "px"; }); el.hmNb.style.height = hB + "px"; el.hmNb2.style.height = hB + "px";
+    [[el.hmEyeL, EYES.L[0], EYES.L[1]], [el.hmEyeR, EYES.R[0], EYES.R[1]]].forEach(([e, x, y]) => { const w = EYES.w * s, h = EYES.h * s; e.style.width = w + "px"; e.style.height = h + "px"; e.style.left = (x * s - w / 2) + "px"; e.style.top = (y * s - h / 2) + "px"; }); el.hmNb.style.height = hB + "px"; el.hmNb2.style.height = hB + "px";
     const tk = el.hmTrk.style; tk.left = (478 * s) + "px"; tk.top = (305 * s) + "px"; tk.width = (190 * s) + "px"; tk.height = (72 * s) + "px";
     const trkT = HMC[ar ? "ar" : "en"].trk; el.hmTrk.querySelector(".t1").textContent = trkT[0]; el.hmTrk.querySelector(".t2").textContent = trkT[1];
     el.hmPt.width = Math.round(vw * .6); el.hmPt.height = Math.round(vh * .6);
@@ -755,7 +757,7 @@
     let ac = null, master = null, nbuf = null;
     const muted = () => !!window.CINE_MUTE || (() => { try { return localStorage.getItem("cine-mute") === "1"; } catch (_) { return false; } })();
     const get = () => {
-      if (muted()) return null;
+      if (muted() || performance.now() < (window.__tmJumpUntil || 0)) return null;   // menu jump: stay silent while flying past
       if (!ac) {
         try {
           const C = window.AudioContext || window.webkitAudioContext; ac = new C();
@@ -797,8 +799,8 @@
   const EXIT_EV = [[.05, () => Snd.whoosh(.9)]];
   const prevs = { enter: null, p: null, q: null, exit: null };
   const fire = (dom, v, list, maxJump) => {
-    const pv = prevs[dom];
-    if (pv !== null) for (const [t, fn] of list) if (pv < t && v >= t && v - pv < maxJump) { try { fn(); } catch (_) {} }
+    const pv = prevs[dom], flying = performance.now() < (window.__tmJumpUntil || 0);   // flying past on a menu jump: track progress, play nothing
+    if (pv !== null && !flying) for (const [t, fn] of list) if (pv < t && v >= t && v - pv < maxJump) { try { fn(); } catch (_) {} }
     prevs[dom] = v;
   };
   const SND_EVENTS = [

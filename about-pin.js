@@ -35,8 +35,8 @@
     const cb = Math.max(photo.getBoundingClientRect().bottom, cert ? cert.getBoundingClientRect().bottom : 0) - sr.top;   // where the content really ends
     /* pin with the kicker just under the header; if the content would not fit, slide up a little (never above header + 4px) */
     top = Math.round(Math.max(hb + 4 - ko, Math.min(hb + 14 - ko, vh - cb - 16)));
-    P = Math.round(vh * 0.95);                                         // total pinned scroll
-    ARR = P * 0.64;                                                    // the cards have met after this much; the rest is a short dwell (stays pinned a little)
+    ARR = Math.round(vh * 0.95 * 0.64);                                // the cards have met after this much (unchanged)
+    P = Math.round(vh * 0.95 + vh * 0.24);                             // total pinned scroll: the same hold as before + a short extra beat before the card moves off
     sec.style.setProperty("--ab-top", top + "px");
     spacer.style.height = P + "px";
     setTimeout(() => dispatchEvent(new Event("scroll")), 0);          // let about-link.js re-read the new geometry
@@ -52,6 +52,7 @@
   window.__frameAbout = () => {
     if (!on) return false;
     const y = wrap.getBoundingClientRect().top + scrollY - top + ARR + 2;
+    if (Math.abs(y - scrollY) > innerHeight * 0.9) window.__tmJumpUntil = performance.now() + 1700;
     const lenis = window.__lenis;
     if (lenis && lenis.scrollTo && !lenis.isStopped) lenis.scrollTo(y, { duration: 1.4 });
     else scrollTo({ top: y, behavior: "smooth" });
