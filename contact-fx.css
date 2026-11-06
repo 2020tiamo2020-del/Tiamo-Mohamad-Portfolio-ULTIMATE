@@ -24,3 +24,6 @@
   #contact::before,#contact::after{right:calc(50% - 50vw);width:100vw;background-size:cover;background-position:82% 100%;top:-24px;bottom:-70px}
 }
 @media(prefers-reduced-motion:reduce){#contact::after{animation:none;opacity:.25}}
+
+/* Arabic (RTL): the metallic shape sits on the LEFT, mirrored, so the text never runs over it */
+[dir="rtl"] #contact::before,[dir="rtl"] #contact::after{right:auto;left:calc(50% - 50vw);transform:scaleX(-1)}

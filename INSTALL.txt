@@ -21,3 +21,6 @@ Changed: about-pin.js (v=2)  cine.js (v=11)  cine.css (v=10)  script.js (v=13)  
 If your live index.html differs: about-pin.js?v=1->2, cine.js?v=10->11, cine.css?v=9->10, script.js?v=12->13.
 Eye glow knobs: top of cine.js, const EYES = { L:[517,322], R:[617,345], w:27, h:16 } (x,y in the 1024-wide image; w/h = size of the lit patch).
 About extra hold: about-pin.js, "vh * 0.24" (raise for a longer hold).
+
+ROUND 6: Arabic contact backdrop on the left (mirrored)
+Changed: contact-fx.css (v=2)  index.html   (live index.html: contact-fx.css?v=1 -> ?v=2)
