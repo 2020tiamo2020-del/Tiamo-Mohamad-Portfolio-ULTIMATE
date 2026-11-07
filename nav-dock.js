@@ -72,12 +72,15 @@
   let tipFor = null;
   const frame = () => {
     raf = 0; let moving = false;
+    measure();                                                           // positions are read fresh each frame (the pill is still opening when the first frame runs)
     const order = items.slice().sort((a, b) => a.c - b.c);
     order.forEach(o => { o.t = px == null ? 1 : 1 + MAXS * Math.exp(-((px - o.c) ** 2) / (2 * SIG * SIG)); o.s += (o.t - o.s) * 0.28; if (Math.abs(o.t - o.s) > 0.002) moving = true; else o.s = o.t; });
     const E = order.reduce((n, o) => n + (o.s - 1) * W, 0); let acc = 0;
     order.forEach(o => { const ex = (o.s - 1) * W; const tx = -E / 2 + acc + ex / 2; o.tx += (tx - o.tx) * 0.5; acc += ex; o.b.style.setProperty("--s", o.s.toFixed(3)); o.b.style.setProperty("--tx", o.tx.toFixed(2) + "px"); });
     if (open && px != null) { let best = null, bd = 1e9; order.forEach(o => { const d = Math.abs(px - o.c); if (d < bd) { bd = d; best = o; } }); if (best && bd < 34 && best !== tipFor) { tipFor = best; showTip(best); } else if (bd >= 34 && tipFor) { tipFor = null; hideTip(); } }
     else tipFor = null;
+    dock.style.setProperty("--ep", (E / 2).toFixed(1) + "px");   /* the pill grows by exactly what the magnified icons need, so none ever pokes out of it */
+    if (tipFor) showTip(tipFor);
     if (moving || (open && px != null)) raf = requestAnimationFrame(frame);
   };
   const kick = () => { if (!raf) raf = requestAnimationFrame(frame); };

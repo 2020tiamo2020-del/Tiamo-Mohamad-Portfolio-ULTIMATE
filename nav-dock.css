@@ -9,7 +9,7 @@
   .tmd{display:block;position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:31;height:56px;
     font-family:Inter,Cairo,system-ui,sans-serif;color:#f6f3ff;transition:opacity .45s ease}
   body.tm-pre-h .tmd{opacity:0;pointer-events:none}
-  .tmd-pill{position:relative;height:100%;display:flex;align-items:center;justify-content:center;border-radius:999px;overflow:visible;
+  .tmd-pill{padding:0 var(--ep,0px);position:relative;height:100%;display:flex;align-items:center;justify-content:center;border-radius:999px;overflow:visible;
     background:rgba(10,7,20,.62);border:1px solid rgba(255,255,255,.16);
     -webkit-backdrop-filter:blur(18px) saturate(1.6);backdrop-filter:blur(18px) saturate(1.6);
     box-shadow:0 14px 50px rgba(0,0,0,.34),0 0 28px rgba(139,53,255,.14),inset 0 1px 0 rgba(255,255,255,.1);

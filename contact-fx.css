@@ -27,3 +27,34 @@
 
 /* Arabic (RTL): the metallic shape sits on the LEFT, mirrored, so the text never runs over it */
 [dir="rtl"] #contact::before,[dir="rtl"] #contact::after{right:auto;left:calc(50% - 50vw);transform:scaleX(-1)}
+
+/* ===== WhatsApp number: sits under the text, no box; the digits drop in when the section is reached ===== */
+#contact{display:block}
+#contact .contact-btn{display:inline-block;min-width:0;margin-top:clamp(22px,3.4vh,36px);padding:4px 0;border:0;border-radius:14px;background:none;box-shadow:none;
+  transition:color .3s,text-shadow .3s}
+#contact .contact-btn:hover{box-shadow:none;text-shadow:none}
+#contact .contact-btn > span{display:block;margin-bottom:4px;font-size:11px;letter-spacing:.22em;color:#9e96ab;text-transform:uppercase}
+[dir="rtl"] #contact .contact-btn > span{letter-spacing:0;font-size:12px}
+#contact .contact-btn b{display:inline-flex;margin:0;font-size:clamp(30px,4.4vw,54px);font-weight:800;letter-spacing:-.02em;line-height:1.1;font-variant-numeric:tabular-nums}
+#contact .contact-btn .arr{font-size:clamp(18px,2vw,26px);color:#9d66ff;opacity:.9;transition:transform .35s var(--ease,ease),color .3s}
+#contact .contact-btn:hover .arr{transform:translate(3px,-3px);color:#25D366}
+#contact .contact-btn b .d{font-size:1em;letter-spacing:inherit;color:inherit;display:inline-block;transition:transform .35s var(--ease,ease),color .3s,text-shadow .3s;white-space:pre}
+#contact .contact-btn:hover b .d{color:#25D366;text-shadow:0 0 18px rgba(37,211,102,.55)}
+#contact .contact-btn b .d:hover{transform:translateY(-7px)}
+/* before the section is reached the digits wait invisible; entering adds .is-in and they fall */
+#contact .contact-btn.cxd-ready:not(.is-in) .d,#contact .contact-btn.cxd-ready:not(.is-in) > span,#contact .contact-btn.cxd-ready:not(.is-in) .arr{opacity:0}
+#contact .contact-btn.is-in .d{animation:cxFall 1s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(var(--i,0) * 60ms)}
+#contact .contact-btn.is-in > span{animation:cxFade .8s ease backwards;animation-delay:.1s}
+#contact .contact-btn.is-in .arr{animation:cxFade .8s ease backwards;animation-delay:1s}
+@keyframes cxFall{
+  0%{opacity:0;transform:translate(var(--dx,60px),var(--dy,-120px)) rotate(var(--r,18deg)) scale(.7);filter:blur(7px)}
+  18%{opacity:1}
+  62%{transform:translate(calc(var(--dx,60px) * -.06),7px) rotate(calc(var(--r,18deg) * -.2)) scale(1.05);filter:blur(0);text-shadow:0 0 26px rgba(157,102,255,.9)}
+  80%{transform:translate(0,-3px) rotate(0)}
+  100%{transform:none;text-shadow:none}
+}
+@keyframes cxFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){#contact .contact-btn .d,#contact .contact-btn > span,#contact .contact-btn .arr{animation:none !important;opacity:1 !important}}
+
+/* Arabic: keep the heading to its old width so it wraps clear of the picture */
+[dir="rtl"] #contact > div{max-width:min(880px,100%)}
