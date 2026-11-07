@@ -1069,7 +1069,7 @@
     wake();
     const fonts = document.fonts;
     if (fonts && fonts.load) {
-      Promise.all([fonts.load('100px "CN Anton"', "POWERS BEYOND"), fonts.load('100px "CN Lalezar"', "قدرات فوق خيالك")]).then(() => { placeWords(); wake(); }).catch(() => { });
+      Promise.all([fonts.load('100px "CN Anton"', "POWERS BEYOND"), fonts.load('100px "Hacen Qatar"', "قدرات فوق خيالك")]).then(() => { placeWords(); wake(); }).catch(() => { });
       fonts.ready && fonts.ready.then(() => { placeWords(); wake(); });
     }
     addEventListener("load", () => { layout(); });

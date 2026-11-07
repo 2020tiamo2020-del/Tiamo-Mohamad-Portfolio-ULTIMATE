@@ -1,0 +1,11 @@
+/* Hacen Qatar for ALL Arabic text.
+   - unicode-range = Arabic only: Latin letters, digits and spaces keep their original fonts.
+   - font-weight 100-900: the browser never fakes bold on this single-weight font.
+   - size-adjust 98% + ascent/descent/line-gap overrides: keep line boxes, text wrapping and section heights the same as
+     before (metrics are Cairo's 130.3% / 73.9% divided by 0.98). If you ever see a tiny shift, tune ONLY these 4 numbers. */
+@font-face{font-family:"Hacen Qatar";src:url("fonts/Hacen_Qatar.ttf") format("truetype");font-weight:100 900;font-style:normal;font-display:swap;
+  size-adjust:98%;ascent-override:132.96%;descent-override:75.41%;line-gap-override:0%;
+  unicode-range:U+060C,U+061B,U+061F,U+0621-063A,U+0640-0652,U+0660-066A,U+066D,U+200C-200F,U+FB50-FDFF,U+FE70-FEFC}
+
+/* the nav-dock label inherits the browser's default button font (Arial), so it never had a font-family to patch */
+.tmd-name{font-family:"Hacen Qatar",Arial,sans-serif}

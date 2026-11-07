@@ -13,7 +13,7 @@
 .ws{--n:4;--gc:139,53,255;position:relative;width:100vw;margin-inline:calc(50% - 50vw);height:calc(100svh + (var(--n) - 1) * 72svh);margin-top:6px}
 .ws-pin{position:sticky;top:0;height:100svh;min-height:520px;display:grid;grid-template-rows:auto minmax(0,1fr) auto;
   padding:clamp(96px,13svh,122px) 0 clamp(14px,2.8svh,26px);isolation:isolate;overflow:hidden;
-  contain:layout paint;font-family:Inter,Cairo,sans-serif}
+  contain:layout paint;font-family:"Hacen Qatar",Inter,Cairo,sans-serif}
 
 /* ambient layers */
 .ws-glow{position:absolute;inset:-12%;z-index:-2;pointer-events:none}
@@ -29,7 +29,7 @@
   -webkit-mask-image:radial-gradient(70% 62% at 50% 50%,#000 20%,transparent 78%);mask-image:radial-gradient(70% 62% at 50% 50%,#000 20%,transparent 78%)}
 
 /* top bar: chapter tabs */
-.ws-kick{font:700 10px/1 ui-monospace,Menlo,Consolas,monospace;letter-spacing:2.4px;color:var(--muted);margin-bottom:-2px}
+.ws-kick{font:700 10px/1 "Hacen Qatar",ui-monospace,Menlo,Consolas,monospace;letter-spacing:2.4px;color:var(--muted);margin-bottom:-2px}
 @media (max-height:700px){.ws-kick{display:none}}
 .ws-bar{display:flex;flex-direction:column;align-items:center;gap:10px;padding:0 4px}
 .ws-tabs{display:flex;gap:6px;max-width:100%;overflow-x:auto;scrollbar-width:none;padding:5px;border:1px solid var(--line);border-radius:18px;
@@ -82,7 +82,7 @@ html[dir="rtl"] .ws-prog i{transform-origin:right center}
 .ws-hud .tl{top:10px;left:10px;border-right:0;border-bottom:0}.ws-hud .tr{top:10px;right:10px;border-left:0;border-bottom:0}
 .ws-hud .bl{bottom:10px;left:10px;border-right:0;border-top:0}.ws-hud .br{bottom:10px;right:10px;border-left:0;border-top:0}
 .ws-hud .meta{position:absolute;top:14px;left:38px;right:38px;display:flex;justify-content:space-between;gap:8px;
-  font:700 10px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:1.4px;color:#fff;text-shadow:0 1px 8px #000}
+  font:700 10px/1 "Hacen Qatar",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:1.4px;color:#fff;text-shadow:0 1px 8px #000}
 .ws-rec{display:inline-flex;align-items:center;gap:6px}
 .ws-rec::before{content:"";width:7px;height:7px;border-radius:50%;background:#ff3d5a;box-shadow:0 0 10px #ff3d5a;animation:wsRec 1.2s steps(2,jump-none) infinite}
 .ws-rec.still::before{background:var(--blue);box-shadow:0 0 10px var(--blue);animation:none}
@@ -110,7 +110,7 @@ html[dir="rtl"] .ws-nav.prev svg{transform:scaleX(-1)}html[dir="rtl"] .ws-nav.ne
   background:rgba(10,8,18,.55);border:1px solid rgba(255,255,255,.22);box-shadow:0 8px 26px -8px #000,inset 0 1px 0 rgba(255,255,255,.22);
   -webkit-backdrop-filter:blur(12px) saturate(1.4);backdrop-filter:blur(12px) saturate(1.4);transition:transform .3s,background .3s}
 .ws-fb[hidden]{display:none}
-.ws-fb b{flex:0 0 auto;display:grid;place-items:center;width:24px;height:24px;border-radius:50%;font:800 15px/1 Georgia,serif;background:#1877f2;box-shadow:0 0 14px rgba(24,119,242,.7)}
+.ws-fb b{flex:0 0 auto;display:grid;place-items:center;width:24px;height:24px;border-radius:50%;font:800 15px/1 "Hacen Qatar",Georgia,serif;background:#1877f2;box-shadow:0 0 14px rgba(24,119,242,.7)}
 .ws-fb:hover{transform:translateY(-2px);background:rgba(24,119,242,.35)}
 .ws-fb:focus-visible{outline:2px solid #fff;outline-offset:2px}
 @media (max-width:760px){.ws-fb{font-size:10.5px;padding:6px 12px 6px 6px}}
@@ -129,10 +129,10 @@ html[dir="rtl"] .ws-nav.prev svg{transform:scaleX(-1)}html[dir="rtl"] .ws-nav.ne
 .ws-lock .tl{top:6px;left:6px;border-right:0;border-bottom:0}.ws-lock .tr{top:6px;right:6px;border-left:0;border-bottom:0}
 .ws-lock .bl{bottom:6px;left:6px;border-right:0;border-top:0}.ws-lock .br{bottom:6px;right:6px;border-left:0;border-top:0}
 .ws-lock .lk-mid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;opacity:0}
-.ws-lock .lk-roll{position:relative;height:1.05em;width:1.2em;overflow:hidden;font:800 clamp(40px,7vw,72px)/1.05 ui-monospace,Menlo,Consolas,monospace;color:#fff;text-align:center;
+.ws-lock .lk-roll{position:relative;height:1.05em;width:1.2em;overflow:hidden;font:800 clamp(40px,7vw,72px)/1.05 "Hacen Qatar",ui-monospace,Menlo,Consolas,monospace;color:#fff;text-align:center;
   text-shadow:0 0 22px rgba(22,216,255,.55),0 0 46px rgba(139,53,255,.45)}
 .ws-lock .lk-roll span{position:absolute;inset:0;display:block}
-.ws-lock .lk-name{font:700 clamp(10px,1.3vw,12px)/1 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.34em;text-transform:uppercase;color:#cfc8e6;white-space:nowrap}
+.ws-lock .lk-name{font:700 clamp(10px,1.3vw,12px)/1 "Hacen Qatar",ui-monospace,Menlo,Consolas,monospace;letter-spacing:.34em;text-transform:uppercase;color:#cfc8e6;white-space:nowrap}
 [dir=rtl] .ws-lock .lk-name{letter-spacing:.06em}
 .ws-lock .lk-bar{display:block;position:relative;width:min(150px,40%);height:2px;background:rgba(255,255,255,.14);overflow:hidden;border-radius:2px}
 .ws-lock .lk-bar b{position:absolute;inset:0;background:linear-gradient(90deg,var(--purple),var(--blue));transform-origin:0 50%;transform:scaleX(0);box-shadow:0 0 10px var(--blue)}
@@ -161,8 +161,8 @@ html[dir="rtl"] .ws-nav.prev svg{transform:scaleX(-1)}html[dir="rtl"] .ws-nav.ne
   width:min(980px,100%);margin:0 auto}
 .ws-info{grid-column:1/-1;display:flex;align-items:baseline;justify-content:center;gap:12px;flex-wrap:wrap;text-align:center}
 .ws-info h3{margin:0;font-size:clamp(15px,2vw,20px);letter-spacing:-.01em;color:var(--text)}
-.ws-info small{font:700 10px/1 ui-monospace,Menlo,Consolas,monospace;letter-spacing:2px;color:var(--muted)}
-.ws-count{font:700 12px/1 ui-monospace,Menlo,Consolas,monospace;letter-spacing:1.4px;color:var(--blue)}
+.ws-info small{font:700 10px/1 "Hacen Qatar",ui-monospace,Menlo,Consolas,monospace;letter-spacing:2px;color:var(--muted)}
+.ws-count{font:700 12px/1 "Hacen Qatar",ui-monospace,Menlo,Consolas,monospace;letter-spacing:1.4px;color:var(--blue)}
 .ws-rail{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:6px 4px;scroll-snap-type:x proximity;
   -webkit-mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent);mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent)}
 .ws-rail::-webkit-scrollbar{display:none}
@@ -170,7 +170,7 @@ html[dir="rtl"] .ws-nav.prev svg{transform:scaleX(-1)}html[dir="rtl"] .ws-nav.ne
 .ws-th{all:unset;box-sizing:border-box;cursor:pointer;flex:0 0 auto;height:clamp(44px,6.4svh,58px);width:calc(clamp(44px,6.4svh,58px) * var(--r,1));border-radius:11px;overflow:hidden;position:relative;scroll-snap-align:center;
   background:#150f26;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);opacity:.6;transition:opacity .3s,transform .3s,box-shadow .3s,width .4s var(--ease,ease)}
 .ws-th img{width:100%;height:100%;object-fit:cover;display:block}
-.ws-th em{position:absolute;inset-inline-start:4px;bottom:3px;padding:2px 5px;border-radius:6px;font:700 9px/1 ui-monospace,Menlo,Consolas,monospace;color:#fff;font-style:normal;background:rgba(8,6,14,.7)}
+.ws-th em{position:absolute;inset-inline-start:4px;bottom:3px;padding:2px 5px;border-radius:6px;font:700 9px/1 "Hacen Qatar",ui-monospace,Menlo,Consolas,monospace;color:#fff;font-style:normal;background:rgba(8,6,14,.7)}
 .ws-th.v:not(:has(img)){background:linear-gradient(135deg,rgba(139,53,255,.3),rgba(22,216,255,.14))}
 .ws-th.v::before{content:"▶";position:absolute;z-index:1;inset:0;display:grid;place-items:center;font-size:13px;color:#fff;text-shadow:0 1px 8px #000;opacity:.9}
 .ws-th:hover{opacity:.9}
@@ -181,7 +181,7 @@ html[dir="rtl"] .ws-nav.prev svg{transform:scaleX(-1)}html[dir="rtl"] .ws-nav.ne
   background:linear-gradient(100deg,#7d2cff,#1bbfff);box-shadow:0 0 28px rgba(139,53,255,.3);transition:transform .3s,filter .3s}
 .ws-cta:hover{transform:translateY(-2px);filter:brightness(1.1)}
 .ws-cta:focus-visible{outline:2px solid #fff;outline-offset:2px}
-.ws-hint{position:absolute;left:50%;bottom:6px;translate:-50% 0;font:700 10px/1 ui-monospace,Menlo,Consolas,monospace;letter-spacing:2px;color:var(--muted);
+.ws-hint{position:absolute;left:50%;bottom:6px;translate:-50% 0;font:700 10px/1 "Hacen Qatar",ui-monospace,Menlo,Consolas,monospace;letter-spacing:2px;color:var(--muted);
   opacity:0;pointer-events:none;transition:opacity .6s}
 .ws.hint .ws-hint{opacity:.8}
 
@@ -216,7 +216,7 @@ html[dir="rtl"] .ws-nav.prev svg{transform:scaleX(-1)}html[dir="rtl"] .ws-nav.ne
 
 /* "click to enlarge" hint on photos (A / C) */
 .ws-zoom{position:absolute;left:var(--zx,50%);top:var(--zy,50%);z-index:5;pointer-events:none;display:flex;align-items:center;gap:8px;white-space:nowrap;
-  padding:9px 15px 9px 12px;border-radius:999px;color:#fff;font:700 12px/1 Inter,Cairo,system-ui,sans-serif;letter-spacing:.3px;
+  padding:9px 15px 9px 12px;border-radius:999px;color:#fff;font:700 12px/1 "Hacen Qatar",Inter,Cairo,system-ui,sans-serif;letter-spacing:.3px;
   background:rgba(10,7,22,.58);border:1px solid rgba(255,255,255,.22);box-shadow:0 8px 30px rgba(0,0,0,.45),0 0 22px rgba(139,53,255,.35);
   -webkit-backdrop-filter:blur(12px) saturate(1.5);backdrop-filter:blur(12px) saturate(1.5);
   opacity:0;transform:translate(-50%,-50%) scale(.86);transition:opacity .28s,transform .28s var(--ease,ease),left .14s linear,top .14s linear}
@@ -235,7 +235,7 @@ html[dir="rtl"] .ws-nav.prev svg{transform:scaleX(-1)}html[dir="rtl"] .ws-nav.ne
 .ws-tab{transition:background .35s,color .35s,opacity .35s,padding .35s}
 .ws-tab[data-rel="prev"],.ws-tab[data-rel="next"]{opacity:.55;padding:9px 12px;gap:7px}
 .ws-tab[data-rel="prev"]:hover,.ws-tab[data-rel="next"]:hover{opacity:1;background:rgba(255,255,255,.06)}
-.ws-tab[data-rel="next"]::before,.ws-tab[data-rel="prev"]::before{font:700 9px/1 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.16em;color:var(--blue);white-space:nowrap}
+.ws-tab[data-rel="next"]::before,.ws-tab[data-rel="prev"]::before{font:700 9px/1 "Hacen Qatar",ui-monospace,Menlo,Consolas,monospace;letter-spacing:.16em;color:var(--blue);white-space:nowrap}
 .ws-tab[data-rel="next"]::before{content:"NEXT \2192";order:-1}
 .ws-tab[data-rel="prev"]::before{content:"\2190 PREV";order:-1}
 html[dir="rtl"] .ws-tab[data-rel="next"]::before{content:"\0627\0644\062A\0627\0644\064A \2190";letter-spacing:0;font-size:10px}

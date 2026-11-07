@@ -34,9 +34,12 @@ New: contact-fx.js     Changed: nav-dock.js (v=2)  nav-dock.css (v=2)  contact-f
 If your live index.html differs: nav-dock.css?v=1->2, nav-dock.js?v=1->2, contact-fx.css->?v=5, and add before </body>:
   <script src="contact-fx.js?v=1" defer></script>
 
-ROUND 9: headline twist on the About and Contact headings (EN + AR)
-New: headline-twist.css  headline-twist.js     Changed: index.html
-If your live index.html differs, add in <head> after nav-dock.css:  <link rel="stylesheet" href="headline-twist.css?v=1">
-and before </body> (after contact-fx.js):  <script src="headline-twist.js?v=1" defer></script>
-Timing knobs in headline-twist.js: IDLE = 480 (ms of no scrolling that counts as calm), MAXWAIT = 5200 (safety: plays anyway after this long on screen).
-To switch off: remove those two lines.
+ROUND 9: Arabic font -> Hacen Qatar (all Arabic text, every section)
+New:     arabic-font.css   fonts/Hacen_Qatar.ttf
+Changed: index.html (+arabic-font.css, font preload, version bumps)  cine.js  and every CSS file that sets a font-family (only the font stack changed: "Hacen Qatar" was added in front)
+If your live index.html differs, add after services-scenes.css:
+  <link rel="stylesheet" href="arabic-font.css?v=1">
+  <link rel="preload" href="fonts/Hacen_Qatar.ttf" as="font" type="font/ttf" crossorigin>
+and bump the ?v= of: style.css, motion.css, enhance.css, story.css, scenes.css, tm-intro.css, cine.css, work-stage.css, nav-dock.css, services-stage.css, services-scenes.css, cine.js
+Only Arabic letters use the new font (unicode-range); English/digits/spaces are untouched. To go back: remove the arabic-font.css line.
+Spacing knobs (arabic-font.css): size-adjust / ascent-override / descent-override. Do not edit the .ttf (its license forbids modification).

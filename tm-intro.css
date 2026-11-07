@@ -5,8 +5,8 @@
    Change the two lines below to try another pairing (e.g. Syncopate / Orbitron / Tenor Sans) - nothing else needs touching.
    ========================================================================== */
 .enter-gate.tm-intro {
-  --tm-title: "Cinzel", "Cormorant SC", Georgia, "Times New Roman", serif;
-  --tm-ui: "Michroma", "Syncopate", Inter, "Segoe UI", Arial, sans-serif;
+  --tm-title: "Hacen Qatar","Cinzel", "Cormorant SC", Georgia, "Times New Roman", serif;
+  --tm-ui: "Hacen Qatar","Michroma", "Syncopate", Inter, "Segoe UI", Arial, sans-serif;
   --tm-ink: #e8f1ff; --tm-mute: rgba(150,186,236,.56); --tm-line: rgba(140,186,255,.30); --tm-glow: 96,156,255;
   background: radial-gradient(ellipse 90% 80% at 50% 44%, #0a1226 0%, #060a16 58%, #03050b 100%); touch-action: none;
 }
@@ -134,7 +134,7 @@ html:not(.tm-orb-fallback) #tmOrb{opacity:0 !important;pointer-events:none !impo
 html:not(.tm-orb-fallback) .core-hint { display: none !important; }
 .tm-stone {
   position: absolute; z-index: 6; translate: -50% 0; pointer-events: none; display: flex; gap: .06em; align-items: center; justify-content: center;
-  font: 400 calc(26px * var(--ts, 1)) / 1 "Uncial Antiqua", "Cinzel", Georgia, serif; letter-spacing: .04em; white-space: nowrap;
+  font: 400 calc(26px * var(--ts, 1)) / 1 "Hacen Qatar","Uncial Antiqua", "Cinzel", Georgia, serif; letter-spacing: .04em; white-space: nowrap;
   perspective: 620px; opacity: 0; visibility: hidden; filter: blur(6px);
   transition: opacity .9s ease, filter .9s ease, visibility .9s;
 }
@@ -151,7 +151,7 @@ html:not(.tm-orb-fallback) .core-hint { display: none !important; }
   -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent;
   animation: tmStoneLight 5.2s ease-in-out var(--dl, 0s) infinite;
 }
-.tm-stone-ar { font-family: "Reem Kufi", "Cairo", sans-serif; font-weight: 700; font-size: calc(31px * var(--ts, 1)); letter-spacing: 0; }
+.tm-stone-ar { font-family:"Hacen Qatar","Reem Kufi", "Cairo", sans-serif; font-weight: 700; font-size: calc(31px * var(--ts, 1)); letter-spacing: 0; }
 @keyframes tmStoneDrift {
   0%   { transform: translate3d(0, 0, 0) rotateX(0) rotateY(0) rotateZ(0); }
   50%  { transform: translate3d(0, var(--ty, 2px), var(--tz, 10px)) rotateX(var(--rx, 12deg)) rotateY(var(--ry, -16deg)) rotateZ(var(--rz, 3deg)); }

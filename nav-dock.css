@@ -7,7 +7,7 @@
   html .site-header nav#nav{position:absolute !important;left:50%;top:0;width:1px;height:1px;overflow:hidden;opacity:0;visibility:hidden;pointer-events:none !important}
 
   .tmd{display:block;position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:31;height:56px;
-    font-family:Inter,Cairo,system-ui,sans-serif;color:#f6f3ff;transition:opacity .45s ease}
+    font-family:"Hacen Qatar",Inter,Cairo,system-ui,sans-serif;color:#f6f3ff;transition:opacity .45s ease}
   body.tm-pre-h .tmd{opacity:0;pointer-events:none}
   .tmd-pill{padding:0 var(--ep,0px);position:relative;height:100%;display:flex;align-items:center;justify-content:center;border-radius:999px;overflow:visible;
     background:rgba(10,7,20,.62);border:1px solid rgba(255,255,255,.16);
