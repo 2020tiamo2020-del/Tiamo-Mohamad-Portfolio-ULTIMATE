@@ -345,7 +345,7 @@ main#home > .tm-hero-space {
 .tm-fc.ld .tm-fc-img { opacity: 1; }
 .tm-fc-num {
   position: absolute; left: 12px; bottom: 10px; z-index: 2;
-  font: 700 11px/1 "Hacen Qatar",Inter, Cairo, sans-serif; letter-spacing: .16em;
+  font: 700 11px/1 Inter, Cairo, sans-serif; letter-spacing: .16em;
   color: rgba(255,255,255,.85); text-shadow: 0 1px 8px rgba(0,0,0,.7);
 }
 .tm-fc-guard { position: absolute; inset: 0; z-index: 3; }
@@ -355,13 +355,13 @@ main#home > .tm-hero-space {
   display: grid; place-content: center; justify-items: center; gap: 14px; text-align: center;
 }
 .tm-fly-intro b {
-  font: 800 clamp(30px, 6.4vw, 92px)/1 "Hacen Qatar",Inter, Cairo, sans-serif; letter-spacing: -.02em;
+  font: 800 clamp(30px, 6.4vw, 92px)/1 Inter, Cairo, sans-serif; letter-spacing: -.02em;
   background: linear-gradient(120deg, #fff 10%, #c4b5fd 50%, #16d8ff 100%);
   -webkit-background-clip: text; background-clip: text; color: transparent;
   filter: drop-shadow(0 0 28px rgba(139,53,255,.55));
 }
 .tm-fly-intro span {
-  font: 700 12px/1 "Hacen Qatar",Inter, Cairo, sans-serif; letter-spacing: .32em; color: rgba(255,255,255,.62);
+  font: 700 12px/1 Inter, Cairo, sans-serif; letter-spacing: .32em; color: rgba(255,255,255,.62);
   animation: tmFlyPulse 2s ease-in-out infinite;
 }
 @keyframes tmFlyPulse { 0%,100% { opacity: .35; transform: translateY(0); } 50% { opacity: 1; transform: translateY(5px); } }
@@ -376,14 +376,14 @@ main#home > .tm-hero-space {
   padding: 8px 18px; border-radius: 999px;
   background: rgba(20,12,40,.55); border: 1px solid rgba(255,255,255,.16);
   -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
-  font: 700 12px/1 "Hacen Qatar",Inter, Cairo, sans-serif; letter-spacing: .14em; color: rgba(255,255,255,.6);
+  font: 700 12px/1 Inter, Cairo, sans-serif; letter-spacing: .14em; color: rgba(255,255,255,.6);
 }
 .tm-fly-count b { font-size: 20px; letter-spacing: .04em; color: #fff; }
 .tm-fly-bar { width: min(280px, 56vw); height: 2px; border-radius: 2px; background: rgba(255,255,255,.14); overflow: hidden; direction: ltr; }
 .tm-fly-bar i { display: block; height: 100%; transform-origin: 0 50%; transform: scaleX(0); background: linear-gradient(90deg, #8b35ff, #16d8ff); }
 .tm-fly-hint {
   display: inline-flex; align-items: center; gap: 8px;
-  font: 700 10.5px/1 "Hacen Qatar",Inter, Cairo, sans-serif; letter-spacing: .22em; color: rgba(255,255,255,.55);
+  font: 700 10.5px/1 Inter, Cairo, sans-serif; letter-spacing: .22em; color: rgba(255,255,255,.55);
 }
 .tm-fly-hint i { width: 6px; height: 6px; border-radius: 50%; background: #16d8ff; box-shadow: 0 0 10px #16d8ff; }
 
