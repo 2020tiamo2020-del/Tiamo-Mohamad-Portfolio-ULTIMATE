@@ -33,3 +33,10 @@ ROUND 8: dock icons stay inside the pill; WhatsApp number under the contact text
 New: contact-fx.js     Changed: nav-dock.js (v=2)  nav-dock.css (v=2)  contact-fx.css (v=5)  index.html
 If your live index.html differs: nav-dock.css?v=1->2, nav-dock.js?v=1->2, contact-fx.css->?v=5, and add before </body>:
   <script src="contact-fx.js?v=1" defer></script>
+
+ROUND 9: headline twist on the About and Contact headings (EN + AR)
+New: headline-twist.css  headline-twist.js     Changed: index.html
+If your live index.html differs, add in <head> after nav-dock.css:  <link rel="stylesheet" href="headline-twist.css?v=1">
+and before </body> (after contact-fx.js):  <script src="headline-twist.js?v=1" defer></script>
+Timing knobs in headline-twist.js: IDLE = 480 (ms of no scrolling that counts as calm), MAXWAIT = 5200 (safety: plays anyway after this long on screen).
+To switch off: remove those two lines.
