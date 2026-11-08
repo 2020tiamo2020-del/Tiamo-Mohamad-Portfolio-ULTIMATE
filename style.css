@@ -109,7 +109,6 @@ animation:float 4s ease-in-out infinite}.core span{font-size:42px;font-weight:80
   .gallery-card .arrow { width: 38px; height: 52px; }
 }
 
-
 /* === CINEMATIC MEDIA BACKDROP — fills empty letterbox space without cropping the artwork === */
 .gallery-card .slides > figure{
   --media-bg:none;
@@ -258,9 +257,6 @@ animation:float 4s ease-in-out infinite}.core span{font-size:42px;font-weight:80
     transform: scale(1.2);
   }
 }
-
-
-
 
 /* === TIAMO VISUAL POLISH / HEADER + NAV + SMART SCROLL === */
 .site-header{
@@ -463,7 +459,6 @@ animation:float 4s ease-in-out infinite}.core span{font-size:42px;font-weight:80
   box-shadow:inset 0 1px 0 rgba(255,255,255,.09),0 0 18px rgba(139,53,255,.22),0 10px 28px rgba(0,0,0,.16);
 }
 
-
 /* === VISUAL WORK — SAFE ROUNDED EDGES ONLY ===
    Preserves the stable gallery layout, images, reels, arrows, dots and effects. */
 .work-section .gallery-card{
@@ -545,7 +540,6 @@ animation:float 4s ease-in-out infinite}.core span{font-size:42px;font-weight:80
 @media(max-width:900px){.about-photo{width:75%;height:80%}.about-photo.show{opacity:.35}}
 @media not all{.about-photo{transition:opacity .4s ease;transform:none}}
 
-
 /* =====================================================================
    FIXES & HARDENING (review pass)
    ===================================================================== */
@@ -612,10 +606,8 @@ section[id],main[id]{scroll-margin-top:110px}
    horizontal overflow is clipped at the page level instead (no sideways scroll on phones) */
 html{overflow-x:clip}
 
-
 /* -- About heading: same typography as zip 1 in Arabic too (tight display heading) -- */
 [dir=rtl] #about .section-title h2{line-height:1;letter-spacing:-2.5px!important}
-
 
 /* =====================================================================
    ABOUT: text on one side, photo on the other (no text over the photo)
@@ -691,7 +683,6 @@ html{overflow-x:clip}
 /* arrows in buttons are mirrored text (↖) in Arabic; keep spacing tidy */
 .contact-btn .arr{font-style:normal;margin-inline-start:4px}
 [dir=rtl] .contact-btn span{letter-spacing:0}
-
 
 /* =====================================================================
    SCROLL-REACTIVE SECTION HEADINGS — isolated from card hover effects
@@ -933,7 +924,6 @@ html{overflow-x:clip}
   .ba-copy .btn{display:block;text-align:center}
 }
 
-
 /* =====================================================================
    MUSIC ORB: click the TM sphere to play / pause the theme (optional, never autoplays)
    ===================================================================== */
@@ -1106,7 +1096,6 @@ html{overflow-x:clip}
   .core.is-playing .wave,.ico-play,.core-hint.show,.core.is-playing.no-fft::before,.core.is-playing.no-fft .ico-eq i,.music-mini.no-fft i{animation:none}
 }
 
-
 /* =====================================================================
    WORK GALLERY: 3D coverflow carousel inside each card
    Centre card flat and large, neighbours tilted in depth at the sides.
@@ -1219,7 +1208,6 @@ html{overflow-x:clip}
   width:26px;background:linear-gradient(90deg,#8b35ff,#16d8ff);
   box-shadow:0 0 10px rgba(139,53,255,.85),0 0 18px rgba(22,216,255,.35);
 }
-
 
 /* =====================================================================
    SERVICES: vertical 3D wheel (desktop AND phones - phone sizing is in the max-width:900px block below).
@@ -1383,7 +1371,6 @@ html{overflow-x:clip}
 @keyframes whFill{to{transform:scaleX(1)}}
 @media(prefers-reduced-motion:reduce){.js .service-grid article.is-active>i.wh-bar{animation:none}}
 
-
 /* =====================================================================
    BEFORE / AFTER: film strip of thumbnails + glass pager  (up to 30 pairs)
    One row; with many pairs it scrolls (mouse drag, swipe, pager) and keeps the active pair centred.
@@ -1427,7 +1414,6 @@ html{overflow-x:clip}
 .ba-pg-btn{width:32px;height:32px;border-radius:50%;border:1px solid rgba(22,216,255,.35);background:rgba(4,3,9,.72);color:#fff;font-size:18px;line-height:1;cursor:pointer;display:grid;place-items:center;padding:0 0 3px;transition:.25s}
 .ba-pg-btn:hover{background:rgba(139,53,255,.82);border-color:#fff;box-shadow:0 0 16px #8b35ff,0 0 30px rgba(22,216,255,.4)}
 .ba-pg-btn:focus-visible{border-radius:50%}
-
 
 /* the scrolling film strip must never widen the page layout on phones / tablets */
 .ba-viewer{min-width:0}
@@ -1517,8 +1503,6 @@ a:focus-visible,button:focus-visible,.contact-btn:focus-visible,.mini-wa:focus-v
 /* Smooth language switch transition for text */
 [data-en],[data-ar]{transition:opacity .15s ease}
 
-
-
 /* ===== Visitor counter + Toasts (dark only) ===== */
 .visitor-counter{
   display:inline-flex;align-items:center;gap:7px;
@@ -1594,7 +1578,6 @@ a:focus-visible,button:focus-visible,.contact-btn:focus-visible,.mini-wa:focus-v
 
 /* ===== Cinematic polish pack 2026-10-11 ===== */
 
-
 /* Custom cursor (desktop only) */
 .cursor-dot,.cursor-ring{
   position:fixed;top:0;left:0;pointer-events:none;z-index:9990;
@@ -1657,7 +1640,6 @@ body.has-cursor,body.has-cursor *{cursor:none !important}
 .site-header nav a.is-active{color:#fff;text-shadow:0 0 16px rgba(139,53,255,.55)}
 .site-header nav a.is-active::after{transform:scaleX(1)}
 [dir=rtl] .site-header nav a::after{transform-origin:right center}
-
 
 /* Scroll parallax helpers */
 .parallax-slow{will-change:transform}
@@ -1769,14 +1751,7 @@ html{scroll-behavior:smooth}
     radial-gradient(circle at 78% 70%,rgba(22,216,255,.1),transparent 38%),
     radial-gradient(circle at 60% 15%,rgba(90,40,180,.12),transparent 35%);
 }
-.enter-gate-noise{
-  position:absolute;inset:0;pointer-events:none;opacity:.04;
-  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 160 160' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-}
-.enter-cubes{
-  position:absolute;inset:0;width:100%;height:100%;
-  pointer-events:none;z-index:0;
-}
+
 .enter-gate-btn{
   position:relative;z-index:2;
   display:flex;flex-direction:column;align-items:center;gap:16px;
@@ -1794,69 +1769,8 @@ html{scroll-behavior:smooth}
   transform:scale(1.04);
   filter:drop-shadow(0 0 36px rgba(139,53,255,.7)) drop-shadow(0 0 60px rgba(22,216,255,.28));
 }
-.enter-gate-pulse{
-  position:absolute;top:42%;left:50%;
-  width:min(300px,78vw);height:min(300px,78vw);
-  transform:translate(-50%,-50%);
-  border-radius:50%;
-  border:1px solid rgba(139,53,255,.28);
-  animation:enterPulse 2.4s ease-out infinite;
-  pointer-events:none;z-index:-1;
-}
+
 .enter-gate-cta{display:flex;flex-direction:column;align-items:center;gap:6px}
-.enter-gate-label{
-  font-size:13px;letter-spacing:3.2px;text-transform:uppercase;
-  background:linear-gradient(135deg,#c4b5fd,#8b35ff 45%,#16d8ff);
-  -webkit-background-clip:text;background-clip:text;color:transparent;
-  font-weight:650;
-}
-.enter-gate-hint{
-  font-size:11px;letter-spacing:1.5px;color:rgba(167,161,183,.75);
-}
-
-/* Desktop click cue */
-.enter-click-cue{
-  position:relative;width:44px;height:44px;margin-top:10px;
-  display:none;place-items:center;
-}
-.enter-click-ring{
-  position:absolute;inset:0;border-radius:50%;
-  border:1.5px solid rgba(196,181,253,.55);
-  box-shadow:0 0 16px rgba(139,53,255,.35);
-  animation:cueRing 1.8s ease-out infinite;
-}
-.enter-click-dot{
-  width:8px;height:8px;border-radius:50%;
-  background:#fff;
-  box-shadow:0 0 12px rgba(139,53,255,.9),0 0 22px rgba(22,216,255,.4);
-  animation:cueDot 1.8s ease-in-out infinite;
-}
-
-/* Mobile touch cue */
-.enter-touch-cue{
-  position:relative;width:52px;height:52px;margin-top:8px;
-  display:none;place-items:center;
-}
-.enter-touch-hand{
-  font-size:22px;position:relative;z-index:1;
-  animation:touchBob 1.4s ease-in-out infinite;
-  filter:drop-shadow(0 0 10px rgba(139,53,255,.55));
-}
-.enter-touch-ripple{
-  position:absolute;inset:4px;border-radius:50%;
-  border:1.5px solid rgba(139,53,255,.45);
-  animation:enterPulse 1.6s ease-out infinite;
-}
-
-@media(hover:hover) and (pointer:fine){
-  .enter-click-cue{display:grid}
-  .enter-touch-cue{display:none !important}
-  .enter-gate-label[data-en]::after{content:none}
-}
-@media(hover:none), (pointer:coarse){
-  .enter-touch-cue{display:grid}
-  .enter-click-cue{display:none !important}
-}
 
 @keyframes enterFloat{
   0%,100%{transform:translateY(0)}
@@ -1866,19 +1780,7 @@ html{scroll-behavior:smooth}
   0%{transform:translate(-50%,-50%) scale(.55);opacity:.75}
   100%{transform:translate(-50%,-50%) scale(1.2);opacity:0}
 }
-@keyframes cueRing{
-  0%{transform:scale(.85);opacity:.9}
-  70%{transform:scale(1.25);opacity:0}
-  100%{transform:scale(1.25);opacity:0}
-}
-@keyframes cueDot{
-  0%,100%{transform:scale(1)}
-  50%{transform:scale(1.25)}
-}
-@keyframes touchBob{
-  0%,100%{transform:translateY(0)}
-  50%{transform:translateY(5px)}
-}
+
 body.gate-locked{overflow:hidden}
 /* The page scrollbar belongs to <html> (html{overflow-x:clip} stops body's overflow from reaching the viewport),
    so the rule above never locked it: the page could be scrolled behind the entry gate and then opened mid-page.
@@ -1891,7 +1793,7 @@ body.gate-locked,body.gate-locked .enter-gate,body.gate-locked .enter-gate *{
 body.gate-locked .cursor-dot,
 body.gate-locked .cursor-ring{opacity:0 !important;visibility:hidden}
 @media(prefers-reduced-motion:reduce){
-  .enter-gate-btn,.enter-gate-pulse,.enter-click-ring,.enter-click-dot,.enter-touch-hand,.enter-touch-ripple{animation:none}
+  .enter-gate-btn {animation:none}
   .enter-gate{transition-duration:.25s}
 }
 
@@ -1908,12 +1810,7 @@ body.gate-locked .cursor-ring{opacity:0 !important;visibility:hidden}
   /* transform set inline by JS */
 }
 .enter-gate.is-morphing .enter-gate-bg,
-.enter-gate.is-morphing .enter-gate-noise,
-.enter-gate.is-morphing .enter-cubes,
-.enter-gate.is-morphing .enter-gate-cta,
-.enter-gate.is-morphing .enter-gate-pulse,
-.enter-gate.is-morphing .enter-click-cue,
-.enter-gate.is-morphing .enter-touch-cue{
+.enter-gate.is-morphing .enter-gate-cta {
   opacity:0;
   transition:opacity .35s ease;
 }
@@ -2018,72 +1915,10 @@ body.gate-locked .cursor-ring{opacity:0 !important;visibility:hidden}
     0 0 70px rgba(22,216,255,.4);
 }
 
-/* Mobile enter: clearer touch cue */
-@media (hover: none), (pointer: coarse){
-  .enter-touch-hand{ font-size: 26px; }
-  .enter-touch-cue{ width: 58px; height: 58px; }
-  .enter-gate-label{ letter-spacing: 2.6px; font-size: 14px; }
-}
-
-/* ===== Enter logo: galaxy triangles behind wordmark ===== */
 .enter-gate-btn{
   position:relative;
 }
-.enter-logo-stack{
-  position:absolute;
-  left:50%;
-  top:42%;
-  width:min(520px, 88vw);
-  height:min(340px, 58vw);
-  transform:translate(-50%, -52%);
-  pointer-events:none;
-  z-index:0;
-}
-.enter-logo-stack .tri-layer{
-  position:absolute;
-  inset:0;
-  display:grid;
-  place-items:center;
-  will-change:transform, opacity, filter;
-}
-.enter-logo-stack .tri-layer img{
-  width:100%;
-  height:auto;
-  display:block;
-  object-fit:contain;
-  user-select:none;
-  -webkit-user-drag:none;
-}
-/* Independent pulse per layer — feels like separate triangles breathing */
-.enter-logo-stack .tri-a{
-  animation:triBreathA 5.5s ease-in-out infinite;
-  opacity:.55;
-  filter:saturate(1.15) brightness(1.05);
-}
-.enter-logo-stack .tri-b{
-  animation:triBreathB 7.2s ease-in-out infinite;
-  opacity:.4;
-  filter:saturate(1.05) brightness(.95) hue-rotate(8deg);
-  transform:scale(1.06) rotate(-3deg);
-}
-.enter-logo-stack .tri-c{
-  animation:triBreathC 4.4s ease-in-out infinite;
-  opacity:.32;
-  filter:saturate(1.2) brightness(1.1);
-  transform:scale(.92) rotate(4deg);
-}
-@keyframes triBreathA{
-  0%,100%{transform:scale(1) rotate(0deg)}
-  50%{transform:scale(1.08) rotate(1.5deg)}
-}
-@keyframes triBreathB{
-  0%,100%{transform:scale(1.06) rotate(-3deg)}
-  50%{transform:scale(1.14) rotate(-1deg)}
-}
-@keyframes triBreathC{
-  0%,100%{transform:scale(.92) rotate(4deg)}
-  50%{transform:scale(1.02) rotate(6deg)}
-}
+
 .enter-gate-logo-wrap,
 .enter-gate-logo{
   position:relative;
@@ -2098,28 +1933,11 @@ body.gate-locked .cursor-ring{opacity:0 !important;visibility:hidden}
   height:auto;
   filter:drop-shadow(0 0 18px rgba(139,53,255,.55)) drop-shadow(0 0 36px rgba(22,216,255,.25));
 }
-/* Don't let triangle layers interfere with morph / pulse */
-.enter-gate.is-morphing .enter-logo-stack{
-  opacity:0;
-  transition:opacity .35s ease;
-  animation:none;
-}
-.enter-gate.is-morphing .tri-layer{animation:none}
-@media (prefers-reduced-motion: reduce){
-  .enter-logo-stack .tri-layer{animation:none}
-}
+
 @media (max-width:560px){
-  .enter-logo-stack{
-    width:min(380px, 92vw);
-    height:min(250px, 62vw);
-  }
+  
   .enter-gate-logo{width:min(240px, 78vw)}
 }
-
-
-/* triangles experiment cancelled */
-.enter-logo-stack{display:none!important;pointer-events:none}
-
 
 /* Glass play button — transparent, shows thumbnail behind */
 .video-frame i,
@@ -2143,7 +1961,6 @@ body.gate-locked .cursor-ring{opacity:0 !important;visibility:hidden}
   box-shadow:0 0 0 1px rgba(255,255,255,.05) inset;
   transform:scale(1.06);
 }
-
 
 /* Work lightbox nav — glass side arrows (never stacked) */
 .media-lightbox .lightbox-prev,
@@ -2229,7 +2046,6 @@ body.gate-locked .cursor-ring{opacity:0 !important;visibility:hidden}
   }
 }
 
-
 /* ===== Glass arrows (safe: never override position/inset) ===== */
 .arrow{
   border:1px solid rgba(255,255,255,.32) !important;
@@ -2289,14 +2105,12 @@ body.gate-locked .cursor-ring{opacity:0 !important;visibility:hidden}
   .media-lightbox .lightbox-next{right:14px !important}
 }
 
-
 /* Gallery arrows always visible on touch / mobile */
 @media (hover:none), (max-width:900px){
   .slider .arrow{
     opacity:.9 !important;
   }
 }
-
 
 /* ===== Nav scroll framing: sections clear fixed header ===== */
 html{scroll-padding-top:100px}
@@ -2378,7 +2192,6 @@ section.social-strip{
   #beforeafter .ba-stage{aspect-ratio:3/4}
 }
 
-
 /* Section frames for nav landing (Services + BA) — natural under header */
 #services{
   scroll-margin-top:100px;
@@ -2411,7 +2224,6 @@ section.social-strip{
   }
 }
 
-
 /* About: natural bottom spacer */
 #about{
   scroll-margin-top:0;
@@ -2423,10 +2235,6 @@ section.social-strip{
 @media(max-width:560px){
   #about{padding-bottom:clamp(56px,10vh,90px)}
 }
-
-
-
-
 
 /* ===== Music orb: cyber gaming headset (neon space tech) ===== */
 .core{
@@ -2579,10 +2387,6 @@ section.social-strip{
   .core.is-playing .tm-phones{transform:none}
 }
 
-
-
-
-
 /* Soft ambient glow while music plays — purple + cyan, lighter */
 .core.is-playing .wave{
   border-width:1.5px;
@@ -2598,7 +2402,6 @@ section.social-strip{
   filter:drop-shadow(0 0 calc(8px + var(--beat,0)*12px) rgba(139,53,255,calc(.14 + var(--beat,0)*.16)))
          drop-shadow(0 0 calc(18px + var(--beat,0)*18px) rgba(22,216,255,calc(.08 + var(--beat,0)*.12)));
 }
-
 
 /* Light motion: orb headset micro-animations */
 @keyframes tmPhFloat{
@@ -2669,16 +2472,12 @@ section.social-strip{
   }
 }
 
-
 /* Remove inner spinning rings inside ear cups */
 .core .tm-phones .ph-ring{display:none !important;animation:none !important}
 
 @media(prefers-reduced-motion:reduce){
   .music-mini.show,.music-mini.is-live{animation:none !important;translate:0 0 !important;scale:1 !important;rotate:none !important}
 }
-
-
-
 
 /* ===== Natural section framing under fixed header ===== */
 html{scroll-padding-top:100px}
@@ -2769,7 +2568,6 @@ section.social-strip{
   margin-top:0;
 }
 
-
 /* =====================================================================
    2026-10-17 FIXES
    1) Services wheel: the card ABOVE the centre card (e.g. 12 Video Editing & Montage) used to wait
@@ -2803,7 +2601,6 @@ section.social-strip{margin-top:56px}
   }
   section.social-strip{margin-top:48px}
 }
-
 
 /* =====================================================================
    2026-10-17  HOME icon in the top bar (glass chip, same underline marker as the other links)
@@ -2915,7 +2712,6 @@ section.social-strip{margin-top:56px}
   height:36px;filter:blur(6px);
 }
 .gallery-card .slider.is-fit .dots{bottom:8px}
-
 
 /* =========================================================
    Cinematic lightbox portal (option C) — not used for BA

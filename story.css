@@ -17,9 +17,7 @@
 .enter-gate.st-ready .st-bar{opacity:0}
 .enter-gate.st-ready .st-mono{opacity:.2}
 /* button parts wait for the loader (no animation property touched -> no clash with existing gate animations) */
-.enter-gate.st-loading .enter-gate-cta,
-.enter-gate.st-loading .enter-click-cue,
-.enter-gate.st-loading .enter-touch-cue{visibility:hidden}
+.enter-gate.st-loading .enter-gate-cta {visibility:hidden}
 
 /* ---------- 2. TEXT SCRAMBLE (hero role words) ---------- */
 .role .st-w{display:inline-block;white-space:pre;text-align:start;font-variant-numeric:tabular-nums}
