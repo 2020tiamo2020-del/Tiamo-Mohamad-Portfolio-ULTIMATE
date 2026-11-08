@@ -25,3 +25,10 @@
   transition:none;
   will-change:translate,opacity;
 }
+
+/* gold sheen: the old timer-based run is switched off here; about-link.js adds .cert-met the moment the cards have met */
+#about.ab-link .cert::after,
+#about.ab-link .cert.cert-in::after{animation:none;transform:translateX(-125%)}
+#about.ab-link .cert.cert-met::after,
+#about.ab-link .cert.cert-in.cert-met::after{animation:certSheen 1.5s cubic-bezier(.22,1,.36,1) 0s 1 both}
+@media(prefers-reduced-motion:reduce){#about.ab-link .cert.cert-met::after,#about.ab-link .cert.cert-in.cert-met::after{animation:none}}

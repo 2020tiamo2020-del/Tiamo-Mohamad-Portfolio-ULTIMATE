@@ -310,6 +310,7 @@
       cx: () => (small() ? .5 : isAr() ? .3 : .7), cy: () => (small() ? .3 : .5), scale: () => (small() ? .27 : .4)
     });
     scenes.push(sc);
+    (window.__scFields = window.__scFields || {}).process = sc.field;   /* read by flow.js (06 > 07 > 08 hologram) */
   }));
 
   /* ------------------------------ BRIEF ------------------------------ */
@@ -366,7 +367,7 @@
     const small = () => isSmall();
     const sc = new Scene(sec, {
       hues: [265, 300, 300, 300, 300, 195],
-      field: () => ({ shapes: ["cloud", "ring", "ring", "ring", "ring", "cube"], count: small() ? 480 : 1000, cx: .74, cy: .5, scale: .46, size: 2.4, palette: PALS.std }),
+      field: () => ({ shapes: ["ring", "ring", "ring", "ring", "ring", "cube"], count: small() ? 480 : 1000, cx: .74, cy: .5, scale: .46, size: 2.4, palette: PALS.std }),
       cx: () => (small() ? .5 : isAr() ? .26 : .74), cy: () => (small() ? .3 : .5), scale: () => (small() ? .26 : .46),
       onFrame(s, now) {
         if (!tk) return;
@@ -394,6 +395,7 @@
       }
     });
     scenes.push(sc);
+    (window.__scFields = window.__scFields || {}).brief = sc.field;   /* read by flow.js */
 
     const render = () => {
       const l = L(), s = chosenSvc(), u = chosenUse(), text = idea.value.trim(), name = nm.value.trim();

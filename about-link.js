@@ -39,6 +39,14 @@ const target = () => {
   return ease(Math.max(leaving, arriving));
 };
 
+/* gold sheen on the certificate: plays only once the two cards have met and settled (and replays every time they meet again) */
+let met = false, metT = 0;
+const sheen = e => {
+  if (!on) return;
+  if (!met && e < 0.004) { met = true; clearTimeout(metT); metT = setTimeout(() => { if (met) cert.classList.add("cert-met"); }, 140); }
+  else if (met && e > 0.1) { met = false; clearTimeout(metT); cert.classList.remove("cert-met"); }
+};
+
 const apply = e => {
   const vw = innerWidth || 1;
   /* rest geometry = current rect minus what we already applied */
@@ -55,6 +63,7 @@ const apply = e => {
   sec.style.setProperty("--ab-cx", pxC.toFixed(2) + "px");
   sec.style.setProperty("--ab-po", fade.toFixed(3));
   sec.style.setProperty("--ab-co", fade.toFixed(3));
+  sheen(e);
 };
 
 const frame = now => {
@@ -79,7 +88,7 @@ const enable = () => {
 };
 const disable = () => {
   if (!on) return;
-  on = false; sec.classList.remove("ab-link");
+  on = false; sec.classList.remove("ab-link"); met = false; clearTimeout(metT); cert.classList.remove("cert-met");
   ["--ab-px", "--ab-cx", "--ab-po", "--ab-co"].forEach(p => sec.style.removeProperty(p));
   pxP = pxC = 0; cur = 0;
 };
