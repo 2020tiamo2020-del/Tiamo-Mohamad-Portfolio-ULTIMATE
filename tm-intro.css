@@ -151,7 +151,7 @@ html:not(.tm-orb-fallback) .core-hint { display: none !important; }
   -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent;
   animation: tmStoneLight 5.2s ease-in-out var(--dl, 0s) infinite;
 }
-.tm-stone-ar { font-family: "Reem Kufi", "Cairo", sans-serif; font-weight: 700; font-size: calc(31px * var(--ts, 1)); letter-spacing: 0; }
+.tm-stone-ar { font-family: "Hacen Qatar", "Reem Kufi", sans-serif; font-weight: 700; font-size: calc(31px * var(--ts, 1)); letter-spacing: 0; }
 @keyframes tmStoneDrift {
   0%   { transform: translate3d(0, 0, 0) rotateX(0) rotateY(0) rotateZ(0); }
   50%  { transform: translate3d(0, var(--ty, 2px), var(--tz, 10px)) rotateX(var(--rx, 12deg)) rotateY(var(--ry, -16deg)) rotateZ(var(--rz, 3deg)); }
