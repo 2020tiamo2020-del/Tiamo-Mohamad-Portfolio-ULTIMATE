@@ -2055,13 +2055,11 @@ updateScrollOrbit(true);
     });
 
     const onMove = e => {
-      if (e.pointerType === "touch" || e.touches) return;
       const t = e.touches ? e.touches[0] : e;
       mx = t.clientX; my = t.clientY;
       if (mode !== "gather") mode = "hover";
     };
     const onDown = e => {
-      if (e.pointerType === "touch" || e.touches) return;
       const t = e.touches ? e.touches[0] : e;
       if (!t) return;
       mx = t.clientX; my = t.clientY;
@@ -2098,7 +2096,9 @@ updateScrollOrbit(true);
     };
 
     gate.addEventListener("pointermove", onMove, { passive: true });
+    gate.addEventListener("touchmove", onMove, { passive: true });
     gate.addEventListener("pointerdown", onDown, { passive: true });
+    gate.addEventListener("touchstart", onDown, { passive: true });
 
     const draw = now => {
       if (!running) return;
@@ -2182,7 +2182,9 @@ updateScrollOrbit(true);
       running = false;
       cancelAnimationFrame(raf);
       gate.removeEventListener("pointermove", onMove);
+      gate.removeEventListener("touchmove", onMove);
       gate.removeEventListener("pointerdown", onDown);
+      gate.removeEventListener("touchstart", onDown);
     };
     addEventListener("resize", resize, { passive: true });
   }
