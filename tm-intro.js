@@ -147,7 +147,6 @@
     "   float zone=1.0-smoothstep(1.6,3.3,rr);",
     "   float zin=mix(1.0,0.62,smoothstep(1.1,1.9,rr));",
     "   vec2 lzp=(uv-uLzR.xy)/uLzR.zw; vec3 lz=texture2D(uLz,lzp).rgb;",
-    "   cm*=1.0-lz.b;",
     "   float cloud=mix(0.70+0.60*nz,0.86+0.28*nz,thin);",
     "   float lt=uLit*cm*zone*zin*cloud*(0.05+0.72*lv*flow+0.22*uBeat*(1.0-0.7*b)+0.10*bass*(1.0-b));",
     "   vec3 cc=mix(vec3(0.10,0.26,0.62),vec3(0.30,0.52,0.92),smoothstep(0.0,0.6,b));",
@@ -653,6 +652,7 @@
   const LZ_UV = { x: 698 / 1672, y: 350 / 941, w: 277 / 1672, h: 225 / 941 };
   let lzImg = null, lzIn = false, lzT0 = 0, lzV = 0, lzLast = 0;
   const drawLaser = (c, k, z, now) => {
+    return;   /* hover/enter laser glow disabled - the smoke should seep into the TM instead */
     if (!lzImg) { lzImg = new Image(); lzImg.decoding = "async"; lzImg.src = "images/tm-laser.webp?v=2"; }
     const dt = Math.min(80, lzLast ? now - lzLast : 16); lzLast = now;
     const x0 = zc[0] + (rect[0] + LZ_UV.x * rect[2] - zc[0]) * z, y0 = zc[1] + (rect[1] + LZ_UV.y * rect[3] - zc[1]) * z, w = LZ_UV.w * rect[2] * z, h = LZ_UV.h * rect[3] * z;
