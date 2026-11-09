@@ -104,6 +104,19 @@
     /* mist light between the rocks: pools in the grooves, clings to the cobbles */
     "  float stone=0.55+0.9*lumA;",
     "  col+=mc*m*cav*stone*uGlow*1.5;",
+    /* SMOKE: dark, dense, in clumps. The field is its density, the carved hollows are its container (stone stays clear).
+       No bright tint: it mostly darkens and tints the hollow deep blue. The laser + music light are added further down, so they are never veiled. */
+    "  float smD=smoothstep(0.04,0.55,fr);",
+    "  float smH=1.0-smoothstep(0.10,0.46,h);",
+    "  vec2 smW=q*0.016+vec2(t*0.045,-t*0.030)+nz*2.2;",
+    "  float smA=fbm(smW);",
+    "  float smB=fbm(q*0.034+vec2(-t*0.04,t*0.06)+smA*1.9);",
+    "  float smC=fbm(smW+vec2(0.17,-0.23));",
+    "  float smK=smoothstep(0.30,0.74,smA*0.58+smB*0.52);",
+    "  float smN=clamp(smD*smH*(0.35+0.95*smK),0.0,0.82);",
+    "  float smL=clamp(0.50+(smA-smC)*3.0,0.15,1.0);",
+    "  vec3 smCol=mix(vec3(0.012,0.032,0.10),vec3(0.12,0.26,0.52),clamp(smL*(0.30+0.70*smN),0.0,1.0));",
+    "  col=col*(1.0-0.34*smN)+smCol*smN*uGlow*0.95;",
     /* fog lit from below */
     "  vec2 gq=(q-uEmb-vec2(0.0,uRing*0.9))/vec2(uRing*2.7,uRing*1.4);",
     "  float under=exp(-dot(gq,gq)*1.4);",
@@ -301,6 +314,7 @@
   const fld = new Float32Array(GW * GH), fu8 = new Uint8Array(GW * GH);
   const condH = new Float32Array((GW - 1) * GH), condV = new Float32Array(GW * (GH - 1));
   let fldTex = null, fldBoot = false;
+  let hollowIdx = null, hollowRnd = null, hollowX = null, hollowY = null, discW = 0;      /* cells of the TM + the three thin rings (the carved hollows of the medallion) that the smoke fills */
   const buildField = () => {
     let hl = null;
     try {
@@ -311,8 +325,20 @@
       hl = new Float32Array(GW * GH);
       for (let i = 0; i < GW * GH; i++) hl[i] = d[i * 4] / 255;
     } catch (_) { hl = null; }
-    for (let y = 0; y < GH; y++) for (let x = 0; x < GW - 1; x++) condH[y * (GW - 1) + x] = hl ? Math.exp(-Math.abs(hl[y * GW + x] - hl[y * GW + x + 1]) * 7) : 0.8;
-    for (let y = 0; y < GH - 1; y++) for (let x = 0; x < GW; x++) condV[y * GW + x] = hl ? Math.exp(-Math.abs(hl[y * GW + x] - hl[(y + 1) * GW + x]) * 7) : 0.8;
+    const cnd = (a, b) => { const c = Math.exp(-Math.abs(a - b) * 7); return Math.max(a, b) < 0.30 ? Math.max(c, 0.93) : c; };   /* hollow -> hollow: smoke flows freely, stone steps still stop it */
+    for (let y = 0; y < GH; y++) for (let x = 0; x < GW - 1; x++) condH[y * (GW - 1) + x] = hl ? cnd(hl[y * GW + x], hl[y * GW + x + 1]) : 0.8;
+    for (let y = 0; y < GH - 1; y++) for (let x = 0; x < GW; x++) condV[y * GW + x] = hl ? cnd(hl[y * GW + x], hl[(y + 1) * GW + x]) : 0.8;
+    if (hl) {                                               /* collect the carved cells of the medallion (TM + thin rings) for the smoke */
+      const R0 = RING_D / 2, idx = [], rnd = [], hx = [], hy = [];
+      for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) {
+        const ix = (x + 0.5) / GW * IMG_W, iy = (y + 0.5) / GH * IMG_H;
+        if (hl[y * GW + x] < 0.24 && Math.hypot(ix - EMB_X, iy - EMB_Y) < R0 * 1.06) {
+          idx.push(y * GW + x); hx.push(ix); hy.push(iy);
+          const f = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453; rnd.push(0.45 + 0.55 * (f - Math.floor(f)));
+        }
+      }
+      hollowIdx = Int32Array.from(idx); hollowRnd = Float32Array.from(rnd); hollowX = Float32Array.from(hx); hollowY = Float32Array.from(hy);
+    }
     gl.activeTexture(gl.TEXTURE3);
     fldTex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, fldTex); setTexParams();
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
@@ -329,7 +355,29 @@
       const i = y * GW + x; const nv = fld[i] + amt * w; fld[i] = nv > 1.4 ? 1.4 : nv;
     }
   };
+  /* the smoke seeps into the carved TM + thin rings. It is a GRADIENT: every cell fills according to how close the pointer is to IT,
+     slowly (rise ~0.8 s), and it drains even slower, so a trail of thick smoke follows the pointer across the medallion and thins out behind it. */
+  const fillHollows = (dt, now) => {
+    if (!hollowIdx || mode !== "intro") return;
+    const R0 = RING_D / 2;
+    let gate = 0, pu = 0, pv = 0;
+    if (!entering && moved && px >= 0 && now - lastMove < 1600) {
+      const u = toUV(px, py); pu = u[0] * IMG_W; pv = u[1] * IMG_H;
+      gate = clamp((2.0 - Math.hypot(pu - EMB_X, pv - EMB_Y) / R0) / 0.7, 0, 1);       /* only when the pointer is on / near the medallion */
+    }
+    discW += (gate - discW) * (1 - Math.exp(-dt / (gate > discW ? 500 : 1500)));
+    const kUp = 1 - Math.exp(-dt / 800), tm = now * 0.00035, rr = R0 * 0.85;
+    for (let j = 0; j < hollowIdx.length; j++) {
+      const i = hollowIdx[j];
+      let prox = 0;
+      if (discW > 0.002) { const d = Math.hypot(hollowX[j] - pu, hollowY[j] - pv) / rr; prox = d < 1 ? (1 - d) * (1 - d) * (3 - 2 * (1 - d)) : 0; }   /* smooth falloff around the pointer */
+      const breathe = 0.82 + 0.18 * Math.sin(tm * 6.283 + hollowRnd[j] * 17.0);                                                              /* slow clumpy breathing */
+      let tgt = (0.07 + 0.78 * prox * discW + (entering ? 0.55 : 0)) * hollowRnd[j] * breathe;
+      if (fld[i] < tgt) fld[i] += (tgt - fld[i]) * kUp;
+    }
+  };
   const stepField = (dt) => {
+    fillHollows(dt, performance.now());
     const decay = Math.exp(-dt / (mode === "intro" ? 3200 : 2400));
     for (let i = 0; i < fld.length; i++) fld[i] *= decay;
     const subs = dt > 28 ? 4 : 2, K = 0.21;
