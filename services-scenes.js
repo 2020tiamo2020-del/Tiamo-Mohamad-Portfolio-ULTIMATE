@@ -3,7 +3,7 @@
    Styles live in services-scenes.css; services-stage.js mounts them inside each card
    and runs / freezes the animations (only the card in the middle plays).
    p = loop length (ms), f = the frame a card shows while it is NOT in the middle.
-   Pure HTML / CSS / SVG. No images required. (Scene 3 plays Cinematic/cinematic0.webm if it exists.)
+   Pure HTML / CSS / SVG. No images required. (Scene 3 plays VFX/rm2.webm if it exists.)
    ===================================================================== */
 (() => {
   "use strict";
@@ -32,7 +32,7 @@
     /* 3 · Reels & Ads — phone, story bars, floating hearts, view counter (plays a real reel when available) */
     { p: 8000, f: 2400, html: `
       <i class="blob b1"></i><i class="blob b2"></i>
-      <div class="ph"><i class="fx"></i><video muted loop playsinline preload="none" data-src="Cinematic/cinematic0.webm"></video>
+      <div class="ph"><i class="fx"></i><video muted loop playsinline preload="none" data-src="VFX/rm2.webm"></video>
         <div class="pg"><i></i><i></i><i></i></div><em class="vw"></em>
         <div class="rail">${heart}${chat}${send}</div>
         <div class="cp"><i class="av"></i><i class="l1"></i><i class="l2"></i></div>
