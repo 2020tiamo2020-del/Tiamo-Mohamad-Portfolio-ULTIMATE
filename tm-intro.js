@@ -58,7 +58,7 @@
     "uniform vec4 uLzR;",
     "uniform vec2 uRes,uZc,uTilt,uEmb;",
     "uniform vec4 uRect;",
-    "uniform float uZoom,uAmb,uInt,uTime,uAlphaMode,uOpacity,uRing,uMk,uGlow,uFlood,uPop,uBeat,uLit;",
+    "uniform float uZoom,uAmb,uInt,uTime,uAlphaMode,uOpacity,uRing,uMk,uGlow,uFlood,uPop,uBeat,uLit,uIntro;",
     "uniform vec4 uM[" + NMK + "];",
     "float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}",
     "float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);",
@@ -103,7 +103,8 @@
     "  col=ac*vec3(0.20,0.42,0.74)*uAmb;",
     /* mist light between the rocks: pools in the grooves, clings to the cobbles */
     "  float stone=0.55+0.9*lumA;",
-    "  col+=mc*m*cav*stone*uGlow*0.35;",
+    "  float lzb=texture2D(uLz,(uv-uLzR.xy)/uLzR.zw).b;",
+    "  col+=mc*m*cav*stone*uGlow*mix(1.5,0.35,uIntro)*(1.0-uIntro*lzb);",
     /* smoke: the field is its density, the carved hollows are its container; warped clumps + a cheap self-shadow give it volume; dark, it veils the stone */
     "  float sd=smoothstep(0.02,0.30,fr);",
     "  float hol=1.0-smoothstep(0.10,0.46,h);",
@@ -112,7 +113,7 @@
     "  float w2=fbm(q*0.031+vec2(-t*0.038,t*0.052)+w1*1.7);",
     "  float w3=fbm(sw+vec2(0.17,-0.23));",
     "  float clump=smoothstep(0.24,0.62,w1*0.56+w2*0.54+(w3-0.5)*0.30);",
-    "  float dens=smoothstep(0.06,0.80,sd*hol*(0.40+1.55*clump));",
+    "  float dens=smoothstep(0.06,0.80,sd*hol*(0.40+1.55*clump))*uIntro*(1.0-0.9*lzb);",
     "  float lit=clamp(0.60+(w1-w3)*4.6,0.15,1.35);",
     "  vec3 sc=mix(vec3(0.018,0.040,0.105),vec3(0.24,0.37,0.60),clamp(lit*(0.22+0.78*dens),0.0,1.0));",
     "  col=col*(1.0-0.58*dens)+sc*dens*uGlow*1.55;",
@@ -131,8 +132,11 @@
     "    vec2 dv=mp-q;float d=length(dv);",
     "    float cf=floor(mk.w),ph=fract(mk.w);float ci=mod(cf,10.0);float rad=step(9.5,cf);",
     "    float br=0.5+0.5*sin(t*(0.5+0.35*ph)+ph*40.0);",
+    "    float isW=1.0-step(0.5,abs(float(i)-5.0));",
     "    float near=texture2D(uFld,mk.xy).r;",
-    "    float k=(0.52+1.15*br*br+1.2*smoothstep(0.05,0.5,near))*uMk*(1.0+0.35*rad);",
+    "    float nw=max(max(texture2D(uFld,mk.xy+vec2(0.024,0.0)).r,texture2D(uFld,mk.xy-vec2(0.024,0.0)).r),max(texture2D(uFld,mk.xy+vec2(0.0,0.040)).r,texture2D(uFld,mk.xy-vec2(0.0,0.040)).r));",
+    "    near=max(near,nw*isW);",
+    "    float k=(0.52+1.15*br*br+1.2*smoothstep(0.05,0.5,near))*uMk*(1.0+0.35*rad)*(1.0+0.55*isW);",
     "    vec3 c=mkCol(ci);",
     "    float a=1.0-clamp(d/(r*3.2),0.0,1.0);a*=a;",
     "    vec3 ld=normalize(vec3(dv/(r*2.2),0.7));",
@@ -281,7 +285,7 @@
   };
   const initGL = () => {
     verify(prog); verify(pprog);
-    ["uAlb","uNor","uHei","uFld","uRes","uZc","uTilt","uEmb","uRect","uZoom","uAmb","uInt","uTime","uAlphaMode","uOpacity","uRing","uMk","uGlow","uFlood","uM","uSp","uCls","uLz","uLzR","uPop","uBeat","uLit"].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
+    ["uAlb","uNor","uHei","uFld","uRes","uZc","uTilt","uEmb","uRect","uZoom","uAmb","uInt","uTime","uAlphaMode","uOpacity","uRing","uMk","uGlow","uFlood","uM","uSp","uCls","uLz","uLzR","uPop","uBeat","uLit","uIntro"].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
     ["uRes","uZc","uTilt","uZoom","uTime","uDpr","uAlphaMode"].forEach((n) => { PU[n] = gl.getUniformLocation(pprog, n); });
     quad = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, quad);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
@@ -312,6 +316,7 @@
                      flat ground and grooves conduct, rock steps resist -> the glow follows the stone */
   const fld = new Float32Array(GW * GH), fu8 = new Uint8Array(GW * GH);
   const condH = new Float32Array((GW - 1) * GH), condV = new Float32Array(GW * (GH - 1));
+  const condHs = new Float32Array((GW - 1) * GH), condVs = new Float32Array(GW * (GH - 1));   /* intro smoke: hollow -> hollow flows freely */
   let fldTex = null, fldBoot = false;
   let hollowIdx = null, hollowRnd = null, hollowRad = null, discW = 0;   /* cells of the TM + the three thin rings (the carved hollows of the medallion) the smoke seeps into */
   const buildField = () => {
@@ -325,8 +330,8 @@
       for (let i = 0; i < GW * GH; i++) hl[i] = d[i * 4] / 255;
     } catch (_) { hl = null; }
     const cnd = (a, b) => { const c = Math.exp(-Math.abs(a - b) * 7); return Math.max(a, b) < 0.30 ? Math.max(c, 0.93) : c; };   /* hollow -> hollow: smoke drifts freely */
-    for (let y = 0; y < GH; y++) for (let x = 0; x < GW - 1; x++) condH[y * (GW - 1) + x] = hl ? cnd(hl[y * GW + x], hl[y * GW + x + 1]) : 0.8;
-    for (let y = 0; y < GH - 1; y++) for (let x = 0; x < GW; x++) condV[y * GW + x] = hl ? cnd(hl[y * GW + x], hl[(y + 1) * GW + x]) : 0.8;
+    for (let y = 0; y < GH; y++) for (let x = 0; x < GW - 1; x++) { condH[y * (GW - 1) + x] = hl ? Math.exp(-Math.abs(hl[y * GW + x] - hl[y * GW + x + 1]) * 7) : 0.8; condHs[y * (GW - 1) + x] = hl ? cnd(hl[y * GW + x], hl[y * GW + x + 1]) : 0.8; }
+    for (let y = 0; y < GH - 1; y++) for (let x = 0; x < GW; x++) { condV[y * GW + x] = hl ? Math.exp(-Math.abs(hl[y * GW + x] - hl[(y + 1) * GW + x]) * 7) : 0.8; condVs[y * GW + x] = hl ? cnd(hl[y * GW + x], hl[(y + 1) * GW + x]) : 0.8; }
     if (hl) {
       const R0 = RING_D / 2, idx = [], rnd = [], rad = [];
       for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) {
@@ -370,15 +375,15 @@
     fillHollows(dt);
     const decay = Math.exp(-dt / (mode === "intro" ? 3200 : 2400));
     for (let i = 0; i < fld.length; i++) fld[i] *= decay;
-    const subs = dt > 28 ? 4 : 2, K = 0.21;
+    const subs = dt > 28 ? 4 : 2, K = 0.21, cH = mode === "intro" ? condHs : condH, cV = mode === "intro" ? condVs : condV;
     for (let s = 0; s < subs; s++) {
       for (let y = 0; y < GH; y++) {
         const row = y * GW, crow = y * (GW - 1);
-        for (let x = 0; x < GW - 1; x++) { const f = (fld[row + x] - fld[row + x + 1]) * condH[crow + x] * K; fld[row + x] -= f; fld[row + x + 1] += f; }
+        for (let x = 0; x < GW - 1; x++) { const f = (fld[row + x] - fld[row + x + 1]) * cH[crow + x] * K; fld[row + x] -= f; fld[row + x + 1] += f; }
       }
       for (let y = 0; y < GH - 1; y++) {
         const row = y * GW;
-        for (let x = 0; x < GW; x++) { const f = (fld[row + x] - fld[row + GW + x]) * condV[row + x] * K; fld[row + x] -= f; fld[row + GW + x] += f; }
+        for (let x = 0; x < GW; x++) { const f = (fld[row + x] - fld[row + GW + x]) * cV[row + x] * K; fld[row + x] -= f; fld[row + GW + x] += f; }
       }
     }
     for (let i = 0; i < fld.length; i++) { const v = fld[i] * 255; fu8[i] = v > 255 ? 255 : v; }
@@ -413,7 +418,7 @@
     for (let i = 0; i < NMK; i++) {
       const m = GL[i];
       markers[i*4] = m ? m[0] : 0.5; markers[i*4+1] = m ? m[1] : 0.5;
-      markers[i*4+2] = m ? (m[2] >= 10 ? 0.15 : 0.14) : 0;                              /* radius in ring units (0 = off) */
+      markers[i*4+2] = m ? (i === 5 ? 0.17 : (m[2] >= 10 ? 0.15 : 0.14)) : 0;                              /* radius in ring units (0 = off) */
       markers[i*4+3] = m ? m[2] + 0.07 + ((i * 0.6180339) % 1) * 0.9 : 0;     /* colour index + breathing phase */
     }
   };
@@ -751,7 +756,7 @@
     gl.uniform4fv(U.uM, markers);
     gl.activeTexture(gl.TEXTURE4); gl.bindTexture(gl.TEXTURE_2D, spTex);
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 64, 1, gl.LUMINANCE, gl.UNSIGNED_BYTE, spBytes);
-    gl.uniform1i(U.uSp, 4); gl.uniform1f(U.uPop, popV); gl.uniform1f(U.uBeat, beatV); gl.uniform1f(U.uLit, litV);
+    gl.uniform1i(U.uSp, 4); gl.uniform1f(U.uPop, popV); gl.uniform1f(U.uBeat, beatV); gl.uniform1f(U.uLit, litV); gl.uniform1f(U.uIntro, mode === "intro" ? 1 : 0);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
     /* depth dust */
