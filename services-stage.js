@@ -235,26 +235,30 @@
       const z = -Math.min(a, 3) * DEPTH;
       const s = 1 - Math.min(a, 2.2) * 0.075 + Math.max(0, 1 - a) * 0.06;
       const fade = a > vis - 0.8 ? clamp((vis - a) / 0.8, 0, 1) : 1;
-      c.style.transform = `translate3d(${x.toFixed(1)}px,0,${z.toFixed(1)}px) rotateY(${ry.toFixed(2)}deg) scale(${s.toFixed(4)})`;
-      c.style.opacity = (fade * (i === 0 && me ? 1 : rv)).toFixed(3);
-      c.style.setProperty("--dim", (Math.min(a, 2.4) * 0.2).toFixed(3));
-      c.style.zIndex = String(100 - Math.round(a * 10));
+      const vT = `translate3d(${x.toFixed(1)}px,0,${z.toFixed(1)}px) rotateY(${ry.toFixed(2)}deg) scale(${s.toFixed(4)})`;
+      const vO = (fade * (i === 0 && me ? 1 : rv)).toFixed(3), vD = (Math.min(a, 2.4) * 0.2).toFixed(2), vZ = String(100 - Math.round(a * 10));
+      if (c._T !== vT) { c._T = vT; c.style.transform = vT; }
+      if (c._O !== vO) { c._O = vO; c.style.opacity = vO; }
+      if (c._D !== vD) { c._D = vD; c.style.setProperty("--dim", vD); }      /* a custom property forces a style recalc of the whole card subtree: only when it really changed */
+      if (c._Z !== vZ) { c._Z = vZ; c.style.zIndex = vZ; }
     }
     // hue follows the position between neighbouring cards
     const f = Math.floor(p), g = Math.min(N - 1, f + 1), t = p - f;
     let h0 = data[f].hue, h1 = data[g].hue;
     if (h1 - h0 > 180) h1 -= 360; else if (h0 - h1 > 180) h1 += 360;
-    root.style.setProperty("--hue", ((h0 + (h1 - h0) * t) % 360 + 360) % 360 + "");
+    const hv = String(Math.round((((h0 + (h1 - h0) * t) % 360 + 360) % 360) * 2) / 2);
+    if (root._H !== hv) { root._H = hv; root.style.setProperty("--hue", hv); }
     // giant headline slides sideways: one card = ~55% of the viewport, wraps seamlessly
     const m = ((p * innerWidth * 0.55) % Math.max(1, segW));
-    row.style.transform = `translate3d(${(reduce ? 0 : (-m + (1 - rv) * innerWidth * 0.3) * d).toFixed(1)}px,0,0)`;   // slides in as the card lands
-    text.style.opacity = (enter * rv * (1 - leave * 0.75)).toFixed(3);
-    glow.style.opacity = (0.15 + 0.85 * rv).toFixed(3); foot.style.opacity = rv.toFixed(3); kick.style.opacity = rv.toFixed(3);
+    const W = (el, prop, v) => { const k = "_" + prop; if (el[k] !== v) { el[k] = v; el.style[prop] = v; } };
+    W(row, "transform", `translate3d(${(reduce ? 0 : (-m + (1 - rv) * innerWidth * 0.3) * d).toFixed(1)}px,0,0)`);   // slides in as the card lands
+    W(text, "opacity", (enter * rv * (1 - leave * 0.75)).toFixed(3));
+    W(glow, "opacity", (0.15 + 0.85 * rv).toFixed(3)); W(foot, "opacity", rv.toFixed(3)); W(kick, "opacity", rv.toFixed(3));
     // group: parallax with the pointer + intro rise / outro dissolve
     const iy = (1 - enter) * innerHeight * 0.16 - leave * innerHeight * 0.05;
     const sc = (0.9 + 0.1 * enter) * (1 - leave * 0.06);
-    group.style.transform = `translate3d(0,${iy.toFixed(1)}px,0) scale(${sc.toFixed(4)}) rotateX(${(py * -3).toFixed(2)}deg) rotateY(${(px * 5).toFixed(2)}deg)`;
-    group.style.opacity = (enter * (1 - leave * 0.55)).toFixed(3);
+    W(group, "transform", `translate3d(0,${iy.toFixed(1)}px,0) scale(${sc.toFixed(4)}) rotateX(${(py * -3).toFixed(2)}deg) rotateY(${(px * 5).toFixed(2)}deg)`);
+    W(group, "opacity", (enter * (1 - leave * 0.55)).toFixed(3));
   }
   /* mini-scenes: every scene rests on its "poster" frame; only the card in the middle plays (from the start) */
   const artOf = c => c.querySelector(".sv-art");
