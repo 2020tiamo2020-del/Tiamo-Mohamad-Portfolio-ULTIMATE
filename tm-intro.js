@@ -40,7 +40,7 @@
 
   /* artwork geometry: 1600x900 source; the medallion's outer ring is 469 px wide and centred at (802,446) */
   const IMG_W = 1600, IMG_H = 900, RING_D = 469, EMB_X = 802, EMB_Y = 446;
-  const SRC = { alb: "images/intro-albedo.jpg?v=6", nor: "images/intro-normal.jpg?v=4", hei: "images/intro-height.jpg?v=6", cls: "images/intro-cavity.png?v=6", lz: "images/intro-laser.png?v=8" };
+  const SRC = { alb: "images/intro-albedo.jpg?v=6", nor: "images/intro-normal.jpg?v=4", hei: "images/intro-height.jpg?v=6", cls: "images/intro-cavity.png?v=6", lz: "images/intro-laser.png?v=7" };
   const INTRO_GLOWS = true;      /* false = the intro exactly as before (no coloured stone glows, no tiny dots) */
   const NMK = 12;
   const GW = 192, GH = 108;                      /* mist-field resolution */
@@ -104,18 +104,6 @@
     /* mist light between the rocks: pools in the grooves, clings to the cobbles */
     "  float stone=0.55+0.9*lumA;",
     "  col+=mc*m*cav*stone*uGlow*1.5;",
-    /* smoke: the field is its density, the hollows are its container; warped wisps + a cheap self-shadow give it volume, and it veils the stone */
-    "  float sd=smoothstep(0.03,0.42,fr);",
-    "  float hol=1.0-smoothstep(0.10,0.46,h);",
-    "  vec2 sw=q*0.016+vec2(t*0.055,-t*0.035)+nz*2.2;",
-    "  float w1=fbm(sw);",
-    "  float w2=fbm(q*0.036+vec2(-t*0.05,t*0.07)+w1*1.8);",
-    "  float w3=fbm(sw+vec2(0.17,-0.23));",
-    "  float wisp=smoothstep(0.22,0.80,w1*0.58+w2*0.52);",
-    "  float dens=clamp(sd*hol*(0.62+0.70*wisp),0.0,1.0);",
-    "  float lit=clamp(0.70+(w1-w3)*3.2,0.25,1.3);",
-    "  vec3 sc=mix(vec3(0.08,0.18,0.42),vec3(0.66,0.82,1.0),clamp(lit*(0.35+0.65*dens),0.0,1.0));",
-    "  col=col*(1.0-0.42*dens)+sc*dens*lit*uGlow*1.25;",
     /* fog lit from below */
     "  vec2 gq=(q-uEmb-vec2(0.0,uRing*0.9))/vec2(uRing*2.7,uRing*1.4);",
     "  float under=exp(-dot(gq,gq)*1.4);",
@@ -159,6 +147,7 @@
     "   float zone=1.0-smoothstep(1.6,3.3,rr);",
     "   float zin=mix(1.0,0.62,smoothstep(1.1,1.9,rr));",
     "   vec2 lzp=(uv-uLzR.xy)/uLzR.zw; vec3 lz=texture2D(uLz,lzp).rgb;",
+    "   cm*=1.0-lz.b;",
     "   float cloud=mix(0.70+0.60*nz,0.86+0.28*nz,thin);",
     "   float lt=uLit*cm*zone*zin*cloud*(0.05+0.72*lv*flow+0.22*uBeat*(1.0-0.7*b)+0.10*bass*(1.0-b));",
     "   vec3 cc=mix(vec3(0.10,0.26,0.62),vec3(0.30,0.52,0.92),smoothstep(0.0,0.6,b));",
@@ -312,7 +301,6 @@
   const fld = new Float32Array(GW * GH), fu8 = new Uint8Array(GW * GH);
   const condH = new Float32Array((GW - 1) * GH), condV = new Float32Array(GW * (GH - 1));
   let fldTex = null, fldBoot = false;
-  let hollowIdx = null, hollowRnd = null, discW = 0;      /* cells of the TM + the three thin rings (the carved hollows of the medallion) */
   const buildField = () => {
     let hl = null;
     try {
@@ -323,17 +311,8 @@
       hl = new Float32Array(GW * GH);
       for (let i = 0; i < GW * GH; i++) hl[i] = d[i * 4] / 255;
     } catch (_) { hl = null; }
-    const cnd = (a, b) => { const c = Math.exp(-Math.abs(a - b) * 7); return Math.max(a, b) < 0.30 ? Math.max(c, 0.95) : c; };   /* hollow -> hollow: smoke flows freely */
-    for (let y = 0; y < GH; y++) for (let x = 0; x < GW - 1; x++) condH[y * (GW - 1) + x] = hl ? cnd(hl[y * GW + x], hl[y * GW + x + 1]) : 0.8;
-    for (let y = 0; y < GH - 1; y++) for (let x = 0; x < GW; x++) condV[y * GW + x] = hl ? cnd(hl[y * GW + x], hl[(y + 1) * GW + x]) : 0.8;
-    if (hl) {
-      const R0 = RING_D / 2, idx = [], rnd = [];
-      for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) {
-        const ix = (x + 0.5) / GW * IMG_W, iy = (y + 0.5) / GH * IMG_H;
-        if (hl[y * GW + x] < 0.24 && Math.hypot(ix - EMB_X, iy - EMB_Y) < R0 * 1.06) { idx.push(y * GW + x); { const f = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453; rnd.push(0.55 + 0.45 * (f - Math.floor(f))); } }
-      }
-      hollowIdx = Int32Array.from(idx); hollowRnd = Float32Array.from(rnd);
-    }
+    for (let y = 0; y < GH; y++) for (let x = 0; x < GW - 1; x++) condH[y * (GW - 1) + x] = hl ? Math.exp(-Math.abs(hl[y * GW + x] - hl[y * GW + x + 1]) * 7) : 0.8;
+    for (let y = 0; y < GH - 1; y++) for (let x = 0; x < GW; x++) condV[y * GW + x] = hl ? Math.exp(-Math.abs(hl[y * GW + x] - hl[(y + 1) * GW + x]) * 7) : 0.8;
     gl.activeTexture(gl.TEXTURE3);
     fldTex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, fldTex); setTexParams();
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
@@ -350,17 +329,7 @@
       const i = y * GW + x; const nv = fld[i] + amt * w; fld[i] = nv > 1.4 ? 1.4 : nv;
     }
   };
-  const fillHollows = (dt, now) => {                       /* the smoke seeps into the carved TM and the thin rings and fills them completely */
-    if (!hollowIdx || mode !== "intro") return;
-    let want = 0.10;
-    if (entering) want = 1;
-    else if (moved && px >= 0) { const u = toUV(px, py); want = Math.max(want, clamp((1.8 - Math.hypot(u[0] * IMG_W - EMB_X, u[1] * IMG_H - EMB_Y) / (RING_D / 2)) / 0.8, 0, 1)); }
-    discW += (want - discW) * (1 - Math.exp(-dt / 650));
-    const tgt = 0.16 + 0.95 * discW, k = 1 - Math.exp(-dt / 380);
-    for (let j = 0; j < hollowIdx.length; j++) { const i = hollowIdx[j], tj = tgt * hollowRnd[j]; if (fld[i] < tj) fld[i] += (tj - fld[i]) * k; }
-  };
   const stepField = (dt) => {
-    fillHollows(dt, performance.now());
     const decay = Math.exp(-dt / (mode === "intro" ? 3200 : 2400));
     for (let i = 0; i < fld.length; i++) fld[i] *= decay;
     const subs = dt > 28 ? 4 : 2, K = 0.21;
@@ -684,7 +653,7 @@
   const LZ_UV = { x: 698 / 1672, y: 350 / 941, w: 277 / 1672, h: 225 / 941 };
   let lzImg = null, lzIn = false, lzT0 = 0, lzV = 0, lzLast = 0;
   const drawLaser = (c, k, z, now) => {
-    if (!lzImg) { lzImg = new Image(); lzImg.decoding = "async"; lzImg.src = "images/tm-laser.webp?v=3"; }
+    if (!lzImg) { lzImg = new Image(); lzImg.decoding = "async"; lzImg.src = "images/tm-laser.webp?v=2"; }
     const dt = Math.min(80, lzLast ? now - lzLast : 16); lzLast = now;
     const x0 = zc[0] + (rect[0] + LZ_UV.x * rect[2] - zc[0]) * z, y0 = zc[1] + (rect[1] + LZ_UV.y * rect[3] - zc[1]) * z, w = LZ_UV.w * rect[2] * z, h = LZ_UV.h * rect[3] * z;
     const inside = moved && px > x0 - w * 0.06 && px < x0 + w * 1.06 && py > y0 - h * 0.08 && py < y0 + h * 1.08;
