@@ -40,7 +40,7 @@
 
   /* artwork geometry: 1600x900 source; the medallion's outer ring is 469 px wide and centred at (802,446) */
   const IMG_W = 1600, IMG_H = 900, RING_D = 469, EMB_X = 802, EMB_Y = 446;
-  const SRC = { alb: "images/intro-albedo.jpg?v=6", nor: "images/intro-normal.jpg?v=4", hei: "images/intro-height.jpg?v=6", cls: "images/intro-cavity.png?v=6", lz: "images/intro-laser.png?v=7" };
+  const SRC = { alb: "images/intro-albedo.jpg?v=6", nor: "images/intro-normal.jpg?v=4", hei: "images/intro-height.jpg?v=6", cls: "images/intro-cavity.png?v=6", lz: "images/intro-laser.png?v=8" };
   const INTRO_GLOWS = true;      /* false = the intro exactly as before (no coloured stone glows, no tiny dots) */
   const NMK = 12;
   const GW = 192, GH = 108;                      /* mist-field resolution */
@@ -684,8 +684,7 @@
   const LZ_UV = { x: 698 / 1672, y: 350 / 941, w: 277 / 1672, h: 225 / 941 };
   let lzImg = null, lzIn = false, lzT0 = 0, lzV = 0, lzLast = 0;
   const drawLaser = (c, k, z, now) => {
-    return;   /* hover/enter laser glow disabled - the smoke should seep into the TM instead */
-    if (!lzImg) { lzImg = new Image(); lzImg.decoding = "async"; lzImg.src = "images/tm-laser.webp?v=2"; }
+    if (!lzImg) { lzImg = new Image(); lzImg.decoding = "async"; lzImg.src = "images/tm-laser.webp?v=3"; }
     const dt = Math.min(80, lzLast ? now - lzLast : 16); lzLast = now;
     const x0 = zc[0] + (rect[0] + LZ_UV.x * rect[2] - zc[0]) * z, y0 = zc[1] + (rect[1] + LZ_UV.y * rect[3] - zc[1]) * z, w = LZ_UV.w * rect[2] * z, h = LZ_UV.h * rect[3] * z;
     const inside = moved && px > x0 - w * 0.06 && px < x0 + w * 1.06 && py > y0 - h * 0.08 && py < y0 + h * 1.08;
