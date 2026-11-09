@@ -32,3 +32,38 @@
 #about.ab-link .cert.cert-met::after,
 #about.ab-link .cert.cert-in.cert-met::after{animation:certSheen 1.5s cubic-bezier(.22,1,.36,1) 0s 1 both}
 @media(prefers-reduced-motion:reduce){#about.ab-link .cert.cert-met::after,#about.ab-link .cert.cert-in.cert-met::after{animation:none}}
+
+
+/* ---------- gold sheen v2 (stronger, clearly gold, plus a soft edge glow) ---------- */
+#about .cert::after{
+  background:linear-gradient(105deg,
+    transparent 26%,
+    rgba(255,205,105,.10) 38%,
+    rgba(255,214,120,.34) 46%,
+    rgba(255,244,205,.70) 50%,
+    rgba(255,214,120,.34) 54%,
+    rgba(255,205,105,.10) 62%,
+    transparent 74%);
+  mix-blend-mode:screen;
+}
+@keyframes certSheenPro{
+  0%{transform:translateX(-135%);opacity:0}
+  14%{opacity:1}
+  86%{opacity:1}
+  100%{transform:translateX(135%);opacity:0}
+}
+@keyframes certEdgeGlow{
+  0%,100%{border-color:rgba(232,196,106,.13)}
+  45%{border-color:rgba(255,222,140,.85)}
+}
+@keyframes certBoxGlow{
+  0%,100%{box-shadow:0 0 0 1px rgba(255,255,255,.03) inset,0 20px 60px -30px rgba(139,53,255,.55)}
+  45%{box-shadow:0 0 0 1px rgba(255,222,140,.22) inset,0 20px 60px -30px rgba(139,53,255,.55),0 0 34px -6px rgba(255,200,90,.38)}
+}
+#about.ab-link .cert.cert-met::after,
+#about.ab-link .cert.cert-in.cert-met::after{animation:certSheenPro 2.1s cubic-bezier(.45,.05,.25,1) 0s 1 both}
+#about.ab-link .cert.cert-met::before{animation:certEdgeGlow 2.1s ease-in-out 0s 1 both}
+#about.ab-link .cert.cert-met{animation:certBoxGlow 2.1s ease-in-out 0s 1 both}
+@media(prefers-reduced-motion:reduce){
+  #about.ab-link .cert.cert-met::before,#about.ab-link .cert.cert-met{animation:none}
+}
