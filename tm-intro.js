@@ -105,17 +105,17 @@
     "  float stone=0.55+0.9*lumA;",
     "  col+=mc*m*cav*stone*uGlow*0.35;",
     /* smoke: the field is its density, the carved hollows are its container; warped clumps + a cheap self-shadow give it volume; dark, it veils the stone */
-    "  float sd=smoothstep(0.03,0.40,fr);",
+    "  float sd=smoothstep(0.02,0.30,fr);",
     "  float hol=1.0-smoothstep(0.10,0.46,h);",
     "  vec2 sw=q*0.014+vec2(t*0.040,-t*0.026)+nz*1.8;",
     "  float w1=fbm(sw);",
     "  float w2=fbm(q*0.031+vec2(-t*0.038,t*0.052)+w1*1.7);",
     "  float w3=fbm(sw+vec2(0.17,-0.23));",
-    "  float clump=smoothstep(0.30,0.74,w1*0.56+w2*0.54);",
-    "  float dens=clamp(sd*hol*(0.35+0.95*clump),0.0,1.0);",
-    "  float lit=clamp(0.62+(w1-w3)*3.0,0.20,1.20);",
-    "  vec3 sc=mix(vec3(0.025,0.055,0.13),vec3(0.16,0.25,0.42),clamp(lit*(0.30+0.70*dens),0.0,1.0));",
-    "  col=col*(1.0-0.38*dens)+sc*dens*uGlow*1.05;",
+    "  float clump=smoothstep(0.24,0.62,w1*0.56+w2*0.54+(w3-0.5)*0.30);",
+    "  float dens=smoothstep(0.06,0.80,sd*hol*(0.40+1.55*clump));",
+    "  float lit=clamp(0.60+(w1-w3)*4.6,0.15,1.35);",
+    "  vec3 sc=mix(vec3(0.018,0.040,0.105),vec3(0.24,0.37,0.60),clamp(lit*(0.22+0.78*dens),0.0,1.0));",
+    "  col=col*(1.0-0.58*dens)+sc*dens*uGlow*1.55;",
     /* fog lit from below */
     "  vec2 gq=(q-uEmb-vec2(0.0,uRing*0.9))/vec2(uRing*2.7,uRing*1.4);",
     "  float under=exp(-dot(gq,gq)*1.4);",
@@ -356,13 +356,13 @@
   };
   const fillHollows = (dt) => {                              /* the smoke seeps gradually into the carved TM and thin rings, centre first */
     if (!hollowIdx || mode !== "intro") return;
-    let want = 0.14;
+    let want = 0.30;
     if (entering) want = 1;
     else if (moved && px >= 0) { const u = toUV(px, py); want = Math.max(want, clamp((1.9 - Math.hypot(u[0] * IMG_W - EMB_X, u[1] * IMG_H - EMB_Y) / (RING_D / 2)) / 0.9, 0, 1)); }
     discW += (want - discW) * (1 - Math.exp(-dt / (want > discW ? 1500 : 2600)));
     const k = 1 - Math.exp(-dt / 520);
     for (let j = 0; j < hollowIdx.length; j++) {
-      const i = hollowIdx[j], open = clamp((discW - hollowRad[j] * 0.78) / 0.22, 0, 1), tj = (0.08 + 0.95 * open) * hollowRnd[j];
+      const i = hollowIdx[j], open = clamp((discW - hollowRad[j] * 0.78) / 0.22, 0, 1), tj = (0.20 + 1.10 * open) * hollowRnd[j];
       if (fld[i] < tj) fld[i] += (tj - fld[i]) * k;
     }
   };
@@ -645,7 +645,7 @@
     const cell = rect[2] / GW;                                      /* one field cell in screen px */
     const n = Math.max(1, Math.ceil(dist / (cell * 1.4)));          /* samples are spaced by distance, never by frame rate */
     const rad = mode === "intro" ? 8.5 : 7;
-    const per = mode === "intro" ? 0.095 : 0.07;
+    const per = mode === "intro" ? 0.13 : 0.07;
     for (let i = 1; i <= n; i++) { const u = toUV(lpx + dx * i / n, lpy + dy * i / n); dep(u[0], u[1], per, rad); }
     lpx = px; lpy = py;
   };
