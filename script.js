@@ -1915,11 +1915,16 @@ updateScrollOrbit(true);
   const GOATCOUNTER_CODE = "tiamo";
   if (!GOATCOUNTER_CODE) return;
 
-  const gc = document.createElement("script");
-  gc.async = true;
-  gc.dataset.goatcounter = "https://" + GOATCOUNTER_CODE + ".goatcounter.com/count";
-  gc.src = "https://gc.zgo.at/count.js";
-  document.head.appendChild(gc);
+  /* injected AFTER the page has finished loading: an ad-blocker / slow network on gc.zgo.at must not keep the browser tab spinning */
+  const loadGC = () => {
+    const gc = document.createElement("script");
+    gc.async = true;
+    gc.dataset.goatcounter = "https://" + GOATCOUNTER_CODE + ".goatcounter.com/count";
+    gc.src = "https://gc.zgo.at/count.js";
+    document.head.appendChild(gc);
+  };
+  if (document.readyState === "complete") setTimeout(loadGC, 2500);
+  else addEventListener("load", () => setTimeout(loadGC, 2500), { once: true });
 
   const label = href => {
     if (/wa\.me|whatsapp/i.test(href)) return "whatsapp";
