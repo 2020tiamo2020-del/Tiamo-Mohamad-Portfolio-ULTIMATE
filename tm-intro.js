@@ -719,31 +719,25 @@
   var atmo = null;   /* var + function declarations: hoisted, so layout() can call placeAtmos() safely at any time */
   function buildAtmos() {
     atmo = {};
-    /* one wrapper = the hero's box with all four edges feathered away, so nothing inside it can ever show a hard edge; the layers move inside it */
+    /* the floating shards live in one wrapper = the hero's box with all four edges feathered away, so they can never show a hard edge */
     const wrap = document.createElement("div"); wrap.className = "tmx-atmo"; wrap.setAttribute("aria-hidden", "true");
-    const mask = "linear-gradient(to right,transparent 0,rgba(0,0,0,.55) 8%,#000 20%,#000 80%,rgba(0,0,0,.55) 92%,transparent 100%),linear-gradient(to bottom,transparent 0,rgba(0,0,0,.55) 9%,#000 22%,#000 62%,rgba(0,0,0,.5) 82%,transparent 100%)";
+    const mask = "linear-gradient(to right,transparent 0,rgba(0,0,0,.35) 3.5%,rgba(0,0,0,.75) 7.5%,#000 12%,#000 88%,rgba(0,0,0,.75) 92.5%,rgba(0,0,0,.35) 96.5%,transparent 100%),linear-gradient(to bottom,transparent 0,rgba(0,0,0,.35) 3.5%,rgba(0,0,0,.75) 7.5%,#000 12%,#000 88%,rgba(0,0,0,.75) 92.5%,rgba(0,0,0,.35) 96.5%,transparent 100%)";
     wrap.style.cssText = "position:absolute;left:0;top:0;z-index:-1;pointer-events:none;overflow:hidden;mix-blend-mode:screen;-webkit-mask-image:" + mask + ";mask-image:" + mask + ";-webkit-mask-composite:source-in;mask-composite:intersect";
     heroEl.insertBefore(wrap, dust.nextSibling); atmo.wrap = wrap;
-    [["shards", "images/home-shards.webp?v=1"], ["shaft", "images/home-shaft.webp?v=1"]].forEach(([n, url]) => {
-      const el = document.createElement("div"); el.className = "tmx-" + n;
-      el.style.cssText = "position:absolute;opacity:0;background:center/cover no-repeat;will-change:opacity,transform" + (n === "shaft" ? ";transform-origin:50% 0;mix-blend-mode:screen" : ";left:-7%;top:-7%;width:114%;height:114%");
-      wrap.appendChild(el); atmo[n] = { el, k: 0, ok: false };
-      const im = new Image(); im.decoding = "async"; im.onload = () => { el.style.backgroundImage = "url(" + url + ")"; atmo[n].ok = true; }; im.src = url;
-    });
+    const url = "images/home-shards.webp?v=1", el = document.createElement("div");
+    el.className = "tmx-shards"; el.style.cssText = "position:absolute;left:-5%;top:-5%;width:110%;height:110%;opacity:0;background:center/cover no-repeat;will-change:opacity,transform";
+    wrap.appendChild(el); atmo.shards = { el, k: 0, ok: false };
+    const im = new Image(); im.decoding = "async"; im.onload = () => { el.style.backgroundImage = "url(" + url + ")"; atmo.shards.ok = true; }; im.src = url;
     placeAtmos();
   }
   function placeAtmos() {
     if (!atmo) return;
     atmo.wrap.style.width = W + "px"; atmo.wrap.style.height = H + "px";
-    const w = Math.max(R * 7.4, 380), h = w * 2 / 3, s = atmo.shaft.el.style;
-    s.width = w + "px"; s.height = h + "px"; s.left = (cx - w / 2) + "px"; s.top = (cy - R * 3.1) + "px";
   }
   function stepAtmos(now, dt) {
     if (!atmo) return;
-    for (const n of ["shaft", "shards"]) if (atmo[n].ok) atmo[n].k += (1 - atmo[n].k) * (1 - Math.exp(-dt / 1300));
+    if (atmo.shards.ok) atmo.shards.k += (1 - atmo.shards.k) * (1 - Math.exp(-dt / 1300));
     const mv = reduce ? 0 : 1;
-    atmo.shaft.el.style.opacity = (atmo.shaft.k * (0.5 + 0.07 * Math.sin(now / 2600) + 0.3 * dBass)).toFixed(3);
-    atmo.shaft.el.style.transform = "translate3d(" + (dPx * 10 * mv).toFixed(1) + "px,0,0) rotate(" + (Math.sin(now / 11000) * 0.8 * mv).toFixed(2) + "deg)";
     atmo.shards.el.style.opacity = (atmo.shards.k * (0.62 + 0.22 * dHi + 0.12 * dBass)).toFixed(3);
     atmo.shards.el.style.transform = "translate3d(" + (-dPx * 24 * mv + Math.sin(now / 7000) * 9 * mv).toFixed(1) + "px," + (-dPy * 15 * mv + Math.cos(now / 8300) * 6 * mv).toFixed(1) + "px,0)";
   }
