@@ -446,7 +446,7 @@
     const L = cx - BG.ex * S, T = cy - BG.ey * S;
     homeImg.style.setProperty("--hx0", (-L).toFixed(1) + "px"); homeImg.style.setProperty("--hx1", (W - L).toFixed(1) + "px");
     homeImg.style.setProperty("--hy0", (-T).toFixed(1) + "px"); homeImg.style.setProperty("--hy1", (H - T).toFixed(1) + "px");
-    placePlayer(S); placeDust();
+    placePlayer(S); placeDust(); placeAtmos();
   };
 
   /* ---------------------------------------------------------------- the player: a mechanical lock built from the picture itself
@@ -515,6 +515,7 @@
     dBass = sm(dBass, b, 90); dMid = sm(dMid, m, 140); dHi = sm(dHi, h, 70);
     dPx += (dPxT - dPx) * (1 - Math.exp(-dt / 400)); dPy += (dPyT - dPy) * (1 - Math.exp(-dt / 400));
     dYaw += dt * 0.00012 * (1 + 2.2 * dMid);
+    stepAtmos(now, dt);
     const c = dctx; c.setTransform(dDpr, 0, 0, dDpr, 0, 0); c.clearRect(0, 0, dW, dH);
     const tilt = 1.05 + dPy * 0.12, ct = Math.cos(tilt), st = Math.sin(tilt), yaw = dYaw * 0.0 + Math.sin(now / 9000) * 0.25 + dPx * 0.35, cy_ = Math.cos(yaw), sy_ = Math.sin(yaw);
     const D = R * 3.4, spin = dt * (0.2 + 1.6 * dMid + 0.6 * dBass) * 0.001;
@@ -713,11 +714,44 @@
     c.restore();
   };
 
+
+  /* ===== HOME atmosphere: a volumetric light shaft over the medallion + a layer of floating stone shards with mouse parallax (screen-blended images on black) ===== */
+  var atmo = null;   /* var + function declarations: hoisted, so layout() can call placeAtmos() safely at any time */
+  function buildAtmos() {
+    atmo = {};
+    [["shaft", "images/home-shaft.webp?v=1"], ["shards", "images/home-shards.webp?v=1"]].forEach(([n, url], j) => {
+      const el = document.createElement("div"); el.className = "tmx-" + n; el.setAttribute("aria-hidden", "true");
+      el.style.cssText = "position:absolute;z-index:-1;pointer-events:none;opacity:0;mix-blend-mode:screen;background:center/cover no-repeat;will-change:opacity,transform" + (n === "shaft" ? ";transform-origin:50% 0" : "");
+      heroEl.insertBefore(el, (j ? atmo.shaft.el : dust).nextSibling);
+      atmo[n] = { el, k: 0, ok: false };
+      const im = new Image(); im.decoding = "async"; im.onload = () => { el.style.backgroundImage = "url(" + url + ")"; atmo[n].ok = true; }; im.src = url;
+    });
+    placeAtmos();
+  }
+  function placeAtmos() {
+    if (!atmo) return;
+    const w = Math.max(R * 7.4, 380), h = w * 2 / 3, s = atmo.shaft.el.style;
+    s.width = w + "px"; s.height = h + "px"; s.left = (cx - w / 2) + "px"; s.top = (cy - R * 3.1) + "px";
+    const q = atmo.shards.el.style; q.left = "0"; q.top = "0"; q.width = W + "px"; q.height = H + "px";
+  }
+  function stepAtmos(now, dt) {
+    if (!atmo) return;
+    for (const n of ["shaft", "shards"]) if (atmo[n].ok) atmo[n].k += (1 - atmo[n].k) * (1 - Math.exp(-dt / 1300));
+    const mv = reduce ? 0 : 1;
+    atmo.shaft.el.style.opacity = (atmo.shaft.k * (0.5 + 0.07 * Math.sin(now / 2600) + 0.3 * dBass)).toFixed(3);
+    atmo.shaft.el.style.transform = "translate3d(" + (dPx * 10 * mv).toFixed(1) + "px,0,0) rotate(" + (Math.sin(now / 11000) * 0.8 * mv).toFixed(2) + "deg)";
+    atmo.shards.el.style.opacity = (atmo.shards.k * (0.62 + 0.22 * dHi + 0.12 * dBass)).toFixed(3);
+    atmo.shards.el.style.transform = "translate3d(" + (-dPx * 24 * mv + Math.sin(now / 7000) * 9 * mv).toFixed(1) + "px," + (-dPy * 15 * mv + Math.cos(now / 8300) * 6 * mv).toFixed(1) + "px,0) scale(1.1)";
+  }
+
   /* ===== CINEMATIC ENTRANCE: light dust that assembles the TM, a flash + speed rays when you enter, and a synthesized sound design ===== */
+  const DIVE = [];
+  const diveWarm = () => { if (DIVE.length) return; ["images/dive-tunnel.webp?v=1", "images/dive-surge.webp?v=1"].forEach((u) => { const i = new Image(); i.decoding = "async"; i.src = u; DIVE.push(i); }); };
+  const diveSoon = () => { const go = () => (window.requestIdleCallback ? requestIdleCallback(diveWarm, { timeout: 5000 }) : setTimeout(diveWarm, 2500)); if (document.readyState === "complete") go(); else addEventListener("load", go, { once: true }); };
   const PT = { ready: false, loading: false, t0: 0, n: 0 };
   const PT_TINT = ["175,215,255", "120,175,255", "238,246,255"];
   const ptInit = () => {
-    if (PT.ready || PT.loading || reduce) return; PT.loading = true;
+    if (PT.ready || PT.loading || reduce) return; PT.loading = true; diveSoon();
     const im = new Image(); im.decoding = "async";
     im.onload = () => {
       try {
@@ -779,8 +813,15 @@
       const ox = fx + vw * 0.3, oy = fy + vh * 0.3;
       const rays = document.createElement("div"), mask = "radial-gradient(circle at " + ox + "px " + oy + "px,transparent 7%,#000 52%)";
       rays.style.cssText = "position:absolute;inset:-30%;opacity:0;transform-origin:" + ox + "px " + oy + "px;background:repeating-conic-gradient(from 0deg at " + ox + "px " + oy + "px,rgba(170,210,255,0) 0deg 2.1deg,rgba(195,228,255,.24) 2.1deg 2.6deg,rgba(170,210,255,0) 2.6deg 5.3deg);-webkit-mask-image:" + mask + ";mask-image:" + mask;
+      /* the tunnel + the energy surge (screen-blended images on black), centred on the medallion */
+      const layer = (img, hx) => { const tw = Math.max(vw, vh * 1.5) * 1.25, th = tw * 2 / 3, e = document.createElement("div"); e.style.cssText = "position:absolute;opacity:0;width:" + tw + "px;height:" + th + "px;left:" + (fx - tw / 2) + "px;top:" + (fy - th * 0.48) + "px;transform-origin:50% 48%;background:url(" + img.src + ") center/100% 100% no-repeat;will-change:transform,opacity"; box.appendChild(e); return e; };
+      const okI = (i) => DIVE[i] && DIVE[i].complete && DIVE[i].naturalWidth > 0;
+      const tun = okI(0) ? layer(DIVE[0]) : null, sur = okI(1) ? layer(DIVE[1]) : null;
+      box.style.mixBlendMode = "screen";
       box.appendChild(rays); box.appendChild(glow); document.body.appendChild(box);
       const D = 3300;
+      if (tun) tun.animate([{ opacity: 0, transform: "scale(.45)", offset: 0 }, { opacity: 0, transform: "scale(.45)", offset: 0.26 }, { opacity: 0.95, transform: "scale(1)", offset: 0.46 }, { opacity: 0.7, transform: "scale(1.7)", offset: 0.6 }, { opacity: 0, transform: "scale(2.7)", offset: 0.8 }, { opacity: 0, transform: "scale(2.7)", offset: 1 }], { duration: D, easing: "ease-in", fill: "forwards" });
+      if (sur) sur.animate([{ opacity: 0, transform: "scale(.7)", offset: 0 }, { opacity: 0, transform: "scale(.7)", offset: 0.3 }, { opacity: 0.8, transform: "scale(1)", offset: 0.42 }, { opacity: 0.3, transform: "scale(1.15)", offset: 0.5 }, { opacity: 0.7, transform: "scale(1.45)", offset: 0.58 }, { opacity: 0, transform: "scale(2.1)", offset: 0.76 }, { opacity: 0, transform: "scale(2.1)", offset: 1 }], { duration: D, easing: "ease-out", fill: "forwards" });
       rays.animate([{ opacity: 0, transform: "scale(1)", offset: 0 }, { opacity: 0, transform: "scale(1.15)", offset: 0.14 }, { opacity: 0.85, transform: "scale(1.7)", offset: 0.4 }, { opacity: 0, transform: "scale(2.6)", offset: 0.64 }, { opacity: 0, transform: "scale(2.6)", offset: 1 }], { duration: D, easing: "ease-in", fill: "forwards" });
       glow.animate([{ opacity: 0, transform: "scale(.5)", offset: 0 }, { opacity: 0, transform: "scale(.5)", offset: 0.3 }, { opacity: 0.85, transform: "scale(1.1)", offset: 0.45 }, { opacity: 1, transform: "scale(1.6)", offset: 0.58 }, { opacity: 0.65, transform: "scale(1.9)", offset: 0.68 }, { opacity: 0, transform: "scale(2.2)", offset: 1 }], { duration: D, easing: "ease-out", fill: "forwards" });
       setTimeout(() => { try { box.remove(); } catch (_) {} }, D + 150);
@@ -1141,7 +1182,7 @@
         const bgImg = document.createElement("img"); bgImg.className = "tm-home-bg"; bgImg.alt = ""; bgImg.decoding = "async";
         bgImg.setAttribute("aria-hidden", "true"); bgImg.draggable = false; bgImg.src = "images/home-bg.webp?v=2"; homeImg.appendChild(bgImg);
         buildPlayer();
-        heroEl.insertBefore(homeImg, heroEl.firstChild); buildDust();
+        heroEl.insertBefore(homeImg, heroEl.firstChild); buildDust(); buildAtmos();
         /* pointer: hover = a gentle zoom / tilt of the player; click on the medallion = play / pause */
         const inside = (e) => { const r = heroEl.getBoundingClientRect(); const dx = e.clientX - r.left - cx, dy = e.clientY - r.top - cy; return { dx, dy, hit: Math.hypot(dx, dy) < R * 0.8 }; };
         heroEl.addEventListener("pointermove", (e) => {
