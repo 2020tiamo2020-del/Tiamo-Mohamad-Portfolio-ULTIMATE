@@ -817,11 +817,11 @@
       /* impact: a falling sub sine + a short low noise burst */
       const ib = ctx.createOscillator(), ig = ctx.createGain(); ib.type = "sine";
       ib.frequency.setValueAtTime(110, t + IMP); ib.frequency.exponentialRampToValueAtTime(30, t + IMP + 0.7);
-      env(ig, [[IMP - 0.005, 0.0001], [IMP + 0.012, 1.0], [IMP + 1.6, 0.0001]]);
+      env(ig, [[IMP - 0.005, 0.0001], [IMP + 0.012, 0.5], [IMP + 1.6, 0.0001]]);
       ib.connect(ig); ig.connect(out); ib.start(t + IMP - 0.01); ib.stop(t + IMP + 1.7);
       const bs = noise(), bf = ctx.createBiquadFilter(), bg = ctx.createGain(); bf.type = "lowpass";
       bf.frequency.setValueAtTime(1800, t + IMP); bf.frequency.exponentialRampToValueAtTime(200, t + IMP + 0.5);
-      env(bg, [[IMP - 0.005, 0.0001], [IMP + 0.01, 0.5], [IMP + 0.7, 0.0001]]);
+      env(bg, [[IMP - 0.005, 0.0001], [IMP + 0.01, 0.25], [IMP + 0.7, 0.0001]]);
       bs.connect(bf); bf.connect(bg); bg.connect(out); bs.start(t + IMP - 0.01); bs.stop(t + IMP + 0.8);
       /* air: a soft whisper that falls away after the hit */
       const ws = noise(), wf = ctx.createBiquadFilter(), wg = ctx.createGain(); wf.type = "bandpass"; wf.Q.value = 0.7;
