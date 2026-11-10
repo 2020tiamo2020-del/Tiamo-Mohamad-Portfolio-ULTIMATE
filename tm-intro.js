@@ -814,11 +814,7 @@
       rf.frequency.setValueAtTime(260, t); rf.frequency.exponentialRampToValueAtTime(4200, t + IMP);
       env(rg, [[0, 0.0001], [IMP * 0.98, 0.32], [IMP + 0.35, 0.0001]]);
       rs.connect(rf); rf.connect(rg); rg.connect(out); rs.start(t); rs.stop(t + IMP + 0.4);
-      /* impact: a falling sub sine + a short low noise burst */
-      const ib = ctx.createOscillator(), ig = ctx.createGain(); ib.type = "sine";
-      ib.frequency.setValueAtTime(110, t + IMP); ib.frequency.exponentialRampToValueAtTime(30, t + IMP + 0.7);
-      env(ig, [[IMP - 0.005, 0.0001], [IMP + 0.012, 0.5], [IMP + 1.6, 0.0001]]);
-      ib.connect(ig); ig.connect(out); ib.start(t + IMP - 0.01); ib.stop(t + IMP + 1.7);
+      /* impact: just a short low noise burst (the deep sub boom was removed) */
       const bs = noise(), bf = ctx.createBiquadFilter(), bg = ctx.createGain(); bf.type = "lowpass";
       bf.frequency.setValueAtTime(1800, t + IMP); bf.frequency.exponentialRampToValueAtTime(200, t + IMP + 0.5);
       env(bg, [[IMP - 0.005, 0.0001], [IMP + 0.01, 0.25], [IMP + 0.7, 0.0001]]);
