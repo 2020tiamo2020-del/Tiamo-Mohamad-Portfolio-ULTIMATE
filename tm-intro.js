@@ -623,6 +623,7 @@
       rect = [cx - EMB_X * S, cy - EMB_Y * S, IMG_W * S, IMG_H * S];
     }
     zc = [cx, cy];
+    fxIntroPlace();
     if (mode === "home") placeHomeImg();
     if (mode === "home" && !homeImg) { cv.style.setProperty("--tm-cx", cx.toFixed(1) + "px"); cv.style.setProperty("--tm-cy", cy.toFixed(1) + "px"); cv.style.setProperty("--tm-r", R.toFixed(1) + "px"); if (stoneEl) placeHint(); }
     cv.width = Math.max(2, Math.round(W * dpr)); cv.height = Math.max(2, Math.round(H * dpr));
@@ -716,40 +717,96 @@
 
 
   /* ===== HOME atmosphere: a volumetric light shaft over the medallion + a layer of floating stone shards with mouse parallax (screen-blended images on black) ===== */
+  /* ===== SCENE FX: tunnel rings + floating shards, anchored to the medallion (its centre and its radius R), so they sit on exactly the same place in the intro and in Home ===== */
+  const FXW = 1280, FXH = 853;
+  const FXS = {                                   /* per ring image: its core and its outer stone ring (ellipse radii), in image px */
+    "fx-intro-2": { cx: 640, cy: 412.5, rx: 398, ry: 371 },
+    "fx-intro-1": { cx: 639, cy: 415, rx: 405, ry: 372 },
+    "fx-home-4": { cx: 640, cy: 399, rx: 393, ry: 371 },
+    "fx-home-3": { cx: 641, cy: 400, rx: 392, ry: 371 }
+  };
+  const FX_OUT_X = 3.0, FX_OUT_Y = 2.0, FX_IN_X = 2.1, FX_IN_Y = 1.4;   /* outer stone arcs of the relief / a nearer ring, in units of R (the relief is an ellipse) */
+  const fxUrl = (n) => "images/" + n + ".webp?v=1";
+  const fxEl = (blend) => { const e = document.createElement("div"); e.setAttribute("aria-hidden", "true"); e.style.cssText = "position:absolute;opacity:0;pointer-events:none;background:no-repeat center/100% 100%;will-change:opacity,transform" + (blend ? ";mix-blend-mode:screen" : ""); return e; };
+  const fxLoad = (L, name) => { const im = new Image(); im.decoding = "async"; im.onload = () => { L.el.style.backgroundImage = "url(" + fxUrl(name) + ")"; L.ok = true; }; im.src = fxUrl(name); };
+  const fxRing = (name, kx, ky) => ({ el: fxEl(true), name, kx, ky, k: 0, ok: false });
+  const fxShards = () => ({ el: fxEl(false), k: 0, ok: false });
+  const fxAfterLoad = (f) => { if (document.readyState === "complete") f(); else addEventListener("load", f, { once: true }); };
+  const fxIdle = (f) => (window.requestIdleCallback ? requestIdleCallback(f, { timeout: 4000 }) : setTimeout(f, 1500));
+  /* the ring image is scaled so its outer ring lands on the ellipse (kx*R, ky*R) round the medallion; the middle (the medallion itself) is masked out so the logo is never lit */
+  const fxPlaceRing = (L, x0, y0, R0) => {
+    const sp = FXS[L.name], sx = L.kx * R0 / sp.rx, sy = L.ky * R0 / sp.ry, ax = sp.cx * sx, ay = sp.cy * sy, s = L.el.style;
+    s.width = (FXW * sx).toFixed(1) + "px"; s.height = (FXH * sy).toFixed(1) + "px"; s.left = (x0 - ax).toFixed(1) + "px"; s.top = (y0 - ay).toFixed(1) + "px"; s.transformOrigin = ax.toFixed(1) + "px " + ay.toFixed(1) + "px";
+    const m = "radial-gradient(ellipse " + (L.kx * R0).toFixed(1) + "px " + (L.ky * R0).toFixed(1) + "px at " + ax.toFixed(1) + "px " + ay.toFixed(1) + "px,transparent 0,transparent 34%,rgba(0,0,0,.5) 41%,#000 53%,#000 100%,rgba(0,0,0,.55) 128%,transparent 165%),linear-gradient(to bottom,transparent 0,#000 16%,#000 84%,transparent 100%),linear-gradient(to right,transparent 0,#000 10%,#000 90%,transparent 100%)";
+    s.webkitMaskImage = m; s.maskImage = m; s.webkitMaskComposite = "source-in"; s.maskComposite = "intersect";
+  };
+  const fxPlaceShards = (L, x0, y0, R0) => { const w = R0 * 8, h = w * 2 / 3, s = L.el.style; s.width = w.toFixed(1) + "px"; s.height = h.toFixed(1) + "px"; s.left = (x0 - w / 2).toFixed(1) + "px"; s.top = (y0 - h / 2).toFixed(1) + "px"; };
+  const fxEase = (L, dt) => { if (L.ok) L.k += (1 - L.k) * (1 - Math.exp(-dt / 1400)); };
+
+  /* ---- INTRO: image 2 (behind) and image 1 (in front), on the intro medallion; shards around ---- */
+  var fxI = null, fxLast = 0, fxNx = 0, fxNy = 0;
+  function fxIntroBuild() {
+    if (fxI || !cv.parentNode) return;
+    fxI = { rb: fxRing("fx-intro-2", FX_OUT_X, FX_OUT_Y), rf: fxRing("fx-intro-1", FX_IN_X, FX_IN_Y), sh: fxShards() };
+    let anchor = cv; [fxI.rb, fxI.rf, fxI.sh].forEach((L) => { anchor.after(L.el); anchor = L.el; });
+    fxIntroPlace();
+    fxAfterLoad(() => { fxLoad(fxI.rb, "fx-intro-2"); fxLoad(fxI.rf, "fx-intro-1"); fxLoad(fxI.sh, "fx-shards"); fxIdle(() => ["fx-home-4", "fx-home-3"].forEach((n) => { const i = new Image(); i.decoding = "async"; i.src = fxUrl(n); })); });
+  }
+  function fxIntroPlace() {
+    if (!fxI || mode !== "intro") return;
+    fxPlaceRing(fxI.rb, cx, cy, R); fxPlaceRing(fxI.rf, cx, cy, R); fxPlaceShards(fxI.sh, cx, cy, R);
+  }
+  function fxIntroStep(now) {
+    if (!fxI || mode !== "intro") return;
+    const dt = Math.min(100, fxLast ? now - fxLast : 16); fxLast = now;
+    [fxI.rb, fxI.rf, fxI.sh].forEach((L) => fxEase(L, dt));
+    const bt = entering ? (now - enterT) / 1000 : 0, boost = 1 + 0.9 * clamp(bt / 1.1, 0, 1), w = 0.72 + 0.55 * discW, mv = reduce ? 0 : 1;
+    fxI.rb.el.style.opacity = Math.min(1, fxI.rb.k * 0.55 * w * boost * (1 + 0.05 * Math.sin(now / 3100) * mv)).toFixed(3);
+    fxI.rf.el.style.opacity = Math.min(1, fxI.rf.k * 0.40 * w * boost * (1 + 0.07 * Math.sin(now / 2300 + 1) * mv)).toFixed(3);
+    fxI.sh.el.style.opacity = (fxI.sh.k * 0.85).toFixed(3);
+    const tx = moved && px >= 0 ? clamp((px - cx) / (W / 2), -1, 1) : 0, ty = moved && py >= 0 ? clamp((py - cy) / (H / 2), -1, 1) : 0;
+    fxNx += (tx - fxNx) * 0.06; fxNy += (ty - fxNy) * 0.06;
+    fxI.sh.el.style.transform = "translate3d(" + (-fxNx * 10 * mv).toFixed(1) + "px," + (-fxNy * 7 * mv).toFixed(1) + "px,0)";
+  }
+
+  /* ---- HOME: image 4 (behind) and image 3 (in front), on the Home medallion; the same shards; the whole group settles together with the picture ---- */
   var atmo = null;   /* var + function declarations: hoisted, so layout() can call placeAtmos() safely at any time */
   function buildAtmos() {
     atmo = {};
-    /* the floating shards live in one wrapper = the hero's box with all four edges feathered away, so they can never show a hard edge */
     const wrap = document.createElement("div"); wrap.className = "tmx-atmo"; wrap.setAttribute("aria-hidden", "true");
     const mask = "linear-gradient(to right,transparent 0,rgba(0,0,0,.35) 3.5%,rgba(0,0,0,.75) 7.5%,#000 12%,#000 88%,rgba(0,0,0,.75) 92.5%,rgba(0,0,0,.35) 96.5%,transparent 100%),linear-gradient(to bottom,transparent 0,rgba(0,0,0,.35) 3.5%,rgba(0,0,0,.75) 7.5%,#000 12%,#000 88%,rgba(0,0,0,.75) 92.5%,rgba(0,0,0,.35) 96.5%,transparent 100%)";
     wrap.style.cssText = "position:absolute;left:0;top:0;z-index:-1;pointer-events:none;overflow:hidden;mix-blend-mode:screen;-webkit-mask-image:" + mask + ";mask-image:" + mask + ";-webkit-mask-composite:source-in;mask-composite:intersect";
-    heroEl.insertBefore(wrap, dust.nextSibling); atmo.wrap = wrap;
-    const url = "images/home-shards.webp?v=1", el = document.createElement("div");
-    el.className = "tmx-shards"; el.style.cssText = "position:absolute;left:-5%;top:-5%;width:110%;height:110%;opacity:0;background:center/cover no-repeat;will-change:opacity,transform";
-    wrap.appendChild(el); atmo.shards = { el, k: 0, ok: false };
-    const im = new Image(); im.decoding = "async"; im.onload = () => { el.style.backgroundImage = "url(" + url + ")"; atmo.shards.ok = true; }; im.src = url;
+    const inner = document.createElement("div"); inner.style.cssText = "position:absolute;left:0;top:0;width:100%;height:100%"; wrap.appendChild(inner);
+    heroEl.insertBefore(wrap, dust.nextSibling);
+    atmo.wrap = wrap; atmo.inner = inner;
+    atmo.rb = fxRing("fx-home-4", FX_OUT_X, FX_OUT_Y); atmo.rf = fxRing("fx-home-3", FX_IN_X, FX_IN_Y); atmo.sh = fxShards();
+    [atmo.rb, atmo.rf, atmo.sh].forEach((L) => inner.appendChild(L.el));
+    fxLoad(atmo.rb, "fx-home-4"); fxLoad(atmo.rf, "fx-home-3"); fxLoad(atmo.sh, "fx-shards");
     placeAtmos();
+    /* the same "camera lands" settle as the picture, about the same point */
+    if (!reduce && inner.animate) inner.animate([{ transform: "scale(1.32)" }, { transform: "scale(1)" }], { duration: 3200, easing: "cubic-bezier(.16,1,.3,1)", fill: "backwards" });
   }
   function placeAtmos() {
     if (!atmo) return;
     atmo.wrap.style.width = W + "px"; atmo.wrap.style.height = H + "px";
+    atmo.inner.style.transformOrigin = cx.toFixed(1) + "px " + cy.toFixed(1) + "px";
+    fxPlaceRing(atmo.rb, cx, cy, R); fxPlaceRing(atmo.rf, cx, cy, R); fxPlaceShards(atmo.sh, cx, cy, R);
   }
   function stepAtmos(now, dt) {
     if (!atmo) return;
-    if (atmo.shards.ok) atmo.shards.k += (1 - atmo.shards.k) * (1 - Math.exp(-dt / 1300));
+    [atmo.rb, atmo.rf, atmo.sh].forEach((L) => fxEase(L, dt));
     const mv = reduce ? 0 : 1;
-    atmo.shards.el.style.opacity = (atmo.shards.k * (0.62 + 0.22 * dHi + 0.12 * dBass)).toFixed(3);
-    atmo.shards.el.style.transform = "translate3d(" + (-dPx * 24 * mv + Math.sin(now / 7000) * 9 * mv).toFixed(1) + "px," + (-dPy * 15 * mv + Math.cos(now / 8300) * 6 * mv).toFixed(1) + "px,0)";
+    atmo.rb.el.style.opacity = Math.min(1, atmo.rb.k * 0.36 * (1 + 0.35 * dBass) * (1 + 0.05 * Math.sin(now / 3100) * mv)).toFixed(3);
+    atmo.rf.el.style.opacity = Math.min(1, atmo.rf.k * 0.30 * (1 + 0.5 * dBass) * (1 + 0.07 * Math.sin(now / 2300 + 1) * mv)).toFixed(3);
+    atmo.sh.el.style.opacity = (atmo.sh.k * (0.62 + 0.22 * dHi + 0.12 * dBass)).toFixed(3);
+    atmo.sh.el.style.transform = "translate3d(" + (-dPx * 10 * mv).toFixed(1) + "px," + (-dPy * 7 * mv).toFixed(1) + "px,0)";
   }
 
   /* ===== CINEMATIC ENTRANCE: light dust that assembles the TM, a flash + speed rays when you enter, and a synthesized sound design ===== */
-  const DIVE = [];
-  const diveWarm = () => { if (DIVE.length) return; ["images/dive-tunnel.webp?v=1", "images/dive-surge.webp?v=1"].forEach((u) => { const i = new Image(); i.decoding = "async"; i.src = u; DIVE.push(i); }); };
-  const diveSoon = () => { const go = () => (window.requestIdleCallback ? requestIdleCallback(diveWarm, { timeout: 5000 }) : setTimeout(diveWarm, 2500)); if (document.readyState === "complete") go(); else addEventListener("load", go, { once: true }); };
   const PT = { ready: false, loading: false, t0: 0, n: 0 };
   const PT_TINT = ["175,215,255", "120,175,255", "238,246,255"];
   const ptInit = () => {
-    if (PT.ready || PT.loading || reduce) return; PT.loading = true; diveSoon();
+    if (PT.ready || PT.loading || reduce) return; PT.loading = true;
     const im = new Image(); im.decoding = "async";
     im.onload = () => {
       try {
@@ -811,15 +868,9 @@
       const ox = fx + vw * 0.3, oy = fy + vh * 0.3;
       const rays = document.createElement("div"), mask = "radial-gradient(circle at " + ox + "px " + oy + "px,transparent 7%,#000 52%)";
       rays.style.cssText = "position:absolute;inset:-30%;opacity:0;transform-origin:" + ox + "px " + oy + "px;background:repeating-conic-gradient(from 0deg at " + ox + "px " + oy + "px,rgba(170,210,255,0) 0deg 2.1deg,rgba(195,228,255,.24) 2.1deg 2.6deg,rgba(170,210,255,0) 2.6deg 5.3deg);-webkit-mask-image:" + mask + ";mask-image:" + mask;
-      /* the tunnel + the energy surge (screen-blended images on black), centred on the medallion */
-      const layer = (img, hx) => { const tw = Math.max(vw, vh * 1.5) * 1.25, th = tw * 2 / 3, e = document.createElement("div"); e.style.cssText = "position:absolute;opacity:0;width:" + tw + "px;height:" + th + "px;left:" + (fx - tw / 2) + "px;top:" + (fy - th * 0.48) + "px;transform-origin:50% 48%;background:url(" + img.src + ") center/100% 100% no-repeat;will-change:transform,opacity"; box.appendChild(e); return e; };
-      const okI = (i) => DIVE[i] && DIVE[i].complete && DIVE[i].naturalWidth > 0;
-      const tun = okI(0) ? layer(DIVE[0]) : null, sur = okI(1) ? layer(DIVE[1]) : null;
       box.style.mixBlendMode = "screen";
       box.appendChild(rays); box.appendChild(glow); document.body.appendChild(box);
       const D = 3300;
-      if (tun) tun.animate([{ opacity: 0, transform: "scale(.45)", offset: 0 }, { opacity: 0, transform: "scale(.45)", offset: 0.26 }, { opacity: 0.95, transform: "scale(1)", offset: 0.46 }, { opacity: 0.7, transform: "scale(1.7)", offset: 0.6 }, { opacity: 0, transform: "scale(2.7)", offset: 0.8 }, { opacity: 0, transform: "scale(2.7)", offset: 1 }], { duration: D, easing: "ease-in", fill: "forwards" });
-      if (sur) sur.animate([{ opacity: 0, transform: "scale(.7)", offset: 0 }, { opacity: 0, transform: "scale(.7)", offset: 0.3 }, { opacity: 0.8, transform: "scale(1)", offset: 0.42 }, { opacity: 0.3, transform: "scale(1.15)", offset: 0.5 }, { opacity: 0.7, transform: "scale(1.45)", offset: 0.58 }, { opacity: 0, transform: "scale(2.1)", offset: 0.76 }, { opacity: 0, transform: "scale(2.1)", offset: 1 }], { duration: D, easing: "ease-out", fill: "forwards" });
       rays.animate([{ opacity: 0, transform: "scale(1)", offset: 0 }, { opacity: 0, transform: "scale(1.15)", offset: 0.14 }, { opacity: 0.85, transform: "scale(1.7)", offset: 0.4 }, { opacity: 0, transform: "scale(2.6)", offset: 0.64 }, { opacity: 0, transform: "scale(2.6)", offset: 1 }], { duration: D, easing: "ease-in", fill: "forwards" });
       glow.animate([{ opacity: 0, transform: "scale(.5)", offset: 0 }, { opacity: 0, transform: "scale(.5)", offset: 0.3 }, { opacity: 0.85, transform: "scale(1.1)", offset: 0.45 }, { opacity: 1, transform: "scale(1.6)", offset: 0.58 }, { opacity: 0.65, transform: "scale(1.9)", offset: 0.68 }, { opacity: 0, transform: "scale(2.2)", offset: 1 }], { duration: D, easing: "ease-out", fill: "forwards" });
       setTimeout(() => { try { box.remove(); } catch (_) {} }, D + 150);
@@ -867,7 +918,7 @@
   };
   const drawDots = (sec, amt, now) => {
     if (!cv.parentNode) return;
-    ptInit();
+    ptInit(); fxIntroBuild(); fxIntroStep(now);
     if (!dotCv) { dotCv = document.createElement("canvas"); dotCv.style.cssText = "position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none"; cv.parentNode.appendChild(dotCv); dotCtx = dotCv.getContext("2d"); }
     if (dotCv.width !== cv.width || dotCv.height !== cv.height) { dotCv.width = cv.width; dotCv.height = cv.height; }
     const c = dotCtx, k = cv.width / Math.max(1, W), z = 1 + zoomV;
