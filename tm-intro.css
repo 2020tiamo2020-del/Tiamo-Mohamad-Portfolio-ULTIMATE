@@ -226,6 +226,5 @@ html[dir="rtl"] .tm-hero-cv { -webkit-mask-image: radial-gradient(ellipse 60% 66
 /* v11 · the gate is the English design for everybody (Arabic visitors get exactly the same type, spacing, loading and name animation) */
 #enterGate.tm-intro, #enterGate.tm-intro * { direction: ltr; }
 
-/* v12 · cinematic flight: the full-screen canvas that plays Enter -> portal -> tunnel -> flash -> landing (tm-intro.js, startFlight) */
-#tmFlight { position: fixed; left: 0; top: 0; width: 100%; height: 100%; z-index: 10002; pointer-events: none; opacity: 0; display: block; background: #05040a; }
-#tmFlight2 { position: fixed; left: 0; top: 0; width: 100%; height: 100%; z-index: 10003; pointer-events: none; display: block; }
+/* cinematic dive after "Enter" (drawn by the block at the end of tm-intro.js) */
+.tm-warp { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 10002; pointer-events: none; display: block; background: transparent; }
