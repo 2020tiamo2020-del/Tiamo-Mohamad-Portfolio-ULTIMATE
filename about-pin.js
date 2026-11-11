@@ -74,6 +74,8 @@
     const l = e.target.closest && e.target.closest('a[href="#about"],[data-target="about"],[data-go="about"]');
     if (!l || !on) return;
     e.preventDefault(); e.stopImmediatePropagation();
+    /* this listener swallows the click before script.js's nav handler runs, so the top-bar click sound (audio/nav.mp3) was never played for About: play it here (top bar + its dock only; nothing else changes) */
+    if (l.closest && l.closest("#nav,#tmDock")) { try { window.playNavSound && window.playNavSound(); } catch (_) {} }
     window.__frameAbout();
   }, true);
   if (!document.querySelector('link[href*="about-pin.css"]')) {
