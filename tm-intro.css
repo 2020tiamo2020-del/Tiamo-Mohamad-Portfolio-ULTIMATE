@@ -228,3 +228,4 @@ html[dir="rtl"] .tm-hero-cv { -webkit-mask-image: radial-gradient(ellipse 60% 66
 
 /* v12 · cinematic flight: the full-screen canvas that plays Enter -> portal -> tunnel -> flash -> landing (tm-intro.js, startFlight) */
 #tmFlight { position: fixed; left: 0; top: 0; width: 100%; height: 100%; z-index: 10002; pointer-events: none; opacity: 0; display: block; background: #05040a; }
+#tmFlight2 { position: fixed; left: 0; top: 0; width: 100%; height: 100%; z-index: 10003; pointer-events: none; display: block; }

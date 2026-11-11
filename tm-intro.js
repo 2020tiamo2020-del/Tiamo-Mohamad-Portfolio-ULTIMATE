@@ -992,12 +992,12 @@
      ========================================================================== */
   const FLIGHT_SOUND = true;                 /* synthesised whoosh / boom / thump (no audio files); false = silent flight */
   const FK = 2.7;                            /* portal outer ring = FK x medallion radius */
-  const FT = { open: 300, openEnd: 1100, rush: 300, flash: 2850, qStart: 2950, qDur: 1800, land: 3950, brake: 4200, hand: 2400, fire: 4200, fadeA: 4500, fadeB: 6000 };   /* ms after Enter */
+  const FT = { open: 300, openEnd: 1100, rush: 300, flash: 2850, qStart: 2950, qDur: 1800, land: 3950, brake: 4200, hand: 2400, burst: 4400, flash2: 4500, fire: 4450, fadeA: 4480, fadeB: 5400 };   /* ms after Enter */
   const PCAL = [[639.4, 421.3, 400], [640, 413.2, 397.5], [635.3, 404.2, 390], [634, 407.3, 390]];     /* per portal image: core x, core y, outer ring radius (px, 1280x853) */
   const ATLAS = [[787,5,66,78],[6,6,145,119],[166,6,118,119],[298,6,111,101],[423,6,123,85],[560,6,106,89],[680,6,93,90],[949,6,63,71],[863,7,72,62],[472,75,31,26],[171,138,69,60],[265,138,58,47],[342,138,67,56],[805,138,53,54],[6,139,67,66],[87,139,70,62],[422,139,46,42],[502,139,66,50],[582,139,55,59],[651,139,72,42],[737,139,57,51],[874,139,51,50],[939,139,55,48],[244,171,55,30],[446,186,52,15],[560,217,58,50],[501,218,50,40],[862,218,42,38],[6,219,51,51],[71,219,50,44],[135,219,42,50],[190,219,47,45],[251,219,51,40],[316,219,49,41],[379,219,45,45],[438,219,49,40],[624,219,44,42],[682,219,43,41],[739,219,41,43],[794,219,54,32],[918,220,46,33],[442,282,41,34],[6,283,40,39],[60,283,41,38],[115,283,48,31],[176,283,49,30],[239,283,36,40],[289,283,35,42],[338,283,38,36],[390,283,38,36]];
   const FL = { ok: false, done: false, imgs: [] };
   const loadFlight = () => {
-    const urls = ["images/fl-portal-1.webp?v=1", "images/fl-portal-2.webp?v=1", "images/fl-portal-3.webp?v=1", "images/fl-portal-4.webp?v=1", "images/fl-rocks.webp?v=1", "images/fl-atlas.webp?v=1"];
+    const urls = ["images/fl-portal-1.webp?v=1", "images/fl-portal-2.webp?v=1", "images/fl-portal-3.webp?v=1", "images/fl-portal-4.webp?v=1", "images/fl-rocks.webp?v=1", "images/fl-atlas.webp?v=1", "images/fl-burst.webp?v=1"];
     let left = urls.length, bad = false;
     const fin = () => { if (--left === 0) { FL.ok = !bad; FL.done = true; } };
     FL.imgs = urls.map((u) => { const im = new Image(); im.decoding = "async"; try { im.fetchPriority = "low"; } catch (_) {} im.onload = fin; im.onerror = () => { bad = true; fin(); }; im.src = u; return im; });
@@ -1043,19 +1043,23 @@
       n = noise(2.85, 1.2); f = c.createBiquadFilter(); g = c.createGain(); f.type = "lowpass"; f.frequency.setValueAtTime(5200, T0 + 2.85); f.frequency.exponentialRampToValueAtTime(140, T0 + 4.0); env(g, [[2.85, 0.9], [4.0, 0]]); n.connect(f); f.connect(g); g.connect(master);
       /* 4 · pulling out and braking: the whoosh falls away */
       n = noise(2.95, 1.5); f = c.createBiquadFilter(); g = c.createGain(); f.type = "bandpass"; f.Q.value = 0.9; f.frequency.setValueAtTime(2600, T0 + 2.95); f.frequency.exponentialRampToValueAtTime(160, T0 + 4.3); env(g, [[2.95, 0.45], [4.3, 0]]); n.connect(f); f.connect(g); g.connect(master);
+      /* 6 · the last flash: boom + the rocks tearing past */
+      o = c.createOscillator(); og = c.createGain(); o.type = "sine"; o.frequency.setValueAtTime(88, T0 + 4.5); o.frequency.exponentialRampToValueAtTime(30, T0 + 5.4); env(og, [[4.5, 0.9], [5.4, 0]]); o.connect(og); og.connect(master); o.start(T0 + 4.5); o.stop(T0 + 5.5);
+      n = noise(4.4, 1.2); f = c.createBiquadFilter(); g = c.createGain(); f.type = "bandpass"; f.Q.value = 0.8; f.frequency.setValueAtTime(500, T0 + 4.4); f.frequency.exponentialRampToValueAtTime(4200, T0 + 4.9); env(g, [[4.4, 0.05], [4.55, 0.8], [5.5, 0]]); n.connect(f); f.connect(g); g.connect(master);
       /* 5 · touchdown thump */
       o = c.createOscillator(); og = c.createGain(); o.type = "sine"; o.frequency.setValueAtTime(70, T0 + 3.95); o.frequency.exponentialRampToValueAtTime(34, T0 + 4.5); env(og, [[3.95, 0.85], [4.5, 0]]); o.connect(og); og.connect(master); o.start(T0 + 3.95); o.stop(T0 + 4.55);
     } catch (_) {}
   };
 
   const startFlight = () => {
-    let cvF = null, done = false, raf2 = 0;
+    let cvF = null, cvG = null, done = false, raf2 = 0;
     const stopKeys = ["wheel", "touchmove", "keydown"];
     const block = (e) => { if (e.type === "keydown" && !/^(Arrow|Page|Home|End| |Space)/.test(e.key)) return; e.preventDefault(); };
     const finish = () => {
       if (done) return; done = true; cancelAnimationFrame(raf2);
       stopKeys.forEach((k) => removeEventListener(k, block, { passive: false }));
       if (cvF && cvF.parentNode) cvF.parentNode.removeChild(cvF);
+      if (cvG && cvG.parentNode) cvG.parentNode.removeChild(cvG);
       window.__tmFlightDone = true;
     };
     try {
@@ -1063,10 +1067,13 @@
       const ctx = cvF.getContext("2d", { alpha: false });
       if (!ctx) return false;
       document.body.appendChild(cvF);
+      cvG = document.createElement("canvas"); cvG.id = "tmFlight2"; cvG.setAttribute("aria-hidden", "true");
+      const ctx2 = cvG.getContext("2d"); if (!ctx2) return false;
+      document.body.appendChild(cvG);
       stopKeys.forEach((k) => addEventListener(k, block, { passive: false }));
-      const Ci = { x: cx, y: cy, R: R }, im = FL.imgs, atlas = im[5];
+      const Ci = { x: cx, y: cy, R: R }, im = FL.imgs, atlas = im[5], burst = im[6];
       let Wf = 0, Hf = 0, dprF = 1;
-      const size = () => { Wf = innerWidth; Hf = innerHeight; dprF = Math.min(window.devicePixelRatio || 1, 1.25) * (Wf < 700 ? 0.9 : 1); cvF.width = Math.round(Wf * dprF); cvF.height = Math.round(Hf * dprF); };
+      const size = () => { Wf = innerWidth; Hf = innerHeight; dprF = Math.min(window.devicePixelRatio || 1, 1.25) * (Wf < 700 ? 0.9 : 1); cvF.width = Math.round(Wf * dprF); cvF.height = Math.round(Hf * dprF); cvG.width = cvF.width; cvG.height = cvF.height; };
       size(); addEventListener("resize", size, { passive: true });
       let rs = 11; const rr = () => (rs = (rs * 16807) % 2147483647) / 2147483647;
       const rocks = Array.from({ length: 54 }, () => { const big = rr() < 0.38; return { s: big ? Math.floor(rr() * 9) : Math.floor(rr() * ATLAS.length), th: rr() * 6.2832, a: 0.10 + Math.pow(rr(), 1.4) * 0.85, z0: rr() * ZR, a0: rr() * 6.2832, sp: (rr() - 0.5) * 1.4, br: 0.55 + rr() * 0.45 }; });
@@ -1099,10 +1106,10 @@
           const swA = 0.055 * Wf * smooth(500, 2500, t) * (t < FT.flash ? 1 : Math.exp(-(t - FT.flash) / 500));
           const Cx = lerp(Ci.x, hg.x, q) + swA * Math.sin(t / 1700 * 6.2832 + 0.4) * (1 - q), Cy = lerp(Ci.y, hg.y, q) + swA * 0.35 * Math.sin(t / 2300 * 6.2832 + 1.1) * (1 - q);
           /* shake (trauma model): grows with the charge, spikes at the flash and at touchdown */
-          let tr = (t < FT.flash ? 0.05 + 0.40 * smooth(500, 2800, t) : 0) + (t >= FT.flash ? Math.exp(-(t - FT.flash) / 380) : 0) + (t >= FT.land ? 0.6 * Math.exp(-(t - FT.land) / 260) : 0) + (t > FT.flash && t < FT.land ? 0.18 * (1 - smooth(FT.flash, FT.land, t)) : 0);
+          let tr = (t < FT.flash ? 0.05 + 0.40 * smooth(500, 2800, t) : 0) + (t >= FT.flash ? Math.exp(-(t - FT.flash) / 380) : 0) + (t >= FT.land ? 0.6 * Math.exp(-(t - FT.land) / 260) : 0) + (t >= FT.flash2 ? 0.75 * Math.exp(-(t - FT.flash2) / 300) : 0) + (t > FT.flash && t < FT.land ? 0.18 * (1 - smooth(FT.flash, FT.land, t)) : 0);
           tr = clamp(tr, 0, 1); const am = tr * tr * minD * 0.028;
           const roll = 0.045 * Math.sin(t / 2600 * 6.2832 + 0.7) * smooth(600, 2200, t) * (1 - smooth(FT.flash, FT.flash + 900, t)) + 0.34 * Math.sin(Math.PI * clamp((t - 300) / 3300, 0, 1)) + am * 0.0008 * nz(t, 3);
-          const punch = 1 + (t >= FT.flash ? 0.12 * Math.exp(-(t - FT.flash) / 190) : 0) - (t >= FT.land ? 0.03 * Math.exp(-(t - FT.land) / 240) : 0) + 0.006 * tr * Math.sin(t / 55);
+          const punch = 1 + (t >= FT.flash ? 0.12 * Math.exp(-(t - FT.flash) / 190) : 0) - (t >= FT.land ? 0.03 * Math.exp(-(t - FT.land) / 240) : 0) + (t >= FT.flash2 ? 0.07 * Math.exp(-(t - FT.flash2) / 220) : 0) + 0.006 * tr * Math.sin(t / 55);
 
           ctx.setTransform(dprF, 0, 0, dprF, 0, 0);
           ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1; ctx.fillStyle = "#05040a"; ctx.fillRect(0, 0, Wf, Hf);
@@ -1196,6 +1203,36 @@
             ctx.fillStyle = g; ctx.fillRect(-Wf, -Wf * 0.9, Wf * 2, Wf * 1.8); ctx.restore();
           }
           ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
+          /* ---- layer 2 (transparent canvas): THE LAST FLASH. The stone shell bursts: every rock sprays out past the camera, then the medallion is there ---- */
+          ctx2.setTransform(dprF, 0, 0, dprF, 0, 0); ctx2.clearRect(0, 0, Wf, Hf);
+          const F2 = t < FT.flash2 ? Math.pow(smooth(FT.flash2 - 140, FT.flash2, t), 2) : Math.exp(-(t - FT.flash2) / 260);
+          if (F2 > 0.01) {
+            ctx2.globalAlpha = Math.min(1, F2); ctx2.fillStyle = "rgb(205,228,255)"; ctx2.fillRect(0, 0, Wf, Hf);
+            ctx2.globalCompositeOperation = "lighter"; ctx2.save(); ctx2.translate(hg.x, hg.y); ctx2.scale(1, 0.035);
+            const g2 = ctx2.createRadialGradient(0, 0, 0, 0, 0, Wf * 0.9); g2.addColorStop(0, "rgba(170,210,255," + Math.min(1, F2).toFixed(3) + ")"); g2.addColorStop(1, "rgba(60,110,255,0)");
+            ctx2.globalAlpha = 1; ctx2.fillStyle = g2; ctx2.fillRect(-Wf, -Wf * 0.9, Wf * 2, Wf * 1.8); ctx2.restore(); ctx2.globalCompositeOperation = "source-over";
+          }
+          { const p = (t - FT.flash2) / 900; if (p > 0 && p < 1) { ctx2.globalCompositeOperation = "lighter"; const rgb = "170,205,255", r = Math.hypot(Wf, Hf) * 0.85 * easeOut(p), w = minD * 0.1, a2 = 0.7 * (1 - p) * (1 - p);
+            const g3 = ctx2.createRadialGradient(hg.x, hg.y, Math.max(0, r - w), hg.x, hg.y, r + w * 0.35); g3.addColorStop(0, "rgba(" + rgb + ",0)"); g3.addColorStop(0.75, "rgba(" + rgb + "," + a2.toFixed(3) + ")"); g3.addColorStop(1, "rgba(" + rgb + ",0)");
+            ctx2.globalAlpha = 1; ctx2.fillStyle = g3; ctx2.fillRect(0, 0, Wf, Hf); ctx2.globalCompositeOperation = "source-over"; } }
+          { const bp = (t - FT.burst) / 950;
+            if (bp > 0 && bp < 1) {
+              /* two depths of rocks (one mirrored + twisted) so they never fly in lock-step; each streaks with 3 ghost copies */
+              const bw = Math.max(Wf, Hf * 1.5) * 0.9, bh = bw * 1024 / 1536;
+              for (let L = 0; L < 2; L++) {
+                const q2 = clamp(bp - L * 0.07, 0, 1); if (q2 <= 0) continue;
+                const sc = (L ? 0.5 : 0.62) + (L ? 2.7 : 3.5) * Math.pow(q2, 1.75), al = smooth(0, 0.1, q2) * (1 - smooth(0.6, 1, q2));
+                if (al < 0.01) continue;
+                for (let k = 3; k >= 0; k--) {
+                  const s2 = sc * (1 - 0.06 * k), a3 = k ? al * (0.22 / k) : al;
+                  ctx2.save(); ctx2.translate(hg.x, hg.y); ctx2.rotate((L ? 0.38 : -0.05) + (L ? -0.18 : 0.12) * q2); ctx2.scale(L ? -s2 : s2, s2);
+                  ctx2.globalAlpha = a3; ctx2.drawImage(burst, -bw / 2, -bh / 2, bw, bh);
+                  if (!k) { ctx2.globalCompositeOperation = "lighter"; ctx2.globalAlpha = a3 * 0.45; ctx2.drawImage(burst, -bw / 2, -bh / 2, bw, bh); ctx2.globalCompositeOperation = "source-over"; }
+                  ctx2.restore();
+                }
+              }
+            } }
+          ctx2.globalAlpha = 1; ctx2.globalCompositeOperation = "source-over";
         } catch (err) { console.warn("[tm-intro] flight frame failed", err); finish(); }
       };
       raf2 = requestAnimationFrame(frame2);
