@@ -48,10 +48,11 @@
     i2: { src: "images/portal-intro-2.webp", w: 1536, h: 1024, cx: 767, cy: 495, r: DISC_R * FIT * 1.2 },
     h3: { src: "images/portal-home-3.webp",  w: 1536, h: 1024, cx: 766, cy: 480, r: DISC_R * FIT * 1.2 * 0.985 },
     h4: { src: "images/portal-home-4.webp",  w: 1280, h: 853,  cx: 639, cy: 399, r: DISC_R * FIT * 0.985 },
-    rk: { src: "images/portal-rocks.webp",   w: 1536, h: 1024 }
+    rk: { src: "images/portal-rocks-atlas.webp", w: 1024, h: 332 }
   };
-  /* single rocks cut out of picture 5 (x, y, w, h) */
-  const RK = [[291,606,158,131],[302,114,130,131],[1295,304,123,113],[1132,705,118,101],[1160,162,105,103],[296,899,135,97],[1432,149,74,88],[1158,532,84,75],[491,50,79,78],[547,684,75,83],[7,535,77,66],[256,346,67,71],[1363,226,64,65],[337,794,82,74],[470,839,78,62],[971,891,81,71],[80,533,67,63],[120,448,65,62],[181,685,87,64],[61,681,78,64],[706,904,84,54],[1244,650,67,60],[1075,918,55,54],[1116,108,62,51],[1441,99,61,53],[1056,27,62,56],[45,894,58,53],[73,46,58,57],[1293,723,55,53],[942,710,63,52],[1420,492,57,56],[1011,187,61,52],[1072,807,63,62],[11,638,53,55],[1288,483,66,44],[312,4,54,62],[542,225,52,51],[1020,955,54,50],[579,978,60,42],[105,631,47,53],[842,899,60,43],[134,184,50,48],[1015,259,50,48],[290,255,53,50],[1151,314,58,46],[791,96,53,45],[652,809,48,52]];
+  /* rock atlas (RGBA cut-outs of picture 5): x, y, w, h  — real alpha, so no dark box around a rock */
+  const ATL = [[0,0,158,131],[160,0,130,131],[292,0,123,113],[417,0,135,97],[554,0,118,101],[674,0,105,103],[781,0,74,88],[857,0,84,75],[943,0,75,83],[0,133,79,78],[81,133,82,74],[165,133,81,71],[248,133,87,64],[337,133,77,66],[416,133,78,64],[496,133,78,62],[576,133,67,71],[645,133,84,54],[731,133,67,63],[800,133,64,65],[866,133,65,62],[933,133,67,60],[0,213,63,62],[65,213,62,56],[129,213,54,62],[185,213,58,57],[245,213,63,52],[310,213,61,53],[373,213,57,56],[432,213,61,52],[495,213,62,51],[559,213,58,53],[619,213,55,54],[676,213,55,53],[733,213,53,55],[788,213,66,44],[856,213,54,50],[912,213,58,46],[0,277,52,51],[54,277,53,50],[109,277,60,43],[171,277,60,42],[233,277,48,52],[283,277,47,53],[332,277,50,48],[384,277,50,48],[436,277,53,45]];
+  const BIG = [0, 1, 2, 4, 5, 7, 8, 9, 10, 12, 15, 17], SMALL = [16, 20, 21, 23, 24, 26, 28, 29, 33, 34, 38, 39, 41, 42, 45, 46], EMB = [18, 27, 30, 40];
 
   /* the old random tunnel / surge pictures of the Enter flash are replaced by this scene */
   new MutationObserver((ms) => { for (const m of ms) for (const n of m.addedNodes) {
@@ -75,14 +76,7 @@
     for (const k in DEF) {
       const im = new Image(); im.decoding = "async";
       im.onload = () => {
-        if (k === "rk") {
-          A.spr = RK.map(([x, y, w, h]) => {
-            const c = document.createElement("canvas"); c.width = w; c.height = h; const g = c.getContext("2d");
-            g.drawImage(im, x, y, w, h, 0, 0, w, h); g.globalCompositeOperation = "destination-in";
-            g.translate(w / 2, h / 2); g.scale(w / 2, h / 2); const rg = g.createRadialGradient(0, 0, 0, 0, 0, 1);
-            rg.addColorStop(0, "#000"); rg.addColorStop(0.66, "#000"); rg.addColorStop(1, "transparent"); g.fillStyle = rg; g.fillRect(-1, -1, 2, 2);
-            return { c, w, h };
-          });
+        if (k === "rk") { A.atlas = im;
         } else A.tun[k] = feather(im);
         if (--n === 0) A.ok = true;
       };
@@ -104,7 +98,7 @@
   /* ---------------------------------------------------------------- the scene */
   const KP = 1.45;                           /* radial law of rocks / streaks: r = r0 * exp(KP * travel) */
   let cv = null, g = null, tn = null, tg = null, dpr = 1, VW = 0, VH = 0, enterT = 0, done = false, I = null, Hm = null;
-  let Ptab = null, Pend = 1, rocksA = null, rocksB = null, streaks = null;
+  let Ptab = null, Pend = 1, rocksA = null, rocksB = null, rocksS = null, streaks = null;
   const v = (e) => ramp(e, 200, 1300) * gone(e, 1900, 3350);                /* THE speed curve (0 -> 1 -> 0) */
   const buildTables = () => {
     Ptab = new Float32Array(END + 2); let p = 0;
@@ -113,9 +107,20 @@
   };
   const P = (e) => Ptab[clamp(Math.round(e), 0, END)];
   const buildActors = () => {
-    const r = rng(20261111), n = A.spr.length;
-    rocksA = Array.from({ length: 30 }, () => ({ s: A.spr[(r() * n) | 0], a: r() * 6.2832, l0: Math.log(0.22) + r() * 3.4, d: 0.7 + r() * 0.85, m: 0.65 + r() * 0.9, rot: r() * 6.2832, sp: (r() - 0.5) * 2.2 }));
-    rocksB = Array.from({ length: 22 }, () => ({ s: A.spr[(r() * n) | 0], a: r() * 6.2832, r1: 0.7 + r() * 2.9, d: 0.8 + r() * 0.8, m: 0.7 + r() * 0.9, rot: r() * 6.2832, sp: (r() - 0.5) * 1.6 }));
+    const r = rng(20261111), pick = (arr) => arr[(r() * arr.length) | 0];
+    /* A · chunks of the intro's stone rings: they sit where the rings are, and are blasted off when the shock wave reaches them */
+    rocksA = Array.from({ length: 20 }, () => {
+      const r0 = 1.3 + r() * 1.55, x = clamp((r0 - 0.95) / 6.5, 0, 0.999);
+      return { i: pick(BIG.concat(SMALL.slice(0, 5))), a: r() * 6.2832, r0, m: 1.0 + r() * 0.9, d: 0.75 + r() * 0.6, rot: r() * 6.2832, sp: (r() < 0.5 ? -1 : 1) * (1.4 + r() * 2.4), tw: 330 + 900 * (1 - Math.pow(1 - x, 1 / 3)) + r() * 50 };
+    });
+    /* S · debris that streams past the camera during the jump (small rocks + glowing embers) */
+    rocksS = Array.from({ length: 28 }, () => { const em = r() < 0.2; return { i: em ? pick(EMB) : pick(SMALL), em, a: r() * 6.2832, l0: Math.log(0.22) + r() * 3.4, d: 0.8 + r() * 0.9, m: 0.8 + r() * 0.8, rot: r() * 6.2832, sp: (r() - 0.5) * 3 }; });
+    /* B · they arrive around the home disc (right / top / bottom, never over the text), then the landing wave throws them off */
+    rocksB = []; while (rocksB.length < 14) {
+      const a = r() * 6.2832, r1 = 1.3 + r() * 1.2; if (Math.cos(a) < -0.3 && r1 > 1.7) continue;
+      const x = clamp((r1 - 0.9) / 6.2, 0, 0.999);
+      rocksB.push({ i: pick(BIG.concat(SMALL.slice(0, 4))), a, r1, m: 1.0 + r() * 0.9, d: 0.8 + r() * 0.6, rot: r() * 6.2832, sp: (r() < 0.5 ? -1 : 1) * (1.2 + r() * 2), tH: 3300 + 1050 * (1 - Math.pow(1 - x, 1 / 3)) + r() * 40 });
+    }
     streaks = Array.from({ length: 200 }, () => ({ a: r() * 6.2832, l0: Math.log(0.16) + r() * 3.5, w: 0.6 + r() * 1.5, len: 0.6 + r() * 1.2, hot: r() < 0.1 }));
   };
 
@@ -149,14 +154,20 @@
     g.strokeStyle = "rgba(170,215,255," + al.toFixed(3) + ")"; g.shadowColor = "rgba(70,140,255," + al.toFixed(3) + ")"; g.shadowBlur = 18;
     g.beginPath(); g.ellipse(cx, cy, r, r * 0.9, 0, 0, 6.2832); g.stroke(); g.restore();
   };
-  const rock = (sp, cx, cy, Rr, r, ang, rot, al, blur, dir) => {
+  const spr = (i, x, y, w, rot, al, comp) => {
+    const t = ATL[i], h = w * t[3] / t[2]; g.save(); g.globalAlpha = clamp(al, 0, 1); g.globalCompositeOperation = comp; g.translate(x, y); g.rotate(rot);
+    g.drawImage(A.atlas, t[0], t[1], t[2], t[3], -w / 2, -h / 2, w, h); g.restore();
+  };
+  /* a solid rock (real alpha) with motion blur along its flight line, an emissive glow when it is hit, and a pop */
+  const rock = (k, cx, cy, Rr, r, ang, rot, al, glow, pop, mv, jx, jy) => {
     if (al < 0.01 || r < 0.05 || r > 7.5) return;
-    const base = sp.s.w / 1536 * 7.4 * Rr * sp.m * 0.6, w = base * r, h = w * sp.s.h / sp.s.w;
-    const n = blur > 0.05 ? 1 + Math.min(4, Math.floor(blur * 5)) : 1;
-    for (let j = 0; j < n; j++) {
-      const rr = r * Math.exp(-dir * 0.11 * blur * j), x = cx + Math.cos(ang) * rr * Rr, y = cy + Math.sin(ang) * rr * Rr * 0.86, ww = base * rr, hh = ww * sp.s.h / sp.s.w;
-      g.save(); g.globalAlpha = clamp(al * (j ? 0.5 / n * 2 : 1) * (j ? 0.8 : 1), 0, 1); g.translate(x, y); g.rotate(rot); g.drawImage(sp.s.c, -ww / 2, -hh / 2, ww, hh); g.restore();
-    }
+    const base = ATL[k.i][2] / 1536 * 7.4 * Rr * k.m * 1.5, sc = (rr) => base * (0.6 + 0.4 * rr) * pop;
+    const pos = (rr) => [cx + Math.cos(ang) * rr * Rr + (jx || 0), cy + Math.sin(ang) * rr * Rr * 0.86 + (jy || 0)];
+    const comp = k.em ? "lighter" : "source-over", n = mv > 0.08 ? 1 + Math.min(4, Math.floor(mv * 5)) : 1;
+    if (mv > 0.12) { const p0 = pos(r * Math.exp(-0.2 * mv)), p1 = pos(r); g.save(); g.globalCompositeOperation = "lighter"; g.lineCap = "round"; g.strokeStyle = "rgba(150,200,255," + (0.35 * al * Math.min(1, mv)).toFixed(3) + ")"; g.lineWidth = Math.max(1.5, sc(r) * 0.12); g.beginPath(); g.moveTo(p0[0], p0[1]); g.lineTo(p1[0], p1[1]); g.stroke(); g.restore(); }
+    for (let j = n - 1; j >= 1; j--) { const rr = r * Math.exp(-0.1 * mv * j), p = pos(rr); spr(k.i, p[0], p[1], sc(rr), rot - j * 0.04, al * 0.32, comp); }
+    const p = pos(r); spr(k.i, p[0], p[1], sc(r), rot, al, comp);
+    if (glow > 0.02) spr(k.i, p[0], p[1], sc(r) * 1.1, rot, glow * 0.85, "lighter");
   };
 
   const frame = (now) => {
@@ -252,22 +263,28 @@
       g.restore();
     }
 
-    /* ---- rocks: each on its own depth; the whole field is already floating around the disc, then it is thrown past the camera ---- */
-    g.save(); g.globalCompositeOperation = "lighter";
+    /* ---- rocks: stone chunks of the intro rings are blasted by the wave, debris streams past, then the home rocks arrive and are hit by the landing wave ---- */
+    for (const k of rocksA) {
+      const u = e - k.tw, vis = smooth(k.tw - 120, k.tw + 40, e) * gone(e, 2100, 2800); if (vis < 0.01) continue;
+      const c = smooth(k.tw - 350, k.tw, e), dp = Math.max(0, P(e) - P(Math.max(0, k.tw)));
+      const r = u < 0 ? k.r0 : k.r0 * Math.exp(0.5 * easeOut(u / 280) + KP * k.d * dp);
+      const jx = u < 0 ? Math.sin(e * 0.2 + k.a * 9) * 2.4 * c : 0, jy = u < 0 ? Math.cos(e * 0.23 + k.a * 7) * 2.4 * c : 0;
+      const ox = e < 900 ? I.cx : cx, oy = e < 900 ? I.cy : cy, Rr = e < 900 ? I.R : Rref;
+      rock(k, ox, oy, Rr, r, k.a, k.rot + k.sp * (easeOut(Math.max(0, u) / 400) * 1.2 + dp * 3), vis * (1 - smooth(5.2, 7.4, r)), u > 0 ? Math.exp(-u / 320) : 0, 1 + (u < 0 ? 0.15 * c : 0.18 * Math.exp(-u / 140)), Math.max(sp * 0.9, u > 0 ? 0.9 * Math.exp(-u / 260) : 0), jx, jy);
+    }
     {
-      const lmin = Math.log(0.22), L = 3.55, inA = ramp(e, 0, 500) * gone(e, 2000, 2700);
-      for (const k of rocksA) {
+      const lmin = Math.log(0.22), L = 3.55, inS = ramp(e, 450, 900) * gone(e, 2000, 2700);
+      for (const k of rocksS) {
         const lr = lmin + ((k.l0 - lmin + KP * k.d * p) % L + L) % L, r = Math.exp(lr);
-        const al = inA * smooth(0.22, 0.55, r) * (1 - smooth(5.2, 7.2, r));
-        rock(k, cx, cy, Rref, r, k.a, k.rot + k.sp * p, 0.95 * al, sp, 1);
+        rock(k, cx, cy, Rref, r, k.a, k.rot + k.sp * p, inS * smooth(0.22, 0.55, r) * (1 - smooth(5.2, 7.2, r)), 0, 1, sp, 0, 0);
       }
-      const inB = ramp(e, 1650, 2300) * gone(e, 3700, 4550), ctr = Hm;
+      const inB = ramp(e, 1650, 2300);
       for (const k of rocksB) {
-        const r = k.r1 * Math.exp(-KP * k.d * q) * (1 + 0.06 * (hs - 1) * 0), al = inB * smooth(0.12, 0.4, r);
-        rock(k, ctr.cx, ctr.cy, Rb, r, k.a + 0.0, k.rot + k.sp * q, 0.95 * al, sp, 1);
+        const u = e - k.tH, r = u < 0 ? k.r1 * Math.exp(-KP * k.d * q * 0.9) : k.r1 * (1 + 0.6 * easeOut(u / 900));
+        const al = inB * smooth(0.12, 0.4, r) * (u > 0 ? gone(e, k.tH + 200, k.tH + 1000) : 1);
+        rock(k, Hm.cx, Hm.cy, Rb, r, k.a, k.rot + k.sp * q + (u > 0 ? k.sp * easeOut(u / 700) * 2 : 0), al, u > 0 ? Math.exp(-u / 280) : 0, 1 + (u > 0 ? 0.2 * Math.exp(-u / 130) : 0), Math.max(sp, u > 0 ? 0.8 * Math.exp(-u / 260) : 0), 0, 0);
       }
     }
-    g.restore();
 
     /* ---- the one flash (soft, once) hides the swap between the two tunnels; the landing gets a small one ---- */
     const fl = 0.36 * Math.exp(-Math.pow((e - 1950) / 170, 2)) + 0.28 * Math.exp(-Math.pow((e - 3340) / 120, 2)) + 0.3 * Math.exp(-Math.pow((e - 430) / 70, 2));
