@@ -719,37 +719,41 @@
   var atmo = null;   /* var + function declarations: hoisted, so layout() can call placeAtmos() safely at any time */
   function buildAtmos() {
     atmo = {};
-    /* the floating shards live in one wrapper = the hero's box with all four edges feathered away, so they can never show a hard edge */
+    /* one wrapper = the hero's box with all four edges feathered away, so nothing inside it can ever show a hard edge */
     const wrap = document.createElement("div"); wrap.className = "tmx-atmo"; wrap.setAttribute("aria-hidden", "true");
     const mask = "linear-gradient(to right,transparent 0,rgba(0,0,0,.35) 3.5%,rgba(0,0,0,.75) 7.5%,#000 12%,#000 88%,rgba(0,0,0,.75) 92.5%,rgba(0,0,0,.35) 96.5%,transparent 100%),linear-gradient(to bottom,transparent 0,rgba(0,0,0,.35) 3.5%,rgba(0,0,0,.75) 7.5%,#000 12%,#000 88%,rgba(0,0,0,.75) 92.5%,rgba(0,0,0,.35) 96.5%,transparent 100%)";
     wrap.style.cssText = "position:absolute;left:0;top:0;z-index:-1;pointer-events:none;overflow:hidden;mix-blend-mode:screen;-webkit-mask-image:" + mask + ";mask-image:" + mask + ";-webkit-mask-composite:source-in;mask-composite:intersect";
-    heroEl.insertBefore(wrap, dust.nextSibling); atmo.wrap = wrap;
+    const inner = document.createElement("div"); inner.style.cssText = "position:absolute;left:0;top:0;width:100%;height:100%"; wrap.appendChild(inner);
     const url = "images/home-shards.webp?v=1", el = document.createElement("div");
-    el.className = "tmx-shards"; el.style.cssText = "position:absolute;left:-5%;top:-5%;width:110%;height:110%;opacity:0;background:center/cover no-repeat;will-change:opacity,transform";
-    wrap.appendChild(el); atmo.shards = { el, k: 0, ok: false };
-    const im = new Image(); im.decoding = "async"; im.onload = () => { el.style.backgroundImage = "url(" + url + ")"; atmo.shards.ok = true; }; im.src = url;
+    el.className = "tmx-shards"; el.style.cssText = "position:absolute;opacity:0;background:center/100% 100% no-repeat;will-change:opacity,transform"; inner.appendChild(el);
+    heroEl.insertBefore(wrap, dust.nextSibling);
+    atmo.wrap = wrap; atmo.inner = inner; atmo.sh = { el, k: 0, ok: false };
+    const im = new Image(); im.decoding = "async"; im.onload = () => { el.style.backgroundImage = "url(" + url + ")"; atmo.sh.ok = true; }; im.src = url;
     placeAtmos();
+    /* the same "camera lands" settle as the picture, about the same point (the disc) */
+    if (!reduce && inner.animate) inner.animate([{ transform: "scale(1.32)" }, { transform: "scale(1)" }], { duration: 3200, easing: "cubic-bezier(.16,1,.3,1)", fill: "backwards" });
   }
   function placeAtmos() {
     if (!atmo) return;
     atmo.wrap.style.width = W + "px"; atmo.wrap.style.height = H + "px";
+    atmo.inner.style.transformOrigin = cx.toFixed(1) + "px " + cy.toFixed(1) + "px";
+    /* the shards image is centred on the disc and sized from its radius, so the rocks always sit around the same stone */
+    const w = R * 7.4, h = w * 2 / 3, s = atmo.sh.el.style;
+    s.width = w.toFixed(1) + "px"; s.height = h.toFixed(1) + "px"; s.left = (cx - w / 2).toFixed(1) + "px"; s.top = (cy - h / 2).toFixed(1) + "px";
   }
   function stepAtmos(now, dt) {
     if (!atmo) return;
-    if (atmo.shards.ok) atmo.shards.k += (1 - atmo.shards.k) * (1 - Math.exp(-dt / 1300));
+    if (atmo.sh.ok) atmo.sh.k += (1 - atmo.sh.k) * (1 - Math.exp(-dt / 1300));
     const mv = reduce ? 0 : 1;
-    atmo.shards.el.style.opacity = (atmo.shards.k * (0.62 + 0.22 * dHi + 0.12 * dBass)).toFixed(3);
-    atmo.shards.el.style.transform = "translate3d(" + (-dPx * 24 * mv + Math.sin(now / 7000) * 9 * mv).toFixed(1) + "px," + (-dPy * 15 * mv + Math.cos(now / 8300) * 6 * mv).toFixed(1) + "px,0)";
+    atmo.sh.el.style.opacity = (atmo.sh.k * (0.62 + 0.22 * dHi + 0.12 * dBass)).toFixed(3);
+    atmo.sh.el.style.transform = "translate3d(" + (-dPx * 10 * mv).toFixed(1) + "px," + (-dPy * 7 * mv).toFixed(1) + "px,0)";
   }
 
   /* ===== CINEMATIC ENTRANCE: light dust that assembles the TM, a flash + speed rays when you enter, and a synthesized sound design ===== */
-  const DIVE = [];
-  const diveWarm = () => { if (DIVE.length) return; ["images/dive-tunnel.webp?v=1", "images/dive-surge.webp?v=1"].forEach((u) => { const i = new Image(); i.decoding = "async"; i.src = u; DIVE.push(i); }); };
-  const diveSoon = () => { const go = () => (window.requestIdleCallback ? requestIdleCallback(diveWarm, { timeout: 5000 }) : setTimeout(diveWarm, 2500)); if (document.readyState === "complete") go(); else addEventListener("load", go, { once: true }); };
   const PT = { ready: false, loading: false, t0: 0, n: 0 };
   const PT_TINT = ["175,215,255", "120,175,255", "238,246,255"];
   const ptInit = () => {
-    if (PT.ready || PT.loading || reduce) return; PT.loading = true; diveSoon();
+    if (PT.ready || PT.loading || reduce) return; PT.loading = true;
     const im = new Image(); im.decoding = "async";
     im.onload = () => {
       try {
@@ -790,7 +794,11 @@
       let x = zc[0] + (mx - zc[0]) * z, y = zc[1] + (my - zc[1]) * z;
       const ang = PT.an[i] + off * 2.4, rr = PT.rr[i] * R * off * z;
       x += Math.cos(ang) * rr; y += Math.sin(ang) * rr;
-      if (bt > 0) { const dx = x - zc[0], dy = y - zc[1], dd = Math.hypot(dx, dy) || 1, push = bt * bt * R * 1.7 * z * (0.5 + PT.sp[i]); x += dx / dd * push; y += dy / dd * push; }
+      if (bt > 0) {
+        const e = 1 - Math.pow(1 - clamp(bt / 1.5, 0, 1), 3), hx = PT.hx === undefined ? zc[0] : PT.hx, hy = PT.hy === undefined ? zc[1] : PT.hy, f = 0.55 + 0.45 * PT.sp[i];
+        const dx = x - zc[0], dy = y - zc[1], dd = Math.hypot(dx, dy) || 1, push = bt * R * 0.6 * f;
+        x += (hx - zc[0]) * e * f + dx / dd * push; y += (hy - zc[1]) * e * f + dy / dd * push;
+      }
       const a = G * (p < 1 ? 0.3 + 0.7 * p : 0.62 + 0.38 * Math.sin(T * 2.4 + i)) * 0.9;
       if (PT.tn[i] !== last) { last = PT.tn[i]; c.fillStyle = "rgb(" + PT_TINT[last] + ")"; }
       const sz = PT.sz[i] * base * Math.pow(z, 0.6);
@@ -800,10 +808,20 @@
     c.restore();
   };
 
-  /* the flash + speed rays, centred on the medallion (plain DOM, removed when done) */
+  /* where the HOME disc will be, measured at the moment you press Enter (same formulas as layout()'s home branch) */
+  const homeGeom = () => {
+    const hero = document.querySelector(".hero"); if (!hero) return null;
+    const r = hero.getBoundingClientRect(), hw = Math.max(2, r.width), hh = Math.max(2, r.height), wide = innerWidth > 900;
+    const target = clamp(Math.min(hh * 0.62, hw * (wide ? 0.50 : 0.80)), 220, 640), rtl = document.documentElement.dir === "rtl" || isAr();
+    return { x: r.left + (wide ? hw * (rtl ? 0.32 : 0.68) : hw * 0.5), y: r.top + (wide ? hh * 0.5 : hh * 0.42), R: target / 2 };
+  };
+
+  /* the flash + speed rays: born on the intro disc, they travel with the jump and bloom ON the Home disc */
   const tmFlash = () => {
     try {
       const sr = stage.getBoundingClientRect(), fx = sr.left + cx, fy = sr.top + cy, vw = innerWidth, vh = innerHeight;
+      const hg = homeGeom() || { x: fx, y: fy }, dx = hg.x - fx, dy = hg.y - fy, tr = (p, sc) => "translate(" + (dx * p).toFixed(1) + "px," + (dy * p).toFixed(1) + "px) scale(" + sc + ")";
+      PT.hx = hg.x - sr.left; PT.hy = hg.y - sr.top;        /* the particles flow to the same point */
       const box = document.createElement("div"); box.setAttribute("aria-hidden", "true");
       box.style.cssText = "position:fixed;inset:0;z-index:10002;pointer-events:none;overflow:hidden";
       const glow = document.createElement("div");
@@ -811,17 +829,11 @@
       const ox = fx + vw * 0.3, oy = fy + vh * 0.3;
       const rays = document.createElement("div"), mask = "radial-gradient(circle at " + ox + "px " + oy + "px,transparent 7%,#000 52%)";
       rays.style.cssText = "position:absolute;inset:-30%;opacity:0;transform-origin:" + ox + "px " + oy + "px;background:repeating-conic-gradient(from 0deg at " + ox + "px " + oy + "px,rgba(170,210,255,0) 0deg 2.1deg,rgba(195,228,255,.24) 2.1deg 2.6deg,rgba(170,210,255,0) 2.6deg 5.3deg);-webkit-mask-image:" + mask + ";mask-image:" + mask;
-      /* the tunnel + the energy surge (screen-blended images on black), centred on the medallion */
-      const layer = (img, hx) => { const tw = Math.max(vw, vh * 1.5) * 1.25, th = tw * 2 / 3, e = document.createElement("div"); e.style.cssText = "position:absolute;opacity:0;width:" + tw + "px;height:" + th + "px;left:" + (fx - tw / 2) + "px;top:" + (fy - th * 0.48) + "px;transform-origin:50% 48%;background:url(" + img.src + ") center/100% 100% no-repeat;will-change:transform,opacity"; box.appendChild(e); return e; };
-      const okI = (i) => DIVE[i] && DIVE[i].complete && DIVE[i].naturalWidth > 0;
-      const tun = okI(0) ? layer(DIVE[0]) : null, sur = okI(1) ? layer(DIVE[1]) : null;
       box.style.mixBlendMode = "screen";
       box.appendChild(rays); box.appendChild(glow); document.body.appendChild(box);
       const D = 3300;
-      if (tun) tun.animate([{ opacity: 0, transform: "scale(.45)", offset: 0 }, { opacity: 0, transform: "scale(.45)", offset: 0.26 }, { opacity: 0.95, transform: "scale(1)", offset: 0.46 }, { opacity: 0.7, transform: "scale(1.7)", offset: 0.6 }, { opacity: 0, transform: "scale(2.7)", offset: 0.8 }, { opacity: 0, transform: "scale(2.7)", offset: 1 }], { duration: D, easing: "ease-in", fill: "forwards" });
-      if (sur) sur.animate([{ opacity: 0, transform: "scale(.7)", offset: 0 }, { opacity: 0, transform: "scale(.7)", offset: 0.3 }, { opacity: 0.8, transform: "scale(1)", offset: 0.42 }, { opacity: 0.3, transform: "scale(1.15)", offset: 0.5 }, { opacity: 0.7, transform: "scale(1.45)", offset: 0.58 }, { opacity: 0, transform: "scale(2.1)", offset: 0.76 }, { opacity: 0, transform: "scale(2.1)", offset: 1 }], { duration: D, easing: "ease-out", fill: "forwards" });
-      rays.animate([{ opacity: 0, transform: "scale(1)", offset: 0 }, { opacity: 0, transform: "scale(1.15)", offset: 0.14 }, { opacity: 0.85, transform: "scale(1.7)", offset: 0.4 }, { opacity: 0, transform: "scale(2.6)", offset: 0.64 }, { opacity: 0, transform: "scale(2.6)", offset: 1 }], { duration: D, easing: "ease-in", fill: "forwards" });
-      glow.animate([{ opacity: 0, transform: "scale(.5)", offset: 0 }, { opacity: 0, transform: "scale(.5)", offset: 0.3 }, { opacity: 0.85, transform: "scale(1.1)", offset: 0.45 }, { opacity: 1, transform: "scale(1.6)", offset: 0.58 }, { opacity: 0.65, transform: "scale(1.9)", offset: 0.68 }, { opacity: 0, transform: "scale(2.2)", offset: 1 }], { duration: D, easing: "ease-out", fill: "forwards" });
+      rays.animate([{ opacity: 0, transform: tr(0, 1), offset: 0 }, { opacity: 0, transform: tr(0, 1.15), offset: 0.14 }, { opacity: 0.85, transform: tr(0.75, 1.7), offset: 0.4 }, { opacity: 0, transform: tr(1, 2.6), offset: 0.64 }, { opacity: 0, transform: tr(1, 2.6), offset: 1 }], { duration: D, easing: "ease-in", fill: "forwards" });
+      glow.animate([{ opacity: 0, transform: tr(0, 0.5), offset: 0 }, { opacity: 0, transform: tr(0, 0.5), offset: 0.3 }, { opacity: 0.85, transform: tr(0.55, 1.1), offset: 0.45 }, { opacity: 1, transform: tr(1, 1.6), offset: 0.58 }, { opacity: 0.65, transform: tr(1, 1.9), offset: 0.68 }, { opacity: 0, transform: tr(1, 2.2), offset: 1 }], { duration: D, easing: "ease-out", fill: "forwards" });
       setTimeout(() => { try { box.remove(); } catch (_) {} }, D + 150);
     } catch (_) {}
   };
