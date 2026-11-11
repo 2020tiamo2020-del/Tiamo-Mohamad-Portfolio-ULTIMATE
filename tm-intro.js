@@ -446,7 +446,7 @@
     const L = cx - BG.ex * S, T = cy - BG.ey * S;
     homeImg.style.setProperty("--hx0", (-L).toFixed(1) + "px"); homeImg.style.setProperty("--hx1", (W - L).toFixed(1) + "px");
     homeImg.style.setProperty("--hy0", (-T).toFixed(1) + "px"); homeImg.style.setProperty("--hy1", (H - T).toFixed(1) + "px");
-    placePlayer(S); placeDust(); placeAtmos();
+    placePlayer(S); placeDust();
   };
 
   /* ---------------------------------------------------------------- the player: a mechanical lock built from the picture itself
@@ -515,7 +515,6 @@
     dBass = sm(dBass, b, 90); dMid = sm(dMid, m, 140); dHi = sm(dHi, h, 70);
     dPx += (dPxT - dPx) * (1 - Math.exp(-dt / 400)); dPy += (dPyT - dPy) * (1 - Math.exp(-dt / 400));
     dYaw += dt * 0.00012 * (1 + 2.2 * dMid);
-    stepAtmos(now, dt);
     const c = dctx; c.setTransform(dDpr, 0, 0, dDpr, 0, 0); c.clearRect(0, 0, dW, dH);
     const tilt = 1.05 + dPy * 0.12, ct = Math.cos(tilt), st = Math.sin(tilt), yaw = dYaw * 0.0 + Math.sin(now / 9000) * 0.25 + dPx * 0.35, cy_ = Math.cos(yaw), sy_ = Math.sin(yaw);
     const D = R * 3.4, spin = dt * (0.2 + 1.6 * dMid + 0.6 * dBass) * 0.001;
@@ -713,173 +712,8 @@
     c.shadowBlur = 0; c.globalAlpha = Math.min(1, 0.55 * I); c.drawImage(lzImg, x0, y0, w, h);
     c.restore();
   };
-
-
-  /* ===== HOME atmosphere: a volumetric light shaft over the medallion + a layer of floating stone shards with mouse parallax (screen-blended images on black) ===== */
-  var atmo = null;   /* var + function declarations: hoisted, so layout() can call placeAtmos() safely at any time */
-  function buildAtmos() {
-    atmo = {};
-    /* one wrapper = the hero's box with all four edges feathered away, so nothing inside it can ever show a hard edge */
-    const wrap = document.createElement("div"); wrap.className = "tmx-atmo"; wrap.setAttribute("aria-hidden", "true");
-    const mask = "linear-gradient(to right,transparent 0,rgba(0,0,0,.35) 3.5%,rgba(0,0,0,.75) 7.5%,#000 12%,#000 88%,rgba(0,0,0,.75) 92.5%,rgba(0,0,0,.35) 96.5%,transparent 100%),linear-gradient(to bottom,transparent 0,rgba(0,0,0,.35) 3.5%,rgba(0,0,0,.75) 7.5%,#000 12%,#000 88%,rgba(0,0,0,.75) 92.5%,rgba(0,0,0,.35) 96.5%,transparent 100%)";
-    wrap.style.cssText = "position:absolute;left:0;top:0;z-index:-1;pointer-events:none;overflow:hidden;mix-blend-mode:screen;-webkit-mask-image:" + mask + ";mask-image:" + mask + ";-webkit-mask-composite:source-in;mask-composite:intersect";
-    const inner = document.createElement("div"); inner.style.cssText = "position:absolute;left:0;top:0;width:100%;height:100%"; wrap.appendChild(inner);
-    const url = "images/home-shards.webp?v=1", el = document.createElement("div");
-    el.className = "tmx-shards"; el.style.cssText = "position:absolute;opacity:0;background:center/100% 100% no-repeat;will-change:opacity,transform"; inner.appendChild(el);
-    heroEl.insertBefore(wrap, dust.nextSibling);
-    atmo.wrap = wrap; atmo.inner = inner; atmo.sh = { el, k: 0, ok: false };
-    const im = new Image(); im.decoding = "async"; im.onload = () => { el.style.backgroundImage = "url(" + url + ")"; atmo.sh.ok = true; }; im.src = url;
-    placeAtmos();
-    /* the same "camera lands" settle as the picture, about the same point (the disc) */
-    if (!reduce && inner.animate) inner.animate([{ transform: "scale(1.32)" }, { transform: "scale(1)" }], { duration: 3200, easing: "cubic-bezier(.16,1,.3,1)", fill: "backwards" });
-  }
-  function placeAtmos() {
-    if (!atmo) return;
-    atmo.wrap.style.width = W + "px"; atmo.wrap.style.height = H + "px";
-    atmo.inner.style.transformOrigin = cx.toFixed(1) + "px " + cy.toFixed(1) + "px";
-    /* the shards image is centred on the disc and sized from its radius, so the rocks always sit around the same stone */
-    const w = R * 7.4, h = w * 2 / 3, s = atmo.sh.el.style;
-    s.width = w.toFixed(1) + "px"; s.height = h.toFixed(1) + "px"; s.left = (cx - w / 2).toFixed(1) + "px"; s.top = (cy - h / 2).toFixed(1) + "px";
-  }
-  function stepAtmos(now, dt) {
-    if (!atmo) return;
-    if (atmo.sh.ok) atmo.sh.k += (1 - atmo.sh.k) * (1 - Math.exp(-dt / 1300));
-    const mv = reduce ? 0 : 1;
-    atmo.sh.el.style.opacity = (atmo.sh.k * (0.62 + 0.22 * dHi + 0.12 * dBass)).toFixed(3);
-    atmo.sh.el.style.transform = "translate3d(" + (-dPx * 10 * mv).toFixed(1) + "px," + (-dPy * 7 * mv).toFixed(1) + "px,0)";
-  }
-
-  /* ===== CINEMATIC ENTRANCE: light dust that assembles the TM, a flash + speed rays when you enter, and a synthesized sound design ===== */
-  const PT = { ready: false, loading: false, t0: 0, n: 0 };
-  const PT_TINT = ["175,215,255", "120,175,255", "238,246,255"];
-  const ptInit = () => {
-    if (PT.ready || PT.loading || reduce) return; PT.loading = true;
-    const im = new Image(); im.decoding = "async";
-    im.onload = () => {
-      try {
-        const cw = 265, ch = 215, cvs = document.createElement("canvas"); cvs.width = cw; cvs.height = ch;
-        const x = cvs.getContext("2d", { willReadFrequently: true }); x.drawImage(im, 0, 0, cw, ch);
-        const d = x.getImageData(0, 0, cw, ch).data, edge = [], body = [];
-        for (let j = 0; j < ch; j++) for (let i = 0; i < cw; i++) { const o = (j * cw + i) * 4; if (d[o] > 90) edge.push(j * cw + i); else if (d[o + 2] > 150) body.push(j * cw + i); }
-        if (edge.length < 40 || body.length < 40) return;
-        const N = W < 700 ? 480 : 1200, nE = Math.round(N * 0.6);
-        PT.tx = new Float32Array(N); PT.ty = new Float32Array(N); PT.an = new Float32Array(N); PT.rr = new Float32Array(N);
-        PT.dl = new Float32Array(N); PT.du = new Float32Array(N); PT.sz = new Float32Array(N); PT.sp = new Float32Array(N); PT.tn = new Uint8Array(N);
-        for (let i = 0; i < N; i++) {
-          const src = i < nE ? edge : body, c0 = src[(Math.random() * src.length) | 0];
-          PT.tx[i] = ((c0 % cw) + Math.random()) / cw; PT.ty[i] = (((c0 / cw) | 0) + Math.random()) / ch;
-          PT.an[i] = Math.random() * 6.2832; PT.rr[i] = 0.45 + Math.random() * 1.1;
-          PT.dl[i] = Math.random() * 1.1; PT.du[i] = 1.5 + Math.random() * 0.9;
-          PT.sz[i] = 0.55 + Math.random() * 0.75; PT.sp[i] = Math.random(); PT.tn[i] = Math.floor(i * 3 / N);
-        }
-        PT.n = N; PT.ready = true;
-      } catch (_) {}
-    };
-    im.src = "images/intro-laser.png";
-  };
-  const drawParticles = (c, k, z, now) => {
-    if (!PT.ready) return;
-    if (!PT.t0) PT.t0 = now;
-    const T = (now - PT.t0) / 1000, bt = entering ? (now - enterT) / 1000 : 0;
-    let G = T < 3.4 ? 1 : Math.max(0.08, 1 - (T - 3.4) / 2.2);
-    if (entering) G = Math.max(G, 0.9) * (1 - clamp(bt / 1.5, 0, 1));
-    if (G < 0.01) return;
-    const base = clamp(R / 250, 0.7, 1.7), n = PT.n;
-    c.save(); c.globalCompositeOperation = "lighter";
-    let last = -1;
-    for (let i = 0; i < n; i++) {
-      const p = clamp((T - PT.dl[i]) / PT.du[i], 0, 1); if (p <= 0) continue;
-      const off = Math.pow(1 - p, 3);
-      const mx = rect[0] + (670 + PT.tx[i] * 265) / 1600 * rect[2], my = rect[1] + (335 + PT.ty[i] * 215) / 900 * rect[3];
-      let x = zc[0] + (mx - zc[0]) * z, y = zc[1] + (my - zc[1]) * z;
-      const ang = PT.an[i] + off * 2.4, rr = PT.rr[i] * R * off * z;
-      x += Math.cos(ang) * rr; y += Math.sin(ang) * rr;
-      if (bt > 0) {
-        const e = 1 - Math.pow(1 - clamp(bt / 1.5, 0, 1), 3), hx = PT.hx === undefined ? zc[0] : PT.hx, hy = PT.hy === undefined ? zc[1] : PT.hy, f = 0.55 + 0.45 * PT.sp[i];
-        const dx = x - zc[0], dy = y - zc[1], dd = Math.hypot(dx, dy) || 1, push = bt * R * 0.6 * f;
-        x += (hx - zc[0]) * e * f + dx / dd * push; y += (hy - zc[1]) * e * f + dy / dd * push;
-      }
-      const a = G * (p < 1 ? 0.3 + 0.7 * p : 0.62 + 0.38 * Math.sin(T * 2.4 + i)) * 0.9;
-      if (PT.tn[i] !== last) { last = PT.tn[i]; c.fillStyle = "rgb(" + PT_TINT[last] + ")"; }
-      const sz = PT.sz[i] * base * Math.pow(z, 0.6);
-      c.globalAlpha = Math.min(1, a); c.fillRect(x - sz, y - sz, sz * 2, sz * 2);
-      if ((i & 7) === 0) { c.globalAlpha = Math.min(1, a * 0.28); c.beginPath(); c.arc(x, y, sz * 3.2, 0, 6.2832); c.fill(); }
-    }
-    c.restore();
-  };
-
-  /* where the HOME disc will be, measured at the moment you press Enter (same formulas as layout()'s home branch) */
-  const homeGeom = () => {
-    const hero = document.querySelector(".hero"); if (!hero) return null;
-    const r = hero.getBoundingClientRect(), hw = Math.max(2, r.width), hh = Math.max(2, r.height), wide = innerWidth > 900;
-    const target = clamp(Math.min(hh * 0.62, hw * (wide ? 0.50 : 0.80)), 220, 640), rtl = document.documentElement.dir === "rtl" || isAr();
-    return { x: r.left + (wide ? hw * (rtl ? 0.32 : 0.68) : hw * 0.5), y: r.top + (wide ? hh * 0.5 : hh * 0.42), R: target / 2 };
-  };
-
-  /* the flash + speed rays: born on the intro disc, they travel with the jump and bloom ON the Home disc */
-  const tmFlash = () => {
-    try {
-      const sr = stage.getBoundingClientRect(), fx = sr.left + cx, fy = sr.top + cy, vw = innerWidth, vh = innerHeight;
-      const hg = homeGeom() || { x: fx, y: fy }, dx = hg.x - fx, dy = hg.y - fy, tr = (p, sc) => "translate(" + (dx * p).toFixed(1) + "px," + (dy * p).toFixed(1) + "px) scale(" + sc + ")";
-      PT.hx = hg.x - sr.left; PT.hy = hg.y - sr.top;        /* the particles flow to the same point */
-      const box = document.createElement("div"); box.setAttribute("aria-hidden", "true");
-      box.style.cssText = "position:fixed;inset:0;z-index:10002;pointer-events:none;overflow:hidden";
-      const glow = document.createElement("div");
-      glow.style.cssText = "position:absolute;inset:0;opacity:0;transform-origin:" + fx + "px " + fy + "px;background:radial-gradient(circle at " + fx + "px " + fy + "px,rgba(238,247,255,1) 0,rgba(150,200,255,.88) 9%,rgba(60,120,255,.48) 26%,rgba(12,24,80,0) 64%)";
-      const ox = fx + vw * 0.3, oy = fy + vh * 0.3;
-      const rays = document.createElement("div"), mask = "radial-gradient(circle at " + ox + "px " + oy + "px,transparent 7%,#000 52%)";
-      rays.style.cssText = "position:absolute;inset:-30%;opacity:0;transform-origin:" + ox + "px " + oy + "px;background:repeating-conic-gradient(from 0deg at " + ox + "px " + oy + "px,rgba(170,210,255,0) 0deg 2.1deg,rgba(195,228,255,.24) 2.1deg 2.6deg,rgba(170,210,255,0) 2.6deg 5.3deg);-webkit-mask-image:" + mask + ";mask-image:" + mask;
-      box.style.mixBlendMode = "screen";
-      box.appendChild(rays); box.appendChild(glow); document.body.appendChild(box);
-      const D = 3300;
-      rays.animate([{ opacity: 0, transform: tr(0, 1), offset: 0 }, { opacity: 0, transform: tr(0, 1.15), offset: 0.14 }, { opacity: 0.85, transform: tr(0.75, 1.7), offset: 0.4 }, { opacity: 0, transform: tr(1, 2.6), offset: 0.64 }, { opacity: 0, transform: tr(1, 2.6), offset: 1 }], { duration: D, easing: "ease-in", fill: "forwards" });
-      glow.animate([{ opacity: 0, transform: tr(0, 0.5), offset: 0 }, { opacity: 0, transform: tr(0, 0.5), offset: 0.3 }, { opacity: 0.85, transform: tr(0.55, 1.1), offset: 0.45 }, { opacity: 1, transform: tr(1, 1.6), offset: 0.58 }, { opacity: 0.65, transform: tr(1, 1.9), offset: 0.68 }, { opacity: 0, transform: tr(1, 2.2), offset: 1 }], { duration: D, easing: "ease-out", fill: "forwards" });
-      setTimeout(() => { try { box.remove(); } catch (_) {} }, D + 150);
-    } catch (_) {}
-  };
-
-  /* synthesized sound design: a rising drone + noise riser into a sub impact, then an air whisper (no audio files) */
-  const enterSound = () => {
-    try {
-      if (!sfx || !sfx.ctx) return;
-      const ctx = sfx.ctx; if (ctx.state === "suspended") ctx.resume();
-      const t = ctx.currentTime + 0.03, IMP = 1.5, sr = ctx.sampleRate;
-      const out = ctx.createGain(); out.gain.value = 0.55;
-      const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 6; comp.attack.value = 0.003; comp.release.value = 0.25;
-      out.connect(comp); comp.connect(ctx.destination);
-      const nbuf = ctx.createBuffer(1, sr * 3, sr), nd = nbuf.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
-      const noise = () => { const s = ctx.createBufferSource(); s.buffer = nbuf; return s; };
-      const env = (g, pts) => { g.gain.setValueAtTime(0.0001, t + pts[0][0]); for (let i = 1; i < pts.length; i++) g.gain.exponentialRampToValueAtTime(Math.max(0.0001, pts[i][1]), t + pts[i][0]); };
-      /* drone: two saws + a triangle, the filter opens as the camera dives */
-      const dg = ctx.createGain(), dlp = ctx.createBiquadFilter(); dlp.type = "lowpass"; dlp.Q.value = 0.8;
-      dlp.frequency.setValueAtTime(90, t); dlp.frequency.exponentialRampToValueAtTime(900, t + IMP);
-      env(dg, [[0, 0.0001], [IMP * 0.9, 0.5], [IMP + 2.2, 0.0001]]);
-      [55, 55.7, 82.4].forEach((f, i) => {
-        const o = ctx.createOscillator(), og = ctx.createGain(); o.type = i === 2 ? "triangle" : "sawtooth"; og.gain.value = 0.18;
-        o.frequency.setValueAtTime(f, t); o.frequency.exponentialRampToValueAtTime(f * 1.5, t + IMP);
-        o.connect(og); og.connect(dlp); o.start(t); o.stop(t + IMP + 2.4);
-      });
-      dlp.connect(dg); dg.connect(out);
-      /* riser: filtered noise sweeping up into the impact */
-      const rs = noise(), rf = ctx.createBiquadFilter(), rg = ctx.createGain(); rf.type = "bandpass"; rf.Q.value = 1.4;
-      rf.frequency.setValueAtTime(260, t); rf.frequency.exponentialRampToValueAtTime(4200, t + IMP);
-      env(rg, [[0, 0.0001], [IMP * 0.98, 0.32], [IMP + 0.35, 0.0001]]);
-      rs.connect(rf); rf.connect(rg); rg.connect(out); rs.start(t); rs.stop(t + IMP + 0.4);
-      /* impact: just a short low noise burst (the deep sub boom was removed) */
-      const bs = noise(), bf = ctx.createBiquadFilter(), bg = ctx.createGain(); bf.type = "lowpass";
-      bf.frequency.setValueAtTime(1800, t + IMP); bf.frequency.exponentialRampToValueAtTime(200, t + IMP + 0.5);
-      env(bg, [[IMP - 0.005, 0.0001], [IMP + 0.01, 0.25], [IMP + 0.7, 0.0001]]);
-      bs.connect(bf); bf.connect(bg); bg.connect(out); bs.start(t + IMP - 0.01); bs.stop(t + IMP + 0.8);
-      /* air: a soft whisper that falls away after the hit */
-      const ws = noise(), wf = ctx.createBiquadFilter(), wg = ctx.createGain(); wf.type = "bandpass"; wf.Q.value = 0.7;
-      wf.frequency.setValueAtTime(5200, t + IMP); wf.frequency.exponentialRampToValueAtTime(1100, t + IMP + 2.2);
-      env(wg, [[IMP, 0.0001], [IMP + 0.25, 0.07], [IMP + 2.2, 0.0001]]);
-      ws.connect(wf); wf.connect(wg); wg.connect(out); ws.start(t + IMP); ws.stop(t + IMP + 2.3);
-    } catch (_) {}
-  };
   const drawDots = (sec, amt, now) => {
     if (!cv.parentNode) return;
-    ptInit();
     if (!dotCv) { dotCv = document.createElement("canvas"); dotCv.style.cssText = "position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none"; cv.parentNode.appendChild(dotCv); dotCtx = dotCv.getContext("2d"); }
     if (dotCv.width !== cv.width || dotCv.height !== cv.height) { dotCv.width = cv.width; dotCv.height = cv.height; }
     const c = dotCtx, k = cv.width / Math.max(1, W), z = 1 + zoomV;
@@ -896,7 +730,6 @@
       c.fillStyle = "rgba(" + DOT_RGB[d[2]] + "," + Math.min(1, 1.15 * a).toFixed(3) + ")"; c.beginPath(); c.arc(x, y, r, 0, 6.2832); c.fill();
     }
     c.globalCompositeOperation = "source-over";
-    drawParticles(c, k, z, now);
     drawLaser(c, k, z, now);
   };
   const draw = (now) => {
@@ -1156,7 +989,7 @@
 
   const enter = () => {
     if (entering || !ready) return;
-    entering = true; enterT = performance.now(); sfxInit(); enterSound();
+    entering = true; enterT = performance.now(); sfxInit();
     window.__tmGoing = true;
     if (window.__tmMark) window.__tmMark();
     gate.classList.add("tm-go");
@@ -1169,7 +1002,6 @@
     stage.style.transformOrigin = cx + "px " + cy + "px";
     stage.classList.add("tm-flying");
     document.body.appendChild(stage);
-    if (!reduce) tmFlash();
 
     const useGL = !!(gl && prog && texDone);
     const fadeDelay = reduce ? 0 : 1100, fadeDur = reduce ? 300 : 750;
@@ -1192,7 +1024,7 @@
         const bgImg = document.createElement("img"); bgImg.className = "tm-home-bg"; bgImg.alt = ""; bgImg.decoding = "async";
         bgImg.setAttribute("aria-hidden", "true"); bgImg.draggable = false; bgImg.src = "images/home-bg.webp?v=2"; homeImg.appendChild(bgImg);
         buildPlayer();
-        heroEl.insertBefore(homeImg, heroEl.firstChild); buildDust(); buildAtmos();
+        heroEl.insertBefore(homeImg, heroEl.firstChild); buildDust();
         /* pointer: hover = a gentle zoom / tilt of the player; click on the medallion = play / pause */
         const inside = (e) => { const r = heroEl.getBoundingClientRect(); const dx = e.clientX - r.left - cx, dy = e.clientY - r.top - cy; return { dx, dy, hit: Math.hypot(dx, dy) < R * 0.8 }; };
         heroEl.addEventListener("pointermove", (e) => {
