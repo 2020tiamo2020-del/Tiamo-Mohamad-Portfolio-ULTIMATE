@@ -858,7 +858,7 @@
       const target = Math.min(real, cap);
       shown += (target - shown) * (1 - Math.exp(-dt / 90));
       if (!readyPending) {
-        if (real >= 100 && cap >= 100 && shown > 99.4) setReady();
+        if (real >= 100 && cap >= 100 && shown > 99.4 && (FL.done || now - t0 > 9000)) setReady();
         else { numEl.textContent = String(Math.floor(shown)).padStart(3, "0"); barEl.style.width = shown.toFixed(1) + "%"; setMsg(shown); }
       }
     }
@@ -980,6 +980,230 @@
 
   raf = requestAnimationFrame(frame);
 
+  /* ==========================================================================
+     CINEMATIC FLIGHT (v6)  -  Enter -> charge -> the stone cracks open into a portal -> tunnel rush (left/right sway,
+     rising shake, debris) -> FLASH + shockwave -> the camera pulls out, brakes hard and LANDS on the Home medallion.
+     Layers (2D canvas on top of everything, removed at the end):
+       images/fl-portal-1,2  calm tunnel   (before the flash)      images/fl-portal-3,4  energy tunnel (after the flash)
+       images/fl-rocks       near-field debris frame               images/fl-atlas       transparent rocks / sparks (depth particles)
+     The portal's outer ring is locked to FK x the medallion radius, at BOTH ends (intro position and Home position),
+     so the landing is pixel-exact. Change FK (one number) to make the portal ring sit on a different carved ring.
+     If the images are not ready when Enter is pressed (or reduced-motion), the old entrance runs unchanged.
+     ========================================================================== */
+  const FLIGHT_SOUND = true;                 /* synthesised whoosh / boom / thump (no audio files); false = silent flight */
+  const FK = 2.7;                            /* portal outer ring = FK x medallion radius */
+  const FT = { open: 300, openEnd: 1100, rush: 300, flash: 2850, qStart: 2950, qDur: 1800, land: 3950, brake: 4200, hand: 2400, fire: 4200, fadeA: 4500, fadeB: 6000 };   /* ms after Enter */
+  const PCAL = [[639.4, 421.3, 400], [640, 413.2, 397.5], [635.3, 404.2, 390], [634, 407.3, 390]];     /* per portal image: core x, core y, outer ring radius (px, 1280x853) */
+  const ATLAS = [[787,5,66,78],[6,6,145,119],[166,6,118,119],[298,6,111,101],[423,6,123,85],[560,6,106,89],[680,6,93,90],[949,6,63,71],[863,7,72,62],[472,75,31,26],[171,138,69,60],[265,138,58,47],[342,138,67,56],[805,138,53,54],[6,139,67,66],[87,139,70,62],[422,139,46,42],[502,139,66,50],[582,139,55,59],[651,139,72,42],[737,139,57,51],[874,139,51,50],[939,139,55,48],[244,171,55,30],[446,186,52,15],[560,217,58,50],[501,218,50,40],[862,218,42,38],[6,219,51,51],[71,219,50,44],[135,219,42,50],[190,219,47,45],[251,219,51,40],[316,219,49,41],[379,219,45,45],[438,219,49,40],[624,219,44,42],[682,219,43,41],[739,219,41,43],[794,219,54,32],[918,220,46,33],[442,282,41,34],[6,283,40,39],[60,283,41,38],[115,283,48,31],[176,283,49,30],[239,283,36,40],[289,283,35,42],[338,283,38,36],[390,283,38,36]];
+  const FL = { ok: false, done: false, imgs: [] };
+  const loadFlight = () => {
+    const urls = ["images/fl-portal-1.webp?v=1", "images/fl-portal-2.webp?v=1", "images/fl-portal-3.webp?v=1", "images/fl-portal-4.webp?v=1", "images/fl-rocks.webp?v=1", "images/fl-atlas.webp?v=1"];
+    let left = urls.length, bad = false;
+    const fin = () => { if (--left === 0) { FL.ok = !bad; FL.done = true; } };
+    FL.imgs = urls.map((u) => { const im = new Image(); im.decoding = "async"; try { im.fetchPriority = "low"; } catch (_) {} im.onload = fin; im.onerror = () => { bad = true; fin(); }; im.src = u; return im; });
+  };
+  if (!reduce) loadFlight(); else FL.done = true;
+
+  const smooth = (a, b, t) => { t = clamp((t - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+  const backOut = (x, c) => { x = clamp(x, 0, 1) - 1; return 1 + (c + 1) * x * x * x + c * x * x; };
+  const U_A = 4.5, U_B = 1.5, U0 = 1 / 6, RHO = 2.6, ZN = 0.16, ZR = 2.2;
+  /* u = how many "tunnel layers" the camera has flown through. It ends on U0 + 3, so the last frame is ONE clean image. */
+  const uOf = (t) => {
+    if (t <= FT.rush) return U0;
+    if (t <= FT.flash) return U0 + U_A * Math.pow((t - FT.rush) / (FT.flash - FT.rush), 2.2);
+    const y = clamp((t - FT.flash) / (FT.brake - FT.flash), 0, 1);
+    return U0 + U_A - U_B * (1 - Math.pow(1 - y, 3));
+  };
+  const vOf = (t) => (uOf(t + 6) - uOf(t - 6)) / 0.012;
+  const nz = (t, k) => (Math.sin(t * 0.031 * k + 1.7 * k) + 0.6 * Math.sin(t * 0.057 * k + 0.3) + 0.35 * Math.sin(t * 0.093 * k + 2.4)) / 1.95;
+  const homeGeom = () => {                      /* where the Home medallion is, in viewport pixels (same rules as layout() in home mode) */
+    const hr = heroEl ? heroEl.getBoundingClientRect() : { left: 0, top: 0, width: innerWidth, height: innerHeight };
+    const Wh = Math.max(2, hr.width), Hh = Math.max(2, hr.height), wide = innerWidth > 900;
+    const target = clamp(Math.min(Hh * 0.62, Wh * (wide ? 0.50 : 0.80)), 220, 640);
+    const rtl = document.documentElement.dir === "rtl" || isAr();
+    return { x: hr.left + (wide ? Wh * (rtl ? 0.32 : 0.68) : Wh * 0.5), y: hr.top + (wide ? Hh * 0.5 : Hh * 0.42), R: target / 2 };
+  };
+
+  const flightSound = () => {
+    if (!FLIGHT_SOUND || !sfx || !sfx.ctx) return;
+    try {
+      const c = sfx.ctx; if (c.state === "suspended") c.resume();
+      const T0 = c.currentTime + 0.03, master = c.createGain(); master.gain.value = 0.5; master.connect(c.destination);
+      const nb = c.createBuffer(1, c.sampleRate * 4, c.sampleRate), d = nb.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      const noise = (t0, dur) => { const s = c.createBufferSource(); s.buffer = nb; s.start(T0 + t0, Math.random() * 0.5, dur); return s; };
+      const env = (g, pts) => { g.gain.setValueAtTime(0.0001, T0 + pts[0][0]); pts.forEach((p) => g.gain.linearRampToValueAtTime(Math.max(0.0001, p[1]), T0 + p[0])); };
+      /* 1 · rising whoosh (the rush) */
+      let n = noise(0.3, 2.7), f = c.createBiquadFilter(), g = c.createGain(); f.type = "bandpass"; f.Q.value = 1.1;
+      f.frequency.setValueAtTime(180, T0 + 0.3); f.frequency.exponentialRampToValueAtTime(3200, T0 + 2.8); env(g, [[0.3, 0], [1.6, 0.25], [2.8, 0.7], [2.86, 0]]); n.connect(f); f.connect(g); g.connect(master);
+      /* 2 · rising sub tone */
+      let o = c.createOscillator(), og = c.createGain(); o.type = "sawtooth"; o.frequency.setValueAtTime(38, T0 + 0.4); o.frequency.exponentialRampToValueAtTime(190, T0 + 2.85);
+      const lp = c.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 420; env(og, [[0.4, 0], [2.4, 0.16], [2.85, 0.22], [2.9, 0]]); o.connect(lp); lp.connect(og); og.connect(master); o.start(T0 + 0.4); o.stop(T0 + 2.95);
+      /* 3 · the flash: boom + air burst */
+      o = c.createOscillator(); og = c.createGain(); o.type = "sine"; o.frequency.setValueAtTime(95, T0 + 2.85); o.frequency.exponentialRampToValueAtTime(26, T0 + 4.1); env(og, [[2.85, 1.0], [4.1, 0]]); o.connect(og); og.connect(master); o.start(T0 + 2.85); o.stop(T0 + 4.2);
+      n = noise(2.85, 1.2); f = c.createBiquadFilter(); g = c.createGain(); f.type = "lowpass"; f.frequency.setValueAtTime(5200, T0 + 2.85); f.frequency.exponentialRampToValueAtTime(140, T0 + 4.0); env(g, [[2.85, 0.9], [4.0, 0]]); n.connect(f); f.connect(g); g.connect(master);
+      /* 4 · pulling out and braking: the whoosh falls away */
+      n = noise(2.95, 1.5); f = c.createBiquadFilter(); g = c.createGain(); f.type = "bandpass"; f.Q.value = 0.9; f.frequency.setValueAtTime(2600, T0 + 2.95); f.frequency.exponentialRampToValueAtTime(160, T0 + 4.3); env(g, [[2.95, 0.45], [4.3, 0]]); n.connect(f); f.connect(g); g.connect(master);
+      /* 5 · touchdown thump */
+      o = c.createOscillator(); og = c.createGain(); o.type = "sine"; o.frequency.setValueAtTime(70, T0 + 3.95); o.frequency.exponentialRampToValueAtTime(34, T0 + 4.5); env(og, [[3.95, 0.85], [4.5, 0]]); o.connect(og); og.connect(master); o.start(T0 + 3.95); o.stop(T0 + 4.55);
+    } catch (_) {}
+  };
+
+  const startFlight = () => {
+    let cvF = null, done = false, raf2 = 0;
+    const stopKeys = ["wheel", "touchmove", "keydown"];
+    const block = (e) => { if (e.type === "keydown" && !/^(Arrow|Page|Home|End| |Space)/.test(e.key)) return; e.preventDefault(); };
+    const finish = () => {
+      if (done) return; done = true; cancelAnimationFrame(raf2);
+      stopKeys.forEach((k) => removeEventListener(k, block, { passive: false }));
+      if (cvF && cvF.parentNode) cvF.parentNode.removeChild(cvF);
+      window.__tmFlightDone = true;
+    };
+    try {
+      cvF = document.createElement("canvas"); cvF.id = "tmFlight"; cvF.setAttribute("aria-hidden", "true");
+      const ctx = cvF.getContext("2d", { alpha: false });
+      if (!ctx) return false;
+      document.body.appendChild(cvF);
+      stopKeys.forEach((k) => addEventListener(k, block, { passive: false }));
+      const Ci = { x: cx, y: cy, R: R }, im = FL.imgs, atlas = im[5];
+      let Wf = 0, Hf = 0, dprF = 1;
+      const size = () => { Wf = innerWidth; Hf = innerHeight; dprF = Math.min(window.devicePixelRatio || 1, 1.25) * (Wf < 700 ? 0.9 : 1); cvF.width = Math.round(Wf * dprF); cvF.height = Math.round(Hf * dprF); };
+      size(); addEventListener("resize", size, { passive: true });
+      let rs = 11; const rr = () => (rs = (rs * 16807) % 2147483647) / 2147483647;
+      const rocks = Array.from({ length: 54 }, () => { const big = rr() < 0.38; return { s: big ? Math.floor(rr() * 9) : Math.floor(rr() * ATLAS.length), th: rr() * 6.2832, a: 0.10 + Math.pow(rr(), 1.4) * 0.85, z0: rr() * ZR, a0: rr() * 6.2832, sp: (rr() - 0.5) * 1.4, br: 0.55 + rr() * 0.45 }; });
+      const lines = Array.from({ length: 72 }, () => ({ th: rr() * 6.2832, ph: rr(), ln: 0.5 + rr(), w: 0.6 + rr() * 1.3 }));
+      const drawPortal = (i, x, y, Rt) => { const c = PCAL[i], s = Rt / c[2]; ctx.drawImage(im[i], x - c[0] * s, y - c[1] * s, 1280 * s, 853 * s); };
+      const ring = (x, y, r, w, rgb, a) => {
+        if (r < 2 || a < 0.01) return;
+        const g = ctx.createRadialGradient(x, y, Math.max(0, r - w), x, y, r + w * 0.35);
+        g.addColorStop(0, "rgba(" + rgb + ",0)"); g.addColorStop(0.75, "rgba(" + rgb + "," + a.toFixed(3) + ")"); g.addColorStop(1, "rgba(" + rgb + ",0)");
+        ctx.fillStyle = g; ctx.fillRect(x - r - w, y - r - w, (r + w) * 2, (r + w) * 2);
+      };
+      const t0 = performance.now();
+      flightSound();
+
+      const frame2 = (now) => {
+        if (done) return;
+        raf2 = requestAnimationFrame(frame2);
+        const t = now - t0;
+        if (t > FT.fadeB + 40) { finish(); return; }
+        try {
+          const aP = smooth(FT.open, FT.openEnd, t), fadeP = easeInOut((t - FT.fadeA) / (FT.fadeB - FT.fadeA)), op = aP * (1 - fadeP);
+          cvF.style.opacity = op.toFixed(3);
+          if (op < 0.004) return;
+          const hg = homeGeom(), UU = 0.5 * Math.max(Wf, Hf), minD = Math.min(Wf, Hf);
+          const u = uOf(t), v = vOf(t), T = Math.pow(clamp(Math.abs(v) / 0.9, 0, 1), 0.8), sgn = v >= 0 ? 1 : -1;
+          /* camera path: intro medallion -> (flash) -> Home medallion, ring locked to FK x radius at both ends */
+          const zp = Math.min(1 + 2.4 * easeInOut(t / 1500), 2.0);
+          const q = backOut((t - FT.qStart) / FT.qDur, 0.85);
+          const Rb = Math.exp(lerp(Math.log(FK * Ci.R * zp), Math.log(FK * hg.R), q));
+          const swA = 0.055 * Wf * smooth(500, 2500, t) * (t < FT.flash ? 1 : Math.exp(-(t - FT.flash) / 500));
+          const Cx = lerp(Ci.x, hg.x, q) + swA * Math.sin(t / 1700 * 6.2832 + 0.4) * (1 - q), Cy = lerp(Ci.y, hg.y, q) + swA * 0.35 * Math.sin(t / 2300 * 6.2832 + 1.1) * (1 - q);
+          /* shake (trauma model): grows with the charge, spikes at the flash and at touchdown */
+          let tr = (t < FT.flash ? 0.05 + 0.40 * smooth(500, 2800, t) : 0) + (t >= FT.flash ? Math.exp(-(t - FT.flash) / 380) : 0) + (t >= FT.land ? 0.6 * Math.exp(-(t - FT.land) / 260) : 0) + (t > FT.flash && t < FT.land ? 0.18 * (1 - smooth(FT.flash, FT.land, t)) : 0);
+          tr = clamp(tr, 0, 1); const am = tr * tr * minD * 0.028;
+          const roll = 0.045 * Math.sin(t / 2600 * 6.2832 + 0.7) * smooth(600, 2200, t) * (1 - smooth(FT.flash, FT.flash + 900, t)) + 0.34 * Math.sin(Math.PI * clamp((t - 300) / 3300, 0, 1)) + am * 0.0008 * nz(t, 3);
+          const punch = 1 + (t >= FT.flash ? 0.12 * Math.exp(-(t - FT.flash) / 190) : 0) - (t >= FT.land ? 0.03 * Math.exp(-(t - FT.land) / 240) : 0) + 0.006 * tr * Math.sin(t / 55);
+
+          ctx.setTransform(dprF, 0, 0, dprF, 0, 0);
+          ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1; ctx.fillStyle = "#05040a"; ctx.fillRect(0, 0, Wf, Hf);
+          ctx.save();
+          ctx.translate(Cx + am * nz(t, 1), Cy + am * nz(t + 777, 1.3)); ctx.rotate(roll); ctx.scale(punch, punch); ctx.translate(-Cx, -Cy);
+          const X = Cx, Y = Cy;
+          ctx.globalCompositeOperation = "lighter";
+          /* the tunnel: three layers an octave apart, blended so the rings stream past; at rest only ONE layer is left (exact landing) */
+          const e = smooth(2780, 2960, t);
+          for (let s = 0; s < 2; s++) {
+            const sw2 = s ? e : 1 - e; if (sw2 < 0.004) continue;
+            const set = s ? [2, 3, 2] : [0, 1, 0];
+            for (let j = 0; j < 3; j++) {
+              const f = (u + j / 3) % 1, w = (T * Math.pow(Math.sin(Math.PI * f), 2) / 1.5 + (1 - T) * (j === 1 ? 1 : 0)) * sw2;
+              if (w < 0.004) continue;
+              ctx.globalAlpha = Math.min(1, w); drawPortal(set[j], X, Y, Rb * Math.pow(RHO, f - 0.5));
+            }
+          }
+          /* near-field debris frame: rocks at the screen edges that sweep outwards (or inwards after the flash) */
+          if (T > 0.02) {
+            const s0 = 0.30 * Wf / 768;
+            for (let j = 0; j < 2; j++) {
+              const f = (u * 0.6 + j * 0.5) % 1, w = Math.pow(Math.sin(Math.PI * f), 2) * 0.8 * T; if (w < 0.01) continue;
+              const s = s0 * (1 + 1.6 * f); ctx.globalAlpha = w; ctx.drawImage(im[4], X - 768 * s, Y - 512 * s, 1536 * s, 1024 * s);
+            }
+          }
+          /* speed lines */
+          const la = clamp(Math.abs(v) / 2.6, 0, 1) * (t < FT.flash ? 1 : 0.8);
+          if (la > 0.05) {
+            ctx.lineCap = "round";
+            for (let i = 0; i < lines.length; i++) {
+              const L = lines[i], p = (((L.ph + u * 0.35) % 1) + 1) % 1, rho = UU * (0.12 + 1.7 * p * p), len = rho * (0.05 + 0.24 * la) * L.ln, a = la * Math.sin(Math.PI * p) * 0.55;
+              if (a < 0.02) continue;
+              const cs = Math.cos(L.th), sn = Math.sin(L.th); ctx.strokeStyle = "rgba(150,200,255," + a.toFixed(3) + ")"; ctx.lineWidth = L.w * (0.6 + p);
+              ctx.beginPath(); ctx.moveTo(X + cs * (rho - len), Y + sn * (rho - len)); ctx.lineTo(X + cs * rho, Y + sn * rho); ctx.stroke();
+            }
+          }
+          /* charge: the core of the portal swells to white just before the flash; and a soft pulse when we touch down */
+          const ch = smooth(1800, 2820, t) * (t < FT.flash + 60 ? 1 : 0);
+          if (ch > 0.01) {
+            const rg = minD * (0.06 + 0.42 * ch), g = ctx.createRadialGradient(X, Y, 0, X, Y, rg);
+            g.addColorStop(0, "rgba(235,245,255," + (0.95 * ch).toFixed(3) + ")"); g.addColorStop(0.4, "rgba(90,150,255," + (0.45 * ch).toFixed(3) + ")"); g.addColorStop(1, "rgba(30,60,200,0)");
+            ctx.globalAlpha = 1; ctx.fillStyle = g; ctx.fillRect(X - rg, Y - rg, rg * 2, rg * 2);
+          }
+          if (t >= FT.land) {
+            const pu = Math.exp(-(t - FT.land) / 420), rg = hg.R * 1.7, g = ctx.createRadialGradient(hg.x, hg.y, 0, hg.x, hg.y, rg);
+            g.addColorStop(0, "rgba(200,225,255," + (0.5 * pu).toFixed(3) + ")"); g.addColorStop(1, "rgba(60,120,255,0)");
+            ctx.globalAlpha = 1; ctx.fillStyle = g; ctx.fillRect(hg.x - rg, hg.y - rg, rg * 2, rg * 2);
+          }
+          /* depth rocks: they fly past the camera on the way in, recede behind us on the way out, hang in the air at touchdown, then dissolve */
+          const vis = smooth(380, 900, t) * (1 - smooth(4000, 4900, t));
+          if (vis > 0.01) {
+            ctx.globalCompositeOperation = "source-over";
+            const D = 0.7 * (u + (t > FT.brake ? 0.05 * (t - FT.brake) / 1000 : 0)), list = [];
+            for (let i = 0; i < rocks.length; i++) {
+              const r = rocks[i], zz = ZN + ((((r.z0 - D) % ZR) + ZR) % ZR);
+              list.push([zz, r]);
+            }
+            list.sort((a, b) => b[0] - a[0]);
+            const trail = Math.abs(v) > 1.1 ? Math.min(Math.abs(v), 4) / 4 : 0;
+            for (let i = 0; i < list.length; i++) {
+              const zz = list[i][0], r = list[i][1], sp = ATLAS[r.s];
+              const fa = (1 - smooth(ZN + ZR * 0.55, ZN + ZR, zz)) * smooth(ZN, ZN + 0.14, zz) * vis * r.br;
+              if (fa < 0.01) continue;
+              const ang = r.a0 + r.sp * t / 1000;
+              for (let k = trail > 0 ? 2 : 0; k >= 0; k--) {
+                const z2 = zz + sgn * 0.07 * k * trail * 2, rho = r.a * UU / z2 * 0.55, size = sp[2] * (UU / 820) * (0.45 / z2);
+                const px = X + Math.cos(r.th) * rho, py = Y + Math.sin(r.th) * rho, sh = size * sp[3] / sp[2];
+                if (px < -size || px > Wf + size || py < -size || py > Hf + size) continue;
+                ctx.globalAlpha = k ? fa * (0.26 / k) : fa;
+                ctx.save(); ctx.translate(px, py); ctx.rotate(ang); ctx.drawImage(atlas, sp[0], sp[1], sp[2], sp[3], -size / 2, -sh / 2, size, sh); ctx.restore();
+              }
+            }
+          }
+          ctx.restore();
+          ctx.globalAlpha = 1;
+          /* vignette (also keeps the picture's own edges out of sight) */
+          ctx.globalCompositeOperation = "source-over";
+          { const g = ctx.createRadialGradient(Cx, Cy, Rb * 0.9, Cx, Cy, Rb * 1.9 + 1); g.addColorStop(0, "rgba(5,4,10,0)"); g.addColorStop(1, "rgba(5,4,10,1)"); ctx.fillStyle = g; ctx.fillRect(0, 0, Wf, Hf); }
+          { const g = ctx.createRadialGradient(Wf / 2, Hf / 2, minD * 0.35, Wf / 2, Hf / 2, Math.hypot(Wf, Hf) * 0.6); g.addColorStop(0, "rgba(2,3,8,0)"); g.addColorStop(1, "rgba(2,3,8," + (0.55 - 0.25 * fadeP).toFixed(3) + ")"); ctx.fillStyle = g; ctx.fillRect(0, 0, Wf, Hf); }
+          /* shockwaves + the flash */
+          ctx.globalCompositeOperation = "lighter";
+          { const p = (t - 420) / 900; if (p > 0 && p < 1) ring(Ci.x, Ci.y, Ci.R * (1.1 + 3.4 * easeOut(p)), Ci.R * 0.22, "120,180,255", 0.55 * (1 - p) * (1 - p)); }
+          { const p = (t - FT.flash) / 1100; if (p > 0 && p < 1) ring(Cx, Cy, Math.hypot(Wf, Hf) * 0.95 * easeOut(p), minD * 0.12, "190,220,255", 0.9 * (1 - p) * (1 - p)); }
+          { const p = (t - FT.land) / 1000; if (p > 0 && p < 1) ring(hg.x, hg.y, Rb * (0.15 + 0.85 * easeOut(p)), hg.R * 0.18, "140,190,255", 0.5 * (1 - p) * (1 - p)); }
+          const Fl = t < 2900 ? Math.pow(smooth(2640, 2850, t), 2) : Math.exp(-(t - 2900) / 330);
+          if (Fl > 0.01) {
+            ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = Math.min(1, Fl); ctx.fillStyle = "rgb(205,228,255)"; ctx.fillRect(0, 0, Wf, Hf);
+            ctx.globalCompositeOperation = "lighter"; ctx.save(); ctx.translate(Cx, Cy); ctx.scale(1, 0.035);
+            const g = ctx.createRadialGradient(0, 0, 0, 0, 0, Wf * 0.9); g.addColorStop(0, "rgba(170,210,255," + Math.min(1, Fl).toFixed(3) + ")"); g.addColorStop(1, "rgba(60,110,255,0)");
+            ctx.fillStyle = g; ctx.fillRect(-Wf, -Wf * 0.9, Wf * 2, Wf * 1.8); ctx.restore();
+          }
+          ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
+        } catch (err) { console.warn("[tm-intro] flight frame failed", err); finish(); }
+      };
+      raf2 = requestAnimationFrame(frame2);
+      setTimeout(finish, FT.fadeB + 1500);                  /* safety net */
+      return true;
+    } catch (err) { console.warn("[tm-intro] flight failed to start", err); finish(); return false; }
+  };
+
   /* --------------------------------------------------------------- Enter */
   const heroEl = document.querySelector(".hero");
   const dropPh = () => { const ph = document.querySelector("[data-tm-ph]"); if (ph) ph.remove(); };
@@ -1004,7 +1228,8 @@
     document.body.appendChild(stage);
 
     const useGL = !!(gl && prog && texDone);
-    const fadeDelay = reduce ? 0 : 1100, fadeDur = reduce ? 300 : 750;
+    const fl = !!(FL.ok && !reduce && startFlight());          /* the cinematic flight (overlay canvas); false = the old entrance */
+    const fadeDelay = fl ? 1750 : (reduce ? 0 : 1100), fadeDur = fl ? 450 : (reduce ? 300 : 750);
     let flatAnim = null;
     if (!useGL && !reduce) flatAnim = stage.animate([{ transform: "scale(1)" }, { transform: "scale(3.4)" }], { duration: PUSH, easing: "cubic-bezier(.6,0,.18,1)", fill: "forwards" });
     const fade = stage.animate([{ opacity: 1 }, { opacity: 0 }], { duration: fadeDur, delay: fadeDelay, easing: "ease-in-out", fill: "forwards" });
@@ -1017,7 +1242,8 @@
       try { if (flatAnim) flatAnim.cancel(); } catch (_) {}
       stage.remove();
       document.body.classList.remove("tm-zoom-lock");
-      if (window.__tmFire) window.__tmFire("handoff");
+      if (fl) setTimeout(() => { if (window.__tmFire) window.__tmFire("handoff"); }, FT.fire - FT.hand);     /* Home's own entrance (header, title...) starts as the portal lets go */
+      else if (window.__tmFire) window.__tmFire("handoff");
       if (heroEl) {
         host = heroEl; mode = "home";
         homeImg = document.createElement("div"); homeImg.className = "tm-home";
@@ -1042,12 +1268,12 @@
         });
         entering = false; layout();
         /* the camera "lands" on it: the picture settles from a close-up and melts in */
-        if (!reduce && homeImg.animate) homeImg.animate([{ opacity: 0, transform: "scale(1.32)" }, { opacity: 1, transform: "scale(1)" }], { duration: 3200, easing: "cubic-bezier(.16,1,.3,1)", fill: "backwards" });
+        if (!reduce && homeImg.animate) { if (fl) homeImg.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 1300, delay: 1500, easing: "ease-out", fill: "backwards" }); else homeImg.animate([{ opacity: 0, transform: "scale(1.32)" }, { opacity: 1, transform: "scale(1)" }], { duration: 3200, easing: "cubic-bezier(.16,1,.3,1)", fill: "backwards" }); }
         if ("ResizeObserver" in window) { let t = 0; new ResizeObserver(() => { clearTimeout(t); t = setTimeout(() => { if (mode === "home") layout(); }, 100); }).observe(heroEl); }
         new MutationObserver(() => { if (mode === "home") layout(); }).observe(document.documentElement, { attributes: true, attributeFilter: ["lang", "dir"] });
       }
       clearTimeout(failsafe);
-    }, fadeDelay + fadeDur + 60);
+    }, fl ? FT.hand : fadeDelay + fadeDur + 60);
 
     /* 2 · the top bar glides down */
     at("header", () => {
