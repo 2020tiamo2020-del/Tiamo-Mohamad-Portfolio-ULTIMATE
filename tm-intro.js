@@ -494,6 +494,56 @@
     pl.root.style.transformOrigin = (G[0].x * S).toFixed(1) + "px " + (G[0].y * S).toFixed(1) + "px";
   };
   /* ---- dust: a thin swirling cloud around the medallion, projected in 3D (tilt + perspective + pointer parallax); the music drives it ---- */
+  /* after-landing effects (only when the cinematic dive brought us here): the blue TM pulse + the ember / dust burst */
+  let flashAt = 0, flashOn = false, burstAt = 0, bstN = 0, bst = [];
+  const FLASH_RISE = 160, FLASH_TAU = 520, BURST_SPAWN = 1300, BURST_SPARKS = 150, BURST_DUST = 240;
+  const flashLevel = (now) => {
+    if (!flashAt || now < flashAt) return 0;
+    const x = now - flashAt;
+    if (x < FLASH_RISE) return Math.pow(x / FLASH_RISE, 1.6);
+    const f = Math.exp(-(x - FLASH_RISE) / FLASH_TAU);
+    if (f < 0.01) { flashAt = 0; return 0; }
+    return f;
+  };
+  const spawnBurst = (now) => {
+    const want = Math.min(BURST_SPARKS + BURST_DUST, Math.floor((now - burstAt) / BURST_SPAWN * (BURST_SPARKS + BURST_DUST)) + 1);
+    while (bstN < want) {
+      const spark = bstN % 8 < 3;
+      const a = Math.random() * 6.2832, r0 = R * (1.0 + Math.random() * (spark ? 1.5 : 2.0));
+      const sp = spark ? R * (0.16 + Math.random() * 0.5) : R * (0.02 + Math.random() * 0.09), sw = (Math.random() - 0.5) * sp * 0.8;
+      bst.push({ spark, x: Math.cos(a) * r0, y: Math.sin(a) * r0 * 0.86, vx: Math.cos(a) * sp - Math.sin(a) * sw, vy: Math.sin(a) * sp * 0.86 + Math.cos(a) * sw - (spark ? 10 : 4),
+        age: -Math.random() * 0.25, life: spark ? 2.6 + Math.random() * 2.6 : 5 + Math.random() * 3.5, sz: spark ? 1.3 + Math.random() * 1.9 : 0.8 + Math.random() * 1.5,
+        ph: Math.random() * 6.28, col: spark ? (Math.random() < 0.7 ? "255,150,55" : "255,205,110") : (Math.random() < 0.8 ? "190,210,245" : "130,165,255") });
+      bstN++;
+    }
+  };
+  const stepBurst = (c, now, dt) => {
+    if (!burstAt || now < burstAt) return;
+    spawnBurst(now);
+    const s = dt / 1000;
+    let alive = 0;
+    for (const q of bst) {
+      q.age += s; if (q.age < 0) { alive++; continue; }
+      if (q.age >= q.life) continue; alive++;
+      const k = Math.exp(-s * (q.spark ? 1.25 : 0.55));
+      q.vx = q.vx * k + Math.cos(q.age * 1.7 + q.ph) * (q.spark ? 6 : 3) * s; q.vy = q.vy * k + (Math.sin(q.age * 1.3 + q.ph) * 3 - (q.spark ? 5 : 1.5)) * s;
+      q.x += q.vx * s; q.y += q.vy * s;
+      const u = q.age / q.life, env = Math.min(1, q.age / 0.35) * Math.pow(1 - u, q.spark ? 1.4 : 1.0);
+      const x = cx + q.x, y = cy + q.y;
+      if (Math.hypot(q.x, q.y) < R * 0.93 || x < -10 || x > dW + 10 || y < -10 || y > dH + 10) continue;
+      let a = env * (q.spark ? 0.7 + 0.3 * Math.sin(now / 70 + q.ph * 9) : 0.55);
+      if (a < 0.015) continue;
+      if (q.spark) {
+        c.strokeStyle = "rgba(" + q.col + "," + (a * 0.7).toFixed(3) + ")"; c.lineWidth = q.sz * 1.1; c.lineCap = "round";
+        c.beginPath(); c.moveTo(x, y); c.lineTo(x - q.vx * 0.05, y - q.vy * 0.05); c.stroke();
+        c.fillStyle = "rgba(" + q.col + "," + Math.min(1, a).toFixed(3) + ")"; c.beginPath(); c.arc(x, y, q.sz * 0.75, 0, 6.2832); c.fill();
+        c.fillStyle = "rgba(" + q.col + "," + (a * 0.2).toFixed(3) + ")"; c.beginPath(); c.arc(x, y, q.sz * 4.2, 0, 6.2832); c.fill();
+      } else {
+        c.fillStyle = "rgba(" + q.col + "," + a.toFixed(3) + ")"; c.beginPath(); c.arc(x, y, q.sz, 0, 6.2832); c.fill();
+      }
+    }
+    if (!alive && bstN >= BURST_SPARKS + BURST_DUST) { burstAt = 0; bst = []; bstN = 0; }
+  };
   let dust = null, dctx = null, dW = 0, dH = 0, dDpr = 1, dBass = 0, dMid = 0, dHi = 0, dYaw = 0, dPx = 0, dPy = 0, dPxT = 0, dPyT = 0;
   const buildDust = () => {
     dust = document.createElement("canvas"); dust.className = "tmx-dust"; dust.setAttribute("aria-hidden", "true"); heroEl.insertBefore(dust, homeImg.nextSibling);
@@ -534,6 +584,7 @@
       c.fillStyle = "rgba(" + q.col + "," + Math.min(1, a).toFixed(3) + ")"; c.beginPath(); c.arc(sx, sy, r, 0, 6.2832); c.fill();
       if (r > 1.3 && a > 0.45) { c.fillStyle = "rgba(" + q.col + "," + (a * 0.1).toFixed(3) + ")"; c.beginPath(); c.arc(sx, sy, r * 2.6, 0, 6.2832); c.fill(); }
     }
+    stepBurst(c, now, dt);
     c.globalCompositeOperation = "source-over";
   };
   let plTeaserDone = false, plTeaserUntil = 0, plP = 0, plHov = 0, plHovT = 0, plBass = 0, plNx = 0, plNy = 0, plTx = 0, plTy = 0;
@@ -588,12 +639,15 @@
     const sc = 1 + 0.038 * L + 0.02 * plHov + 0.01 * plBass * L;
     pl.g.style.transform = "translate3d(" + jx.toFixed(2) + "px," + (-R * 0.035 * lift + jy).toFixed(2) + "px," + (R * 0.05 * lift).toFixed(1) + "px) scale(" + sc.toFixed(4) + ")";
     const lzI = clamp((L - 0.3) / 0.7, 0, 1), pulse = 0.72 + 0.28 * Math.sin(now / 380) + 0.55 * plBass;
-    pl.laser.style.opacity = (lzI * Math.min(1, pulse)).toFixed(3);
+    const fv = flashLevel(now);
+    pl.laser.style.opacity = Math.max(lzI * Math.min(1, pulse), fv).toFixed(3);
+    if (fv > 0) { flashOn = true; pl.laser.style.filter = "drop-shadow(0 0 " + (2 + 16 * fv).toFixed(1) + "px rgba(70,160,255," + (0.55 + 0.4 * fv).toFixed(2) + ")) brightness(" + (1 + 0.9 * fv).toFixed(2) + ")"; }
+    else if (flashOn) { flashOn = false; pl.laser.style.filter = ""; }
     pl.lr1.style.opacity = pl.lr2.style.opacity = (L * Math.min(1, 0.55 + 0.5 * plBass + 0.12 * Math.sin(now / 520))).toFixed(3);
     pl.core.style.filter = L > 0.01 ? "brightness(" + (1 - 0.42 * lzI + 0.08 * plBass).toFixed(3) + ") saturate(" + (1 - 0.15 * lzI).toFixed(2) + ")" : "none";
     pl.hole.style.opacity = L > 0.004 ? "1" : "0";
     pl.sh.style.opacity = (0.6 * L).toFixed(3); pl.sh.style.transform = "translate(" + (R * 0.055 * L).toFixed(1) + "px," + (R * 0.085 * L).toFixed(1) + "px) scale(" + (1.05 + 0.06 * L).toFixed(3) + ")";
-    pl.rim.style.opacity = (L * (0.45 + 0.55 * plBass + 0.1 * Math.sin(now / 420))).toFixed(3);
+    pl.rim.style.opacity = Math.max(L * (0.45 + 0.55 * plBass + 0.1 * Math.sin(now / 420)), 0.85 * fv).toFixed(3);
     pl.root.style.transform = "scale(" + (1 + 0.012 * plHov).toFixed(4) + ")";
   };
 
@@ -1052,6 +1106,7 @@
           const o = document.getElementById("tmOrb"); if (o) o.click();
         });
         entering = false; layout();
+        if (cine) { const n0 = performance.now(); flashAt = n0 + 950; burstAt = n0 + 900; }       /* the TM lights up once as the energy melts away, then the embers drift */
         /* the camera "lands" on it: the picture settles from a close-up and melts in */
         if (!reduce && homeImg.animate) homeImg.animate(cine ? [{ opacity: 0, transform: "scale(1.04)" }, { opacity: 1, transform: "scale(1)" }] : [{ opacity: 0, transform: "scale(1.32)" }, { opacity: 1, transform: "scale(1)" }], cine ? { duration: 1700, easing: "cubic-bezier(.22,.8,.3,1)", fill: "backwards" } : { duration: 3200, easing: "cubic-bezier(.16,1,.3,1)", fill: "backwards" });
         if ("ResizeObserver" in window) { let t = 0; new ResizeObserver(() => { clearTimeout(t); t = setTimeout(() => { if (mode === "home") layout(); }, 100); }).observe(heroEl); }
@@ -1093,6 +1148,8 @@
   btn.addEventListener("click", enter);
   gate.addEventListener("click", (e) => { if (!e.target.closest || !e.target.closest("button")) btn.click(); });   /* a tap anywhere on the gate = the Enter button */
   gate.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") enter(); });
+  /* console helper: __tmFx.replay() plays the blue TM pulse + the embers again on Home */
+  window.__tmFx = { replay: () => { const n = performance.now(); flashAt = n + 60; burstAt = n; bst = []; bstN = 0; }, state: () => ({ flash: flashLevel(performance.now()), particles: bst.length, since: flashAt ? performance.now() - flashAt : null }) };
   window.__tmIntroState = () => ({ mode, opac, zoomV, amb, glow, mk, flood, homeVisible, W, H, dpr, rect, zc, handT, alphaMode, renderScale, texDone, flat, ready, glOK: !!(gl && prog) });
   window.__tmField = () => ({ max: Math.max.apply(null, Array.from(fu8)), mean: fu8.reduce((a, b) => a + b, 0) / fu8.length });
 
