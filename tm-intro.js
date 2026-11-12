@@ -1374,7 +1374,9 @@
      2700 - 3500 charge: shake + glow build up; at 3500 a flash turns the tunnel into blue energy (pictures 3 + 4)
      3500 - 5300 the blast: speed, left/right sway, big rocks, streaks
      5300 - 6900 the brake: the energy tunnel slides to the exact place of the Home medallion and lands on it
-     6900 - 8500 Home is already built underneath; the energy melts away and the carved TM disc appears
+     6900 - 8400 Home is already built underneath; the energy melts away and the carved TM disc appears
+     7850        THE HIT (same instant as the stone's jump + blue TM pulse): a light flash, a shockwave ring and the transparent rocks are
+                 thrown out of the medallion straight at the viewer (second, transparent canvas; same rock picture, no sound)
    Tune everything in the CFG block. Click / tap anywhere after 1.5 s skips to the brake.
    ===================================================================================================== */
 (function () {
@@ -1386,7 +1388,8 @@
     toEnergy: [3350, 3900],           /* calm tunnel -> energy tunnel                                         */
     brake: [5300, 6900],              /* slide + landing on the Home medallion                                */
     handoff: 6900,                    /* Home is built under the canvas                                       */
-    fade: [6900, 8400], end: 8500,    /* the canvas melts away                                                */
+    fade: [6900, 8400], end: 9300,    /* the energy canvas melts away; the throw layer lives until `end`      */
+    hit: 7850,                        /* = handoff + 950 ms, the same moment as the stone's jump / TM pulse   */
     ringK: 2.9,                       /* outer stone ring radius of the Home medallion, in medallion radii    */
     speed: [[0, 0], [1000, .3], [1900, .55], [2700, .9], [3500, 1.4], [3900, 2.3], [5200, 1.9], [6000, .5], [6900, .1], [9000, .06]]
   };
@@ -1424,8 +1427,9 @@
   function play(o) {
     var cv = document.createElement("canvas"); cv.className = "tm-warp"; cv.setAttribute("aria-hidden", "true");
     document.body.appendChild(cv);
-    var ctx = cv.getContext("2d"), W = 0, H = 0, dpr = 1;
-    var size = function () { W = innerWidth; H = innerHeight; dpr = Math.min(window.devicePixelRatio || 1, W < 700 ? 1 : 1.25); cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); };
+    var cv2 = document.createElement("canvas"); cv2.className = "tm-warp"; cv2.setAttribute("aria-hidden", "true"); document.body.appendChild(cv2);   /* transparent layer: the hit */
+    var ctx = cv.getContext("2d"), ctx2 = cv2.getContext("2d"), W = 0, H = 0, dpr = 1, blank = false;
+    var size = function () { W = innerWidth; H = innerHeight; dpr = Math.min(window.devicePixelRatio || 1, W < 700 ? 1 : 1.25); cv.width = cv2.width = Math.round(W * dpr); cv.height = cv2.height = Math.round(H * dpr); };
     size(); addEventListener("resize", size);
 
     var t0 = performance.now(), tOff = 0, last = t0, P = 0, hid = false, hand = false, raf = 0, over = false;
@@ -1454,6 +1458,8 @@
       var b = eio((t - CFG.brake[0]) / (CFG.brake[1] - CFG.brake[0]));
       var master = 1 - eio((t - CFG.fade[0]) / (CFG.fade[1] - CFG.fade[0]));
       cv.style.opacity = master.toFixed(3);
+      if (master < .003) { if (!blank) { ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H); blank = true; } return; }   /* the energy is gone: stop drawing it */
+      blank = false;
 
       var tg = o.target ? o.target() : null, tx = tg ? tg.x : vp0.x, ty = tg ? tg.y : vp0.y, R = tg ? tg.R : Math.min(W, H) * .25;
       var vx = lerp(vp0.x, tx, b), vy = lerp(vp0.y, ty, b), vm = Math.min(W, H);
@@ -1535,8 +1541,47 @@
       ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1;
     }
 
+    /* THE HIT: flash + shockwave + the transparent rocks thrown out of the medallion at the viewer (two depths, one mirrored and twisted, each with 3 ghost copies) */
+    function drawThrow(t) {
+      ctx2.setTransform(dpr, 0, 0, dpr, 0, 0); ctx2.clearRect(0, 0, W, H);
+      var x = t - CFG.hit; if (x < -400 || x > 1500) return;
+      var tg = o.target ? o.target() : null, hx = tg ? tg.x : vp0.x, hy = tg ? tg.y : vp0.y, vm = Math.min(W, H);
+      var F = x < 0 ? Math.pow(ss((x + 140) / 140), 2) : Math.exp(-x / 260);
+      if (F > .01) {
+        ctx2.globalAlpha = Math.min(1, F) * .7; ctx2.fillStyle = "rgb(205,228,255)"; ctx2.fillRect(0, 0, W, H);
+        ctx2.globalCompositeOperation = "lighter"; ctx2.save(); ctx2.translate(hx, hy); ctx2.scale(1, .035);
+        var g2 = ctx2.createRadialGradient(0, 0, 0, 0, 0, W * .9); g2.addColorStop(0, "rgba(170,210,255," + Math.min(1, F).toFixed(3) + ")"); g2.addColorStop(1, "rgba(60,110,255,0)");
+        ctx2.globalAlpha = 1; ctx2.fillStyle = g2; ctx2.fillRect(-W, -W * .9, W * 2, W * 1.8); ctx2.restore(); ctx2.globalCompositeOperation = "source-over";
+      }
+      var p = x / 900;
+      if (p > 0 && p < 1) {   /* the shockwave ring */
+        ctx2.globalCompositeOperation = "lighter";
+        var r = Math.hypot(W, H) * .85 * eo3(p), w = vm * .1, a2 = .7 * (1 - p) * (1 - p), c = "170,205,255";
+        var g3 = ctx2.createRadialGradient(hx, hy, Math.max(0, r - w), hx, hy, r + w * .35);
+        g3.addColorStop(0, "rgba(" + c + ",0)"); g3.addColorStop(.75, "rgba(" + c + "," + a2.toFixed(3) + ")"); g3.addColorStop(1, "rgba(" + c + ",0)");
+        ctx2.globalAlpha = 1; ctx2.fillStyle = g3; ctx2.fillRect(0, 0, W, H); ctx2.globalCompositeOperation = "source-over";
+      }
+      var rk = IM.rk, bp = (x + 100) / 950;
+      if (bp > 0 && bp < 1 && rk.naturalWidth) {   /* the rocks */
+        var bw = Math.max(W, H * 1.5) * .9, bh = bw * rk.naturalHeight / rk.naturalWidth;
+        for (var L = 0; L < 2; L++) {
+          var q2 = c01(bp - L * .07); if (q2 <= 0) continue;
+          var sc = (L ? .5 : .62) + (L ? 2.7 : 3.5) * Math.pow(q2, 1.75), al = ss(q2 / .1) * (1 - ss((q2 - .6) / .4));
+          if (al < .01) continue;
+          for (var k = 3; k >= 0; k--) {
+            var s2 = sc * (1 - .06 * k), a3 = k ? al * (.22 / k) : al;
+            ctx2.save(); ctx2.translate(hx, hy); ctx2.rotate((L ? .38 : -.05) + (L ? -.18 : .12) * q2); ctx2.scale(L ? -s2 : s2, s2);
+            ctx2.globalAlpha = a3; ctx2.drawImage(rk, -bw / 2, -bh / 2, bw, bh);
+            if (!k) { ctx2.globalCompositeOperation = "lighter"; ctx2.globalAlpha = a3 * .45; ctx2.drawImage(rk, -bw / 2, -bh / 2, bw, bh); ctx2.globalCompositeOperation = "source-over"; }
+            ctx2.restore();
+          }
+        }
+      }
+      ctx2.globalAlpha = 1; ctx2.globalCompositeOperation = "source-over";
+    }
+
     function finish() {
-      if (over) return; over = true; cancelAnimationFrame(raf);
+      if (over) return; over = true; cancelAnimationFrame(raf); cv2.remove();
       removeEventListener("resize", size); removeEventListener("pointerdown", skip);
       cv.remove(); if (o.onDone) o.onDone();
     }
@@ -1544,7 +1589,7 @@
       var dt = Math.min(50, now - last); last = now;
       var dbg = window.__tmCine && window.__tmCine.dbg, t = dbg != null ? dbg : now - t0 + tOff;
       var v = speedAt(t); P += v * dt / 1000;
-      try { draw(t, v); } catch (e) { console.warn("[tm-cine]", e); t = CFG.end + 1; }
+      try { draw(t, v); drawThrow(t); } catch (e) { console.warn("[tm-cine]", e); t = CFG.end + 1; }
       if (!hid && t >= CFG.hide) { hid = true; if (o.onHide) o.onHide(); }
       if (!hand && t >= CFG.handoff) { hand = true; if (o.onHandoff) o.onHandoff(); }
       if (t >= CFG.end) { if (!hid && o.onHide) o.onHide(); if (!hand && o.onHandoff) o.onHandoff(); finish(); return; }
