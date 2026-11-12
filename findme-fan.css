@@ -35,14 +35,14 @@ section.social-strip.fm>.fm-fan{position:absolute;inset:0;z-index:2;container-ty
 /* Instagram + TikTok: no cover photo, so the brand mark sits big in the visible (outer) part of the card */
 .fm-l2 .fm-lab,.fm-r2 .fm-lab{top:0;bottom:0;width:60%;flex-direction:column;justify-content:center;gap:7px;text-align:center}
 .fm-l2 .fm-lab{left:0;right:auto}.fm-r2 .fm-lab{right:0;left:auto}
-.fm-l2 .fm-lab svg,.fm-r2 .fm-lab svg{width:46px;height:46px;padding:11px;box-sizing:border-box;border-radius:50%;border:1px solid rgba(255,255,255,.4);transition:transform .4s cubic-bezier(.22,1,.36,1)}
-.fm-l2 .fm-lab svg{background:linear-gradient(45deg,#f77737,#e1306c 52%,#833ab4);box-shadow:0 0 26px rgba(225,48,108,.55)}
-.fm-r2 .fm-lab svg{background:#0a0a0f;filter:drop-shadow(-1.5px -1px 0 #25f4ee) drop-shadow(1.5px 1px 0 #fe2c55)}
+.fm-l2 .fm-lab svg,.fm-r2 .fm-lab svg{width:46px;height:46px;transition:transform .4s cubic-bezier(.22,1,.36,1)}
+.fm-l2 .fm-lab svg{filter:drop-shadow(0 0 9px rgba(225,48,108,.85)) drop-shadow(0 0 3px rgba(247,119,55,.7))}
+.fm-r2 .fm-lab svg{filter:drop-shadow(-1.5px -1px 0 #25f4ee) drop-shadow(1.5px 1px 0 #fe2c55)}
 .fm-l2 .fm-lab>span,.fm-r2 .fm-lab>span{font-size:13px}
 .fm-l2:hover .fm-lab svg,.fm-r2:hover .fm-lab svg{transform:scale(1.12)}
 @media(max-width:900px){
   .fm-side{width:22cqw;height:48cqh}.fm-lab{left:0;right:0;bottom:8px;justify-content:center!important}.fm-lab>span{display:none}.fm-lab svg,.fm-lab b{width:20px;height:20px;font-size:10px}
   .fm-l2{--fx:-38.5cqw;--fy:10cqh}.fm-l1{--fx:-29cqw;--fy:4cqh}.fm-r1{--fx:29cqw;--fy:4cqh}.fm-r2{--fx:38.5cqw;--fy:10cqh}
-  .fm-l2 .fm-lab,.fm-r2 .fm-lab{width:64%}.fm-l2 .fm-lab svg,.fm-r2 .fm-lab svg{width:34px;height:34px;padding:8px}
+  .fm-l2 .fm-lab,.fm-r2 .fm-lab{width:64%}.fm-l2 .fm-lab svg,.fm-r2 .fm-lab svg{width:34px;height:34px}
   .fm-c{width:46cqw;height:84cqh;min-width:0}.fm-t{font-size:clamp(15px,5.8cqw,26px)}}
 @media(prefers-reduced-motion:reduce){.fm-card{transition:none}}
