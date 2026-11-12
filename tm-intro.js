@@ -494,6 +494,56 @@
     pl.root.style.transformOrigin = (G[0].x * S).toFixed(1) + "px " + (G[0].y * S).toFixed(1) + "px";
   };
   /* ---- dust: a thin swirling cloud around the medallion, projected in 3D (tilt + perspective + pointer parallax); the music drives it ---- */
+  /* after-landing effects (only when the cinematic dive brought us here): the blue TM pulse + the ember / dust burst */
+  let flashAt = 0, flashOn = false, burstAt = 0, bstN = 0, bst = [];
+  const FLASH_RISE = 160, FLASH_TAU = 520, BURST_SPAWN = 1300, BURST_SPARKS = 150, BURST_DUST = 240;
+  const flashLevel = (now) => {
+    if (!flashAt || now < flashAt) return 0;
+    const x = now - flashAt;
+    if (x < FLASH_RISE) return Math.pow(x / FLASH_RISE, 1.6);
+    const f = Math.exp(-(x - FLASH_RISE) / FLASH_TAU);
+    if (f < 0.01) { flashAt = 0; return 0; }
+    return f;
+  };
+  const spawnBurst = (now) => {
+    const want = Math.min(BURST_SPARKS + BURST_DUST, Math.floor((now - burstAt) / BURST_SPAWN * (BURST_SPARKS + BURST_DUST)) + 1);
+    while (bstN < want) {
+      const spark = bstN % 8 < 3;
+      const a = Math.random() * 6.2832, r0 = R * (1.0 + Math.random() * (spark ? 1.5 : 2.0));
+      const sp = spark ? R * (0.16 + Math.random() * 0.5) : R * (0.02 + Math.random() * 0.09), sw = (Math.random() - 0.5) * sp * 0.8;
+      bst.push({ spark, x: Math.cos(a) * r0, y: Math.sin(a) * r0 * 0.86, vx: Math.cos(a) * sp - Math.sin(a) * sw, vy: Math.sin(a) * sp * 0.86 + Math.cos(a) * sw - (spark ? 10 : 4),
+        age: -Math.random() * 0.25, life: spark ? 2.6 + Math.random() * 2.6 : 5 + Math.random() * 3.5, sz: spark ? 1.3 + Math.random() * 1.9 : 0.8 + Math.random() * 1.5,
+        ph: Math.random() * 6.28, col: spark ? (Math.random() < 0.7 ? "255,150,55" : "255,205,110") : (Math.random() < 0.8 ? "190,210,245" : "130,165,255") });
+      bstN++;
+    }
+  };
+  const stepBurst = (c, now, dt) => {
+    if (!burstAt || now < burstAt) return;
+    spawnBurst(now);
+    const s = dt / 1000;
+    let alive = 0;
+    for (const q of bst) {
+      q.age += s; if (q.age < 0) { alive++; continue; }
+      if (q.age >= q.life) continue; alive++;
+      const k = Math.exp(-s * (q.spark ? 1.25 : 0.55));
+      q.vx = q.vx * k + Math.cos(q.age * 1.7 + q.ph) * (q.spark ? 6 : 3) * s; q.vy = q.vy * k + (Math.sin(q.age * 1.3 + q.ph) * 3 - (q.spark ? 5 : 1.5)) * s;
+      q.x += q.vx * s; q.y += q.vy * s;
+      const u = q.age / q.life, env = Math.min(1, q.age / 0.35) * Math.pow(1 - u, q.spark ? 1.4 : 1.0);
+      const x = cx + q.x, y = cy + q.y;
+      if (Math.hypot(q.x, q.y) < R * 0.93 || x < -10 || x > dW + 10 || y < -10 || y > dH + 10) continue;
+      let a = env * (q.spark ? 0.7 + 0.3 * Math.sin(now / 70 + q.ph * 9) : 0.55);
+      if (a < 0.015) continue;
+      if (q.spark) {
+        c.strokeStyle = "rgba(" + q.col + "," + (a * 0.7).toFixed(3) + ")"; c.lineWidth = q.sz * 1.1; c.lineCap = "round";
+        c.beginPath(); c.moveTo(x, y); c.lineTo(x - q.vx * 0.05, y - q.vy * 0.05); c.stroke();
+        c.fillStyle = "rgba(" + q.col + "," + Math.min(1, a).toFixed(3) + ")"; c.beginPath(); c.arc(x, y, q.sz * 0.75, 0, 6.2832); c.fill();
+        c.fillStyle = "rgba(" + q.col + "," + (a * 0.2).toFixed(3) + ")"; c.beginPath(); c.arc(x, y, q.sz * 4.2, 0, 6.2832); c.fill();
+      } else {
+        c.fillStyle = "rgba(" + q.col + "," + a.toFixed(3) + ")"; c.beginPath(); c.arc(x, y, q.sz, 0, 6.2832); c.fill();
+      }
+    }
+    if (!alive && bstN >= BURST_SPARKS + BURST_DUST) { burstAt = 0; bst = []; bstN = 0; }
+  };
   let dust = null, dctx = null, dW = 0, dH = 0, dDpr = 1, dBass = 0, dMid = 0, dHi = 0, dYaw = 0, dPx = 0, dPy = 0, dPxT = 0, dPyT = 0;
   const buildDust = () => {
     dust = document.createElement("canvas"); dust.className = "tmx-dust"; dust.setAttribute("aria-hidden", "true"); heroEl.insertBefore(dust, homeImg.nextSibling);
@@ -534,10 +584,9 @@
       c.fillStyle = "rgba(" + q.col + "," + Math.min(1, a).toFixed(3) + ")"; c.beginPath(); c.arc(sx, sy, r, 0, 6.2832); c.fill();
       if (r > 1.3 && a > 0.45) { c.fillStyle = "rgba(" + q.col + "," + (a * 0.1).toFixed(3) + ")"; c.beginPath(); c.arc(sx, sy, r * 2.6, 0, 6.2832); c.fill(); }
     }
+    stepBurst(c, now, dt);
     c.globalCompositeOperation = "source-over";
   };
-  /* the landing hit (cinematic flight only, at the LAST flash): the whole carved stone jumps and settles back, and the TM lights up blue once */
-  let hitAt = 0, hitOn = false;
   let plTeaserDone = false, plTeaserUntil = 0, plP = 0, plHov = 0, plHovT = 0, plBass = 0, plNx = 0, plNy = 0, plTx = 0, plTy = 0;
   /* a clicking step: quick snap with a little overshoot, then a pause -- the "tk" of a mechanism */
   const tk = (x, n) => { x = clamp(x, 0, 1); const v = x * n, i = Math.floor(v), f = v - i, e = f < 0.42 ? easeOutBack(f / 0.42) : 1; return Math.min(1.04, (i + e) / n); };
@@ -590,27 +639,15 @@
     const sc = 1 + 0.038 * L + 0.02 * plHov + 0.01 * plBass * L;
     pl.g.style.transform = "translate3d(" + jx.toFixed(2) + "px," + (-R * 0.035 * lift + jy).toFixed(2) + "px," + (R * 0.05 * lift).toFixed(1) + "px) scale(" + sc.toFixed(4) + ")";
     const lzI = clamp((L - 0.3) / 0.7, 0, 1), pulse = 0.72 + 0.28 * Math.sin(now / 380) + 0.55 * plBass;
-    /* --- the hit: a damped bounce of the whole stone (scale punch + a hop + a short tremor) and a blue pulse on TM --- */
-    let hv = 0;
-    if (hitAt && now >= hitAt) {
-      const x = (now - hitAt) / 1000;
-      if (x > 2.6) hitAt = 0;
-      else if (homeImg) {
-        const e = Math.exp(-x * 5), hop = -R * 0.085 * Math.exp(-x * 3.4) * Math.abs(Math.sin(x * 9.5));
-        homeImg.style.scale = (1 + 0.1 * e * Math.cos(x * 14)).toFixed(4);
-        homeImg.style.translate = (7 * e * Math.sin(x * 63)).toFixed(2) + "px " + (hop + 5 * e * Math.cos(x * 49)).toFixed(2) + "px";
-        hv = Math.min(1, x / 0.07) * Math.exp(-x * 2.7); hitOn = true;
-      }
-    }
-    if (!hitAt && hitOn && homeImg) { hitOn = false; homeImg.style.scale = ""; homeImg.style.translate = ""; }
-    pl.laser.style.opacity = Math.max(lzI * Math.min(1, pulse), hv).toFixed(3);
-    if (hv > 0.01) pl.laser.style.filter = "drop-shadow(0 0 " + (2 + 16 * hv).toFixed(1) + "px rgba(70,160,255," + (0.55 + 0.4 * hv).toFixed(2) + ")) brightness(" + (1 + 0.9 * hv).toFixed(2) + ")";
-    else if (pl.laser.style.filter) pl.laser.style.filter = "";
+    const fv = flashLevel(now);
+    pl.laser.style.opacity = Math.max(lzI * Math.min(1, pulse), fv).toFixed(3);
+    if (fv > 0) { flashOn = true; pl.laser.style.filter = "drop-shadow(0 0 " + (2 + 16 * fv).toFixed(1) + "px rgba(70,160,255," + (0.55 + 0.4 * fv).toFixed(2) + ")) brightness(" + (1 + 0.9 * fv).toFixed(2) + ")"; }
+    else if (flashOn) { flashOn = false; pl.laser.style.filter = ""; }
     pl.lr1.style.opacity = pl.lr2.style.opacity = (L * Math.min(1, 0.55 + 0.5 * plBass + 0.12 * Math.sin(now / 520))).toFixed(3);
     pl.core.style.filter = L > 0.01 ? "brightness(" + (1 - 0.42 * lzI + 0.08 * plBass).toFixed(3) + ") saturate(" + (1 - 0.15 * lzI).toFixed(2) + ")" : "none";
     pl.hole.style.opacity = L > 0.004 ? "1" : "0";
     pl.sh.style.opacity = (0.6 * L).toFixed(3); pl.sh.style.transform = "translate(" + (R * 0.055 * L).toFixed(1) + "px," + (R * 0.085 * L).toFixed(1) + "px) scale(" + (1.05 + 0.06 * L).toFixed(3) + ")";
-    pl.rim.style.opacity = Math.max(L * (0.45 + 0.55 * plBass + 0.1 * Math.sin(now / 420)), 0.85 * hv).toFixed(3);
+    pl.rim.style.opacity = Math.max(L * (0.45 + 0.55 * plBass + 0.1 * Math.sin(now / 420)), 0.85 * fv).toFixed(3);
     pl.root.style.transform = "scale(" + (1 + 0.012 * plHov).toFixed(4) + ")";
   };
 
@@ -702,7 +739,7 @@
 
   /* ------------------------------------------------------------ frame loop */
   let ready = false, readyPending = false, entering = false, enterT = 0, handT = 0, raf = 0, alive = true, shown = 0, t0 = performance.now(), litT = 0;
-  let tilt = [0, 0], homeVisible = true, lastNow = 0, slow = 0, fast = 0, renderScale = 1;
+  let cineCover = false, tilt = [0, 0], homeVisible = true, lastNow = 0, slow = 0, fast = 0, renderScale = 1;
   let amb = 0.55, inten = 1.1, zoomV = 0, opac = 1, alphaMode = 1, glow = 0, mk = 0, flood = 0;
   const ZOOM_MAX = 2.4, PUSH = 1500;
 
@@ -875,7 +912,7 @@
       const target = Math.min(real, cap);
       shown += (target - shown) * (1 - Math.exp(-dt / 90));
       if (!readyPending) {
-        if (real >= 100 && cap >= 100 && shown > 99.4 && (FL.done || now - t0 > 9000)) setReady();
+        if (real >= 100 && cap >= 100 && shown > 99.4) setReady();
         else { numEl.textContent = String(Math.floor(shown)).padStart(3, "0"); barEl.style.width = shown.toFixed(1) + "%"; setMsg(shown); }
       }
     }
@@ -917,6 +954,7 @@
     if (mode === "home" && homeImg) { if (homeVisible) { stepPlayer(now, dt); stepDust(now, dt); } return; }       /* Home is a picture + a CSS mechanism: no WebGL work at all */
     if (mode === "home") stepMusic(now, dt);
     if (mode === "home" && !homeVisible) return;
+    if (cineCover) return;                                  /* the cinematic canvas covers the medallion: no WebGL work meanwhile */
     if (!gl || !prog || !texDone) return;
     draw(now);
   };
@@ -997,273 +1035,21 @@
 
   raf = requestAnimationFrame(frame);
 
-  /* ==========================================================================
-     CINEMATIC FLIGHT (v6)  -  Enter -> charge -> the stone cracks open into a portal -> tunnel rush (left/right sway,
-     rising shake, debris) -> FLASH + shockwave -> the camera pulls out, brakes hard and LANDS on the Home medallion.
-     Layers (2D canvas on top of everything, removed at the end):
-       images/fl-portal-1,2  calm tunnel   (before the flash)      images/fl-portal-3,4  energy tunnel (after the flash)
-       images/fl-rocks       near-field debris frame               images/fl-atlas       transparent rocks / sparks (depth particles)
-     The portal's outer ring is locked to FK x the medallion radius, at BOTH ends (intro position and Home position),
-     so the landing is pixel-exact. Change FK (one number) to make the portal ring sit on a different carved ring.
-     If the images are not ready when Enter is pressed (or reduced-motion), the old entrance runs unchanged.
-     ========================================================================== */
-  const FLIGHT_SOUND = true;                 /* synthesised whoosh / boom / thump (no audio files); false = silent flight */
-  const FK = 2.7;                            /* portal outer ring = FK x medallion radius */
-  const FT = { open: 300, openEnd: 1100, rush: 300, flash: 2850, qStart: 2950, qDur: 1800, land: 3950, brake: 4200, hand: 2400, burst: 4400, flash2: 4500, fire: 4450, fadeA: 4480, fadeB: 5400 };   /* ms after Enter */
-  const PCAL = [[639.4, 421.3, 400], [640, 413.2, 397.5], [635.3, 404.2, 390], [634, 407.3, 390]];     /* per portal image: core x, core y, outer ring radius (px, 1280x853) */
-  const ATLAS = [[787,5,66,78],[6,6,145,119],[166,6,118,119],[298,6,111,101],[423,6,123,85],[560,6,106,89],[680,6,93,90],[949,6,63,71],[863,7,72,62],[472,75,31,26],[171,138,69,60],[265,138,58,47],[342,138,67,56],[805,138,53,54],[6,139,67,66],[87,139,70,62],[422,139,46,42],[502,139,66,50],[582,139,55,59],[651,139,72,42],[737,139,57,51],[874,139,51,50],[939,139,55,48],[244,171,55,30],[446,186,52,15],[560,217,58,50],[501,218,50,40],[862,218,42,38],[6,219,51,51],[71,219,50,44],[135,219,42,50],[190,219,47,45],[251,219,51,40],[316,219,49,41],[379,219,45,45],[438,219,49,40],[624,219,44,42],[682,219,43,41],[739,219,41,43],[794,219,54,32],[918,220,46,33],[442,282,41,34],[6,283,40,39],[60,283,41,38],[115,283,48,31],[176,283,49,30],[239,283,36,40],[289,283,35,42],[338,283,38,36],[390,283,38,36]];
-  const FL = { ok: false, done: false, imgs: [] };
-  const loadFlight = () => {
-    const urls = ["images/fl-portal-1.webp?v=1", "images/fl-portal-2.webp?v=1", "images/fl-portal-3.webp?v=1", "images/fl-portal-4.webp?v=1", "images/fl-rocks.webp?v=1", "images/fl-atlas.webp?v=1", "images/fl-burst.webp?v=1"];
-    let left = urls.length, bad = false;
-    const fin = () => { if (--left === 0) { FL.ok = !bad; FL.done = true; } };
-    FL.imgs = urls.map((u) => { const im = new Image(); im.decoding = "async"; try { im.fetchPriority = "low"; } catch (_) {} im.onload = fin; im.onerror = () => { bad = true; fin(); }; im.src = u; return im; });
-  };
-  if (!reduce) loadFlight(); else FL.done = true;
-
-  const smooth = (a, b, t) => { t = clamp((t - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
-  const backOut = (x, c) => { x = clamp(x, 0, 1) - 1; return 1 + (c + 1) * x * x * x + c * x * x; };
-  const U_A = 4.5, U_B = 1.5, U0 = 1 / 6, RHO = 2.6, ZN = 0.16, ZR = 2.2;
-  /* u = how many "tunnel layers" the camera has flown through. It ends on U0 + 3, so the last frame is ONE clean image. */
-  const uOf = (t) => {
-    if (t <= FT.rush) return U0;
-    if (t <= FT.flash) return U0 + U_A * Math.pow((t - FT.rush) / (FT.flash - FT.rush), 2.2);
-    const y = clamp((t - FT.flash) / (FT.brake - FT.flash), 0, 1);
-    return U0 + U_A - U_B * (1 - Math.pow(1 - y, 3));
-  };
-  const vOf = (t) => (uOf(t + 6) - uOf(t - 6)) / 0.012;
-  const nz = (t, k) => (Math.sin(t * 0.031 * k + 1.7 * k) + 0.6 * Math.sin(t * 0.057 * k + 0.3) + 0.35 * Math.sin(t * 0.093 * k + 2.4)) / 1.95;
-  const homeGeom = () => {                      /* where the Home medallion is, in viewport pixels (same rules as layout() in home mode) */
-    const hr = heroEl ? heroEl.getBoundingClientRect() : { left: 0, top: 0, width: innerWidth, height: innerHeight };
-    const Wh = Math.max(2, hr.width), Hh = Math.max(2, hr.height), wide = innerWidth > 900;
-    const target = clamp(Math.min(Hh * 0.62, Wh * (wide ? 0.50 : 0.80)), 220, 640);
-    const rtl = document.documentElement.dir === "rtl" || isAr();
-    return { x: hr.left + (wide ? Wh * (rtl ? 0.32 : 0.68) : Wh * 0.5), y: hr.top + (wide ? Hh * 0.5 : Hh * 0.42), R: target / 2 };
-  };
-
-  const flightSound = () => {
-    if (!FLIGHT_SOUND || !sfx || !sfx.ctx) return;
-    try {
-      const c = sfx.ctx; if (c.state === "suspended") c.resume();
-      const T0 = c.currentTime + 0.03, master = c.createGain(); master.gain.value = 0.5; master.connect(c.destination);
-      const nb = c.createBuffer(1, c.sampleRate * 4, c.sampleRate), d = nb.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-      const noise = (t0, dur) => { const s = c.createBufferSource(); s.buffer = nb; s.start(T0 + t0, Math.random() * 0.5, dur); return s; };
-      const env = (g, pts) => { g.gain.setValueAtTime(0.0001, T0 + pts[0][0]); pts.forEach((p) => g.gain.linearRampToValueAtTime(Math.max(0.0001, p[1]), T0 + p[0])); };
-      /* 1 · rising whoosh (the rush) */
-      let n = noise(0.3, 2.7), f = c.createBiquadFilter(), g = c.createGain(); f.type = "bandpass"; f.Q.value = 1.1;
-      f.frequency.setValueAtTime(180, T0 + 0.3); f.frequency.exponentialRampToValueAtTime(3200, T0 + 2.8); env(g, [[0.3, 0], [1.6, 0.25], [2.8, 0.7], [2.86, 0]]); n.connect(f); f.connect(g); g.connect(master);
-      /* 2 · rising sub tone */
-      let o = c.createOscillator(), og = c.createGain(); o.type = "sawtooth"; o.frequency.setValueAtTime(38, T0 + 0.4); o.frequency.exponentialRampToValueAtTime(190, T0 + 2.85);
-      const lp = c.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 420; env(og, [[0.4, 0], [2.4, 0.16], [2.85, 0.22], [2.9, 0]]); o.connect(lp); lp.connect(og); og.connect(master); o.start(T0 + 0.4); o.stop(T0 + 2.95);
-      /* 3 · the flash: boom + air burst */
-      o = c.createOscillator(); og = c.createGain(); o.type = "sine"; o.frequency.setValueAtTime(95, T0 + 2.85); o.frequency.exponentialRampToValueAtTime(26, T0 + 4.1); env(og, [[2.85, 1.0], [4.1, 0]]); o.connect(og); og.connect(master); o.start(T0 + 2.85); o.stop(T0 + 4.2);
-      n = noise(2.85, 1.2); f = c.createBiquadFilter(); g = c.createGain(); f.type = "lowpass"; f.frequency.setValueAtTime(5200, T0 + 2.85); f.frequency.exponentialRampToValueAtTime(140, T0 + 4.0); env(g, [[2.85, 0.9], [4.0, 0]]); n.connect(f); f.connect(g); g.connect(master);
-      /* 4 · pulling out and braking: the whoosh falls away */
-      n = noise(2.95, 1.5); f = c.createBiquadFilter(); g = c.createGain(); f.type = "bandpass"; f.Q.value = 0.9; f.frequency.setValueAtTime(2600, T0 + 2.95); f.frequency.exponentialRampToValueAtTime(160, T0 + 4.3); env(g, [[2.95, 0.45], [4.3, 0]]); n.connect(f); f.connect(g); g.connect(master);
-      /* 6 · the last flash: boom + the rocks tearing past */
-      o = c.createOscillator(); og = c.createGain(); o.type = "sine"; o.frequency.setValueAtTime(88, T0 + 4.5); o.frequency.exponentialRampToValueAtTime(30, T0 + 5.4); env(og, [[4.5, 0.9], [5.4, 0]]); o.connect(og); og.connect(master); o.start(T0 + 4.5); o.stop(T0 + 5.5);
-      n = noise(4.4, 1.2); f = c.createBiquadFilter(); g = c.createGain(); f.type = "bandpass"; f.Q.value = 0.8; f.frequency.setValueAtTime(500, T0 + 4.4); f.frequency.exponentialRampToValueAtTime(4200, T0 + 4.9); env(g, [[4.4, 0.05], [4.55, 0.8], [5.5, 0]]); n.connect(f); f.connect(g); g.connect(master);
-      /* 5 · touchdown thump */
-      o = c.createOscillator(); og = c.createGain(); o.type = "sine"; o.frequency.setValueAtTime(70, T0 + 3.95); o.frequency.exponentialRampToValueAtTime(34, T0 + 4.5); env(og, [[3.95, 0.85], [4.5, 0]]); o.connect(og); og.connect(master); o.start(T0 + 3.95); o.stop(T0 + 4.55);
-    } catch (_) {}
-  };
-
-  const startFlight = () => {
-    let cvF = null, cvG = null, done = false, raf2 = 0;
-    const stopKeys = ["wheel", "touchmove", "keydown"];
-    const block = (e) => { if (e.type === "keydown" && !/^(Arrow|Page|Home|End| |Space)/.test(e.key)) return; e.preventDefault(); };
-    const finish = () => {
-      if (done) return; done = true; cancelAnimationFrame(raf2);
-      stopKeys.forEach((k) => removeEventListener(k, block, { passive: false }));
-      if (cvF && cvF.parentNode) cvF.parentNode.removeChild(cvF);
-      if (cvG && cvG.parentNode) cvG.parentNode.removeChild(cvG);
-      window.__tmFlightDone = true;
-    };
-    try {
-      cvF = document.createElement("canvas"); cvF.id = "tmFlight"; cvF.setAttribute("aria-hidden", "true");
-      const ctx = cvF.getContext("2d", { alpha: false });
-      if (!ctx) return false;
-      document.body.appendChild(cvF);
-      cvG = document.createElement("canvas"); cvG.id = "tmFlight2"; cvG.setAttribute("aria-hidden", "true");
-      const ctx2 = cvG.getContext("2d"); if (!ctx2) return false;
-      document.body.appendChild(cvG);
-      stopKeys.forEach((k) => addEventListener(k, block, { passive: false }));
-      const Ci = { x: cx, y: cy, R: R }, im = FL.imgs, atlas = im[5], burst = im[6];
-      let Wf = 0, Hf = 0, dprF = 1;
-      const size = () => { Wf = innerWidth; Hf = innerHeight; dprF = Math.min(window.devicePixelRatio || 1, 1.25) * (Wf < 700 ? 0.9 : 1); cvF.width = Math.round(Wf * dprF); cvF.height = Math.round(Hf * dprF); cvG.width = cvF.width; cvG.height = cvF.height; };
-      size(); addEventListener("resize", size, { passive: true });
-      let rs = 11; const rr = () => (rs = (rs * 16807) % 2147483647) / 2147483647;
-      const rocks = Array.from({ length: 54 }, () => { const big = rr() < 0.38; return { s: big ? Math.floor(rr() * 9) : Math.floor(rr() * ATLAS.length), th: rr() * 6.2832, a: 0.10 + Math.pow(rr(), 1.4) * 0.85, z0: rr() * ZR, a0: rr() * 6.2832, sp: (rr() - 0.5) * 1.4, br: 0.55 + rr() * 0.45 }; });
-      const lines = Array.from({ length: 72 }, () => ({ th: rr() * 6.2832, ph: rr(), ln: 0.5 + rr(), w: 0.6 + rr() * 1.3 }));
-      const drawPortal = (i, x, y, Rt) => { const c = PCAL[i], s = Rt / c[2]; ctx.drawImage(im[i], x - c[0] * s, y - c[1] * s, 1280 * s, 853 * s); };
-      const ring = (x, y, r, w, rgb, a) => {
-        if (r < 2 || a < 0.01) return;
-        const g = ctx.createRadialGradient(x, y, Math.max(0, r - w), x, y, r + w * 0.35);
-        g.addColorStop(0, "rgba(" + rgb + ",0)"); g.addColorStop(0.75, "rgba(" + rgb + "," + a.toFixed(3) + ")"); g.addColorStop(1, "rgba(" + rgb + ",0)");
-        ctx.fillStyle = g; ctx.fillRect(x - r - w, y - r - w, (r + w) * 2, (r + w) * 2);
-      };
-      const t0 = performance.now();
-      flightSound();
-
-      const frame2 = (now) => {
-        if (done) return;
-        raf2 = requestAnimationFrame(frame2);
-        const t = now - t0;
-        if (t > FT.fadeB + 40) { finish(); return; }
-        try {
-          const aP = smooth(FT.open, FT.openEnd, t), fadeP = easeInOut((t - FT.fadeA) / (FT.fadeB - FT.fadeA)), op = aP * (1 - fadeP);
-          cvF.style.opacity = op.toFixed(3);
-          if (op < 0.004) return;
-          const hg = homeGeom(), UU = 0.5 * Math.max(Wf, Hf), minD = Math.min(Wf, Hf);
-          const u = uOf(t), v = vOf(t), T = Math.pow(clamp(Math.abs(v) / 0.9, 0, 1), 0.8), sgn = v >= 0 ? 1 : -1;
-          /* camera path: intro medallion -> (flash) -> Home medallion, ring locked to FK x radius at both ends */
-          const zp = Math.min(1 + 2.4 * easeInOut(t / 1500), 2.0);
-          const q = backOut((t - FT.qStart) / FT.qDur, 0.85);
-          const Rb = Math.exp(lerp(Math.log(FK * Ci.R * zp), Math.log(FK * hg.R), q));
-          const swA = 0.055 * Wf * smooth(500, 2500, t) * (t < FT.flash ? 1 : Math.exp(-(t - FT.flash) / 500));
-          const Cx = lerp(Ci.x, hg.x, q) + swA * Math.sin(t / 1700 * 6.2832 + 0.4) * (1 - q), Cy = lerp(Ci.y, hg.y, q) + swA * 0.35 * Math.sin(t / 2300 * 6.2832 + 1.1) * (1 - q);
-          /* shake (trauma model): grows with the charge, spikes at the flash and at touchdown */
-          let tr = (t < FT.flash ? 0.05 + 0.40 * smooth(500, 2800, t) : 0) + (t >= FT.flash ? Math.exp(-(t - FT.flash) / 380) : 0) + (t >= FT.land ? 0.6 * Math.exp(-(t - FT.land) / 260) : 0) + (t >= FT.flash2 ? 0.75 * Math.exp(-(t - FT.flash2) / 300) : 0) + (t > FT.flash && t < FT.land ? 0.18 * (1 - smooth(FT.flash, FT.land, t)) : 0);
-          tr = clamp(tr, 0, 1); const am = tr * tr * minD * 0.028;
-          const roll = 0.045 * Math.sin(t / 2600 * 6.2832 + 0.7) * smooth(600, 2200, t) * (1 - smooth(FT.flash, FT.flash + 900, t)) + 0.34 * Math.sin(Math.PI * clamp((t - 300) / 3300, 0, 1)) + am * 0.0008 * nz(t, 3);
-          const punch = 1 + (t >= FT.flash ? 0.12 * Math.exp(-(t - FT.flash) / 190) : 0) - (t >= FT.land ? 0.03 * Math.exp(-(t - FT.land) / 240) : 0) + (t >= FT.flash2 ? 0.07 * Math.exp(-(t - FT.flash2) / 220) : 0) + 0.006 * tr * Math.sin(t / 55);
-
-          ctx.setTransform(dprF, 0, 0, dprF, 0, 0);
-          ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1; ctx.fillStyle = "#05040a"; ctx.fillRect(0, 0, Wf, Hf);
-          ctx.save();
-          ctx.translate(Cx + am * nz(t, 1), Cy + am * nz(t + 777, 1.3)); ctx.rotate(roll); ctx.scale(punch, punch); ctx.translate(-Cx, -Cy);
-          const X = Cx, Y = Cy;
-          ctx.globalCompositeOperation = "lighter";
-          /* the tunnel: three layers an octave apart, blended so the rings stream past; at rest only ONE layer is left (exact landing) */
-          const e = smooth(2780, 2960, t);
-          for (let s = 0; s < 2; s++) {
-            const sw2 = s ? e : 1 - e; if (sw2 < 0.004) continue;
-            const set = s ? [2, 3, 2] : [0, 1, 0];
-            for (let j = 0; j < 3; j++) {
-              const f = (u + j / 3) % 1, w = (T * Math.pow(Math.sin(Math.PI * f), 2) / 1.5 + (1 - T) * (j === 1 ? 1 : 0)) * sw2;
-              if (w < 0.004) continue;
-              ctx.globalAlpha = Math.min(1, w); drawPortal(set[j], X, Y, Rb * Math.pow(RHO, f - 0.5));
-            }
-          }
-          /* near-field debris frame: rocks at the screen edges that sweep outwards (or inwards after the flash) */
-          if (T > 0.02) {
-            const s0 = 0.30 * Wf / 768;
-            for (let j = 0; j < 2; j++) {
-              const f = (u * 0.6 + j * 0.5) % 1, w = Math.pow(Math.sin(Math.PI * f), 2) * 0.8 * T; if (w < 0.01) continue;
-              const s = s0 * (1 + 1.6 * f); ctx.globalAlpha = w; ctx.drawImage(im[4], X - 768 * s, Y - 512 * s, 1536 * s, 1024 * s);
-            }
-          }
-          /* speed lines */
-          const la = clamp(Math.abs(v) / 2.6, 0, 1) * (t < FT.flash ? 1 : 0.8);
-          if (la > 0.05) {
-            ctx.lineCap = "round";
-            for (let i = 0; i < lines.length; i++) {
-              const L = lines[i], p = (((L.ph + u * 0.35) % 1) + 1) % 1, rho = UU * (0.12 + 1.7 * p * p), len = rho * (0.05 + 0.24 * la) * L.ln, a = la * Math.sin(Math.PI * p) * 0.55;
-              if (a < 0.02) continue;
-              const cs = Math.cos(L.th), sn = Math.sin(L.th); ctx.strokeStyle = "rgba(150,200,255," + a.toFixed(3) + ")"; ctx.lineWidth = L.w * (0.6 + p);
-              ctx.beginPath(); ctx.moveTo(X + cs * (rho - len), Y + sn * (rho - len)); ctx.lineTo(X + cs * rho, Y + sn * rho); ctx.stroke();
-            }
-          }
-          /* charge: the core of the portal swells to white just before the flash; and a soft pulse when we touch down */
-          const ch = smooth(1800, 2820, t) * (t < FT.flash + 60 ? 1 : 0);
-          if (ch > 0.01) {
-            const rg = minD * (0.06 + 0.42 * ch), g = ctx.createRadialGradient(X, Y, 0, X, Y, rg);
-            g.addColorStop(0, "rgba(235,245,255," + (0.95 * ch).toFixed(3) + ")"); g.addColorStop(0.4, "rgba(90,150,255," + (0.45 * ch).toFixed(3) + ")"); g.addColorStop(1, "rgba(30,60,200,0)");
-            ctx.globalAlpha = 1; ctx.fillStyle = g; ctx.fillRect(X - rg, Y - rg, rg * 2, rg * 2);
-          }
-          if (t >= FT.land) {
-            const pu = Math.exp(-(t - FT.land) / 420), rg = hg.R * 1.7, g = ctx.createRadialGradient(hg.x, hg.y, 0, hg.x, hg.y, rg);
-            g.addColorStop(0, "rgba(200,225,255," + (0.5 * pu).toFixed(3) + ")"); g.addColorStop(1, "rgba(60,120,255,0)");
-            ctx.globalAlpha = 1; ctx.fillStyle = g; ctx.fillRect(hg.x - rg, hg.y - rg, rg * 2, rg * 2);
-          }
-          /* depth rocks: they fly past the camera on the way in, recede behind us on the way out, hang in the air at touchdown, then dissolve */
-          const vis = smooth(380, 900, t) * (1 - smooth(4000, 4900, t));
-          if (vis > 0.01) {
-            ctx.globalCompositeOperation = "source-over";
-            const D = 0.7 * (u + (t > FT.brake ? 0.05 * (t - FT.brake) / 1000 : 0)), list = [];
-            for (let i = 0; i < rocks.length; i++) {
-              const r = rocks[i], zz = ZN + ((((r.z0 - D) % ZR) + ZR) % ZR);
-              list.push([zz, r]);
-            }
-            list.sort((a, b) => b[0] - a[0]);
-            const trail = Math.abs(v) > 1.1 ? Math.min(Math.abs(v), 4) / 4 : 0;
-            for (let i = 0; i < list.length; i++) {
-              const zz = list[i][0], r = list[i][1], sp = ATLAS[r.s];
-              const fa = (1 - smooth(ZN + ZR * 0.55, ZN + ZR, zz)) * smooth(ZN, ZN + 0.14, zz) * vis * r.br;
-              if (fa < 0.01) continue;
-              const ang = r.a0 + r.sp * t / 1000;
-              for (let k = trail > 0 ? 2 : 0; k >= 0; k--) {
-                const z2 = zz + sgn * 0.07 * k * trail * 2, rho = r.a * UU / z2 * 0.55, size = sp[2] * (UU / 820) * (0.45 / z2);
-                const px = X + Math.cos(r.th) * rho, py = Y + Math.sin(r.th) * rho, sh = size * sp[3] / sp[2];
-                if (px < -size || px > Wf + size || py < -size || py > Hf + size) continue;
-                ctx.globalAlpha = k ? fa * (0.26 / k) : fa;
-                ctx.save(); ctx.translate(px, py); ctx.rotate(ang); ctx.drawImage(atlas, sp[0], sp[1], sp[2], sp[3], -size / 2, -sh / 2, size, sh); ctx.restore();
-              }
-            }
-          }
-          ctx.restore();
-          ctx.globalAlpha = 1;
-          /* vignette (also keeps the picture's own edges out of sight) */
-          ctx.globalCompositeOperation = "source-over";
-          { const g = ctx.createRadialGradient(Cx, Cy, Rb * 0.9, Cx, Cy, Rb * 1.9 + 1); g.addColorStop(0, "rgba(5,4,10,0)"); g.addColorStop(1, "rgba(5,4,10,1)"); ctx.fillStyle = g; ctx.fillRect(0, 0, Wf, Hf); }
-          { const g = ctx.createRadialGradient(Wf / 2, Hf / 2, minD * 0.35, Wf / 2, Hf / 2, Math.hypot(Wf, Hf) * 0.6); g.addColorStop(0, "rgba(2,3,8,0)"); g.addColorStop(1, "rgba(2,3,8," + (0.55 - 0.25 * fadeP).toFixed(3) + ")"); ctx.fillStyle = g; ctx.fillRect(0, 0, Wf, Hf); }
-          /* shockwaves + the flash */
-          ctx.globalCompositeOperation = "lighter";
-          { const p = (t - 420) / 900; if (p > 0 && p < 1) ring(Ci.x, Ci.y, Ci.R * (1.1 + 3.4 * easeOut(p)), Ci.R * 0.22, "120,180,255", 0.55 * (1 - p) * (1 - p)); }
-          { const p = (t - FT.flash) / 1100; if (p > 0 && p < 1) ring(Cx, Cy, Math.hypot(Wf, Hf) * 0.95 * easeOut(p), minD * 0.12, "190,220,255", 0.9 * (1 - p) * (1 - p)); }
-          { const p = (t - FT.land) / 1000; if (p > 0 && p < 1) ring(hg.x, hg.y, Rb * (0.15 + 0.85 * easeOut(p)), hg.R * 0.18, "140,190,255", 0.5 * (1 - p) * (1 - p)); }
-          const Fl = t < 2900 ? Math.pow(smooth(2640, 2850, t), 2) : Math.exp(-(t - 2900) / 330);
-          if (Fl > 0.01) {
-            ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = Math.min(1, Fl); ctx.fillStyle = "rgb(205,228,255)"; ctx.fillRect(0, 0, Wf, Hf);
-            ctx.globalCompositeOperation = "lighter"; ctx.save(); ctx.translate(Cx, Cy); ctx.scale(1, 0.035);
-            const g = ctx.createRadialGradient(0, 0, 0, 0, 0, Wf * 0.9); g.addColorStop(0, "rgba(170,210,255," + Math.min(1, Fl).toFixed(3) + ")"); g.addColorStop(1, "rgba(60,110,255,0)");
-            ctx.fillStyle = g; ctx.fillRect(-Wf, -Wf * 0.9, Wf * 2, Wf * 1.8); ctx.restore();
-          }
-          ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
-          /* ---- layer 2 (transparent canvas): THE LAST FLASH. The stone shell bursts: every rock sprays out past the camera, then the medallion is there ---- */
-          ctx2.setTransform(dprF, 0, 0, dprF, 0, 0); ctx2.clearRect(0, 0, Wf, Hf);
-          const F2 = t < FT.flash2 ? Math.pow(smooth(FT.flash2 - 140, FT.flash2, t), 2) : Math.exp(-(t - FT.flash2) / 260);
-          if (F2 > 0.01) {
-            ctx2.globalAlpha = Math.min(1, F2); ctx2.fillStyle = "rgb(205,228,255)"; ctx2.fillRect(0, 0, Wf, Hf);
-            ctx2.globalCompositeOperation = "lighter"; ctx2.save(); ctx2.translate(hg.x, hg.y); ctx2.scale(1, 0.035);
-            const g2 = ctx2.createRadialGradient(0, 0, 0, 0, 0, Wf * 0.9); g2.addColorStop(0, "rgba(170,210,255," + Math.min(1, F2).toFixed(3) + ")"); g2.addColorStop(1, "rgba(60,110,255,0)");
-            ctx2.globalAlpha = 1; ctx2.fillStyle = g2; ctx2.fillRect(-Wf, -Wf * 0.9, Wf * 2, Wf * 1.8); ctx2.restore(); ctx2.globalCompositeOperation = "source-over";
-          }
-          { const p = (t - FT.flash2) / 900; if (p > 0 && p < 1) { ctx2.globalCompositeOperation = "lighter"; const rgb = "170,205,255", r = Math.hypot(Wf, Hf) * 0.85 * easeOut(p), w = minD * 0.1, a2 = 0.7 * (1 - p) * (1 - p);
-            const g3 = ctx2.createRadialGradient(hg.x, hg.y, Math.max(0, r - w), hg.x, hg.y, r + w * 0.35); g3.addColorStop(0, "rgba(" + rgb + ",0)"); g3.addColorStop(0.75, "rgba(" + rgb + "," + a2.toFixed(3) + ")"); g3.addColorStop(1, "rgba(" + rgb + ",0)");
-            ctx2.globalAlpha = 1; ctx2.fillStyle = g3; ctx2.fillRect(0, 0, Wf, Hf); ctx2.globalCompositeOperation = "source-over"; } }
-          { const bp = (t - FT.burst) / 950;
-            if (bp > 0 && bp < 1) {
-              /* two depths of rocks (one mirrored + twisted) so they never fly in lock-step; each streaks with 3 ghost copies */
-              const bw = Math.max(Wf, Hf * 1.5) * 0.9, bh = bw * 1024 / 1536;
-              for (let L = 0; L < 2; L++) {
-                const q2 = clamp(bp - L * 0.07, 0, 1); if (q2 <= 0) continue;
-                const sc = (L ? 0.5 : 0.62) + (L ? 2.7 : 3.5) * Math.pow(q2, 1.75), al = smooth(0, 0.1, q2) * (1 - smooth(0.6, 1, q2));
-                if (al < 0.01) continue;
-                for (let k = 3; k >= 0; k--) {
-                  const s2 = sc * (1 - 0.06 * k), a3 = k ? al * (0.22 / k) : al;
-                  ctx2.save(); ctx2.translate(hg.x, hg.y); ctx2.rotate((L ? 0.38 : -0.05) + (L ? -0.18 : 0.12) * q2); ctx2.scale(L ? -s2 : s2, s2);
-                  ctx2.globalAlpha = a3; ctx2.drawImage(burst, -bw / 2, -bh / 2, bw, bh);
-                  if (!k) { ctx2.globalCompositeOperation = "lighter"; ctx2.globalAlpha = a3 * 0.45; ctx2.drawImage(burst, -bw / 2, -bh / 2, bw, bh); ctx2.globalCompositeOperation = "source-over"; }
-                  ctx2.restore();
-                }
-              }
-            } }
-          ctx2.globalAlpha = 1; ctx2.globalCompositeOperation = "source-over";
-        } catch (err) { console.warn("[tm-intro] flight frame failed", err); finish(); }
-      };
-      raf2 = requestAnimationFrame(frame2);
-      setTimeout(finish, FT.fadeB + 1500);                  /* safety net */
-      return true;
-    } catch (err) { console.warn("[tm-intro] flight failed to start", err); finish(); return false; }
-  };
-
   /* --------------------------------------------------------------- Enter */
   const heroEl = document.querySelector(".hero");
   const dropPh = () => { const ph = document.querySelector("[data-tm-ph]"); if (ph) ph.remove(); };
   const at = (name, fn) => (window.__tmAt ? window.__tmAt(name, fn) : setTimeout(fn, (window.__tmTL && window.__tmTL[name]) || 0));
   const FLOATERS = ".st-rail, .st-chap, .float-wa, .scroll-orbit";
   const pop = (els, kf, opt) => els.forEach((el) => { try { el.animate(kf, Object.assign({ easing: "cubic-bezier(.16,1,.3,1)" }, opt)); } catch (_) {} });
+
+  /* where the Home medallion will be, in viewport pixels (same maths as layout() in home mode) */
+  const homeTarget = () => {
+    if (!heroEl) return null;
+    const r = heroEl.getBoundingClientRect(), w = Math.max(2, r.width), h = Math.max(2, r.height), wide = innerWidth > 900;
+    const tg = clamp(Math.min(h * 0.62, w * (wide ? 0.50 : 0.80)), 220, 640);
+    const rtl = document.documentElement.dir === "rtl" || isAr();
+    return { x: r.left + (wide ? w * (rtl ? 0.32 : 0.68) : w * 0.5), y: r.top + (wide ? h * 0.5 : h * 0.42), R: tg / 2 };
+  };
 
   const enter = () => {
     if (entering || !ready) return;
@@ -1282,9 +1068,8 @@
     document.body.appendChild(stage);
 
     const useGL = !!(gl && prog && texDone);
-    const fl = !!(FL.ok && !reduce && startFlight());
-    if (fl) hitAt = enterT + FT.flash2 + 90;                  /* the stone is hit by the last flash */          /* the cinematic flight (overlay canvas); false = the old entrance */
-    const fadeDelay = fl ? 1750 : (reduce ? 0 : 1100), fadeDur = fl ? 450 : (reduce ? 300 : 750);
+    const cine = !reduce && window.__tmCine && window.__tmCine.ok();
+    const fadeDelay = reduce ? 0 : cine ? 9e6 : 1100, fadeDur = reduce ? 300 : 750;
     let flatAnim = null;
     if (!useGL && !reduce) flatAnim = stage.animate([{ transform: "scale(1)" }, { transform: "scale(3.4)" }], { duration: PUSH, easing: "cubic-bezier(.6,0,.18,1)", fill: "forwards" });
     const fade = stage.animate([{ opacity: 1 }, { opacity: 0 }], { duration: fadeDur, delay: fadeDelay, easing: "ease-in-out", fill: "forwards" });
@@ -1292,13 +1077,12 @@
 
     /* ---- the director: one clock, one order ---- */
     /* 1 · the stage hands the canvas to Home (invisible at this moment) and the relief settles in */
-    setTimeout(() => {
+    const doHandoff = () => {
       try { fade.cancel(); } catch (_) {}
       try { if (flatAnim) flatAnim.cancel(); } catch (_) {}
       stage.remove();
       document.body.classList.remove("tm-zoom-lock");
-      if (fl) setTimeout(() => { if (window.__tmFire) window.__tmFire("handoff"); }, FT.fire - FT.hand);     /* Home's own entrance (header, title...) starts as the portal lets go */
-      else if (window.__tmFire) window.__tmFire("handoff");
+      if (window.__tmFire) window.__tmFire("handoff");
       if (heroEl) {
         host = heroEl; mode = "home";
         homeImg = document.createElement("div"); homeImg.className = "tm-home";
@@ -1322,13 +1106,23 @@
           const o = document.getElementById("tmOrb"); if (o) o.click();
         });
         entering = false; layout();
+        if (cine) { const n0 = performance.now(); flashAt = n0 + 950; burstAt = n0 + 900; }       /* the TM lights up once as the energy melts away, then the embers drift */
         /* the camera "lands" on it: the picture settles from a close-up and melts in */
-        if (!reduce && homeImg.animate) { if (fl) homeImg.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 1300, delay: 1500, easing: "ease-out", fill: "backwards" }); else homeImg.animate([{ opacity: 0, transform: "scale(1.32)" }, { opacity: 1, transform: "scale(1)" }], { duration: 3200, easing: "cubic-bezier(.16,1,.3,1)", fill: "backwards" }); }
+        if (!reduce && homeImg.animate) homeImg.animate(cine ? [{ opacity: 0, transform: "scale(1.04)" }, { opacity: 1, transform: "scale(1)" }] : [{ opacity: 0, transform: "scale(1.32)" }, { opacity: 1, transform: "scale(1)" }], cine ? { duration: 1700, easing: "cubic-bezier(.22,.8,.3,1)", fill: "backwards" } : { duration: 3200, easing: "cubic-bezier(.16,1,.3,1)", fill: "backwards" });
         if ("ResizeObserver" in window) { let t = 0; new ResizeObserver(() => { clearTimeout(t); t = setTimeout(() => { if (mode === "home") layout(); }, 100); }).observe(heroEl); }
         new MutationObserver(() => { if (mode === "home") layout(); }).observe(document.documentElement, { attributes: true, attributeFilter: ["lang", "dir"] });
       }
       clearTimeout(failsafe);
-    }, fl ? FT.hand : fadeDelay + fadeDur + 60);
+    };
+    if (cine) {
+      /* the cinematic dive (see the block at the end of this file): it brings the camera to the exact spot of the Home medallion */
+      window.__tmCine.play({
+        from: { x: cx, y: cy },
+        target: homeTarget,
+        onHide: () => { cineCover = true; stage.style.visibility = "hidden"; },
+        onHandoff: doHandoff
+      });
+    } else setTimeout(doHandoff, fadeDelay + fadeDur + 60);
 
     /* 2 · the top bar glides down */
     at("header", () => {
@@ -1354,8 +1148,8 @@
   btn.addEventListener("click", enter);
   gate.addEventListener("click", (e) => { if (!e.target.closest || !e.target.closest("button")) btn.click(); });   /* a tap anywhere on the gate = the Enter button */
   gate.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") enter(); });
-  /* console helper: __tmFx.hit() plays the landing hit (jump + blue TM pulse) again on Home */
-  window.__tmFx = { hit: () => { hitAt = performance.now() + 30; } };
+  /* console helper: __tmFx.replay() plays the blue TM pulse + the embers again on Home */
+  window.__tmFx = { replay: () => { const n = performance.now(); flashAt = n + 60; burstAt = n; bst = []; bstN = 0; }, state: () => ({ flash: flashLevel(performance.now()), particles: bst.length, since: flashAt ? performance.now() - flashAt : null }) };
   window.__tmIntroState = () => ({ mode, opac, zoomV, amb, glow, mk, flood, homeVisible, W, H, dpr, rect, zc, handT, alphaMode, renderScale, texDone, flat, ready, glOK: !!(gl && prog) });
   window.__tmField = () => ({ max: Math.max.apply(null, Array.from(fu8)), mean: fu8.reduce((a, b) => a + b, 0) / fu8.length });
 
@@ -1557,4 +1351,194 @@
   }
   /* the press: one clean chromatic hit on both lines, no sound */
   if (enterBtn) enterBtn.addEventListener("click", () => { [nameEl, wordEl].forEach((el) => { const r = el && rigs.get(el); if (r) r.spans.forEach((s, i) => setTimeout(() => { s.classList.add("gl"); setTimeout(() => s.classList.remove("gl"), 160); }, i * 22)); }); }, true);
+})();
+
+/* =====================================================================================================
+   TM · the cinematic dive after "Enter"
+   One full-screen 2D canvas laid over the page. Order of events (ms after the click):
+     0 - 1500    the carved medallion keeps its own push-in (tm-intro above, untouched)
+     1000 - 1900 the quiet tunnel (pictures 1 + 2) opens at the centre of the medallion, rocks start to stream past
+     2700 - 3500 charge: shake + glow build up; at 3500 a flash turns the tunnel into blue energy (pictures 3 + 4)
+     3500 - 5300 the blast: speed, left/right sway, big rocks, streaks
+     5300 - 6900 the brake: the energy tunnel slides to the exact place of the Home medallion and lands on it
+     6900 - 8500 Home is already built underneath; the energy melts away and the carved TM disc appears
+   Tune everything in the CFG block. Click / tap anywhere after 1.5 s skips to the brake.
+   ===================================================================================================== */
+(function () {
+  "use strict";
+  var CFG = {
+    hide: 1950,                       /* the WebGL medallion is hidden (the tunnel fully covers it)          */
+    tunIn: [1000, 1900],              /* tunnel fades in                                                      */
+    chargeAt: 2700, flashAt: 3500,    /* glow starts building / the white flash                               */
+    toEnergy: [3350, 3900],           /* calm tunnel -> energy tunnel                                         */
+    brake: [5300, 6900],              /* slide + landing on the Home medallion                                */
+    handoff: 6900,                    /* Home is built under the canvas                                       */
+    fade: [6900, 8400], end: 8500,    /* the canvas melts away                                                */
+    ringK: 2.9,                       /* outer stone ring radius of the Home medallion, in medallion radii    */
+    speed: [[0, 0], [1000, .3], [1900, .55], [2700, .9], [3500, 1.4], [3900, 2.3], [5200, 1.9], [6000, .5], [6900, .1], [9000, .06]]
+  };
+  var SRC = { tb: "cine-tunnel-b.webp", ta: "cine-tunnel-a.webp", ea: "cine-energy-a.webp", eb: "cine-energy-b.webp", sp: "cine-space.webp", rk: "cine-rocks.webp" };
+  var LC = { tb: [.5, .482], ta: [.5, .484], ea: [.5, .467], eb: [.5, .467] };   /* where the light sits in each picture */
+  var RING_E = .306;                                                              /* outer ring radius of the energy picture / its width */
+  var IM = {}, loaded = 0, bad = false, started = false;
+
+  var clamp = function (v, a, b) { return v < a ? a : v > b ? b : v; };
+  var c01 = function (v) { return clamp(v, 0, 1); };
+  var lerp = function (a, b, t) { return a + (b - a) * t; };
+  var ss = function (t) { t = c01(t); return t * t * (3 - 2 * t); };
+  var eio = function (t) { t = c01(t); return t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; };
+  var eo3 = function (t) { t = c01(t); return 1 - Math.pow(1 - t, 3); };
+  var fr = function (v) { return v - Math.floor(v); };
+
+  function load() {
+    if (started) return; started = true;
+    Object.keys(SRC).forEach(function (k) {
+      var i = new Image(); i.decoding = "async"; try { i.fetchPriority = "low"; } catch (e) {}
+      i.onload = function () { loaded++; }; i.onerror = function () { bad = true; };
+      i.src = "images/" + SRC[k] + "?v=1"; IM[k] = i;
+    });
+  }
+  setTimeout(load, 1200);
+  addEventListener("tm:ready", load);
+
+  function speedAt(t) {
+    var K = CFG.speed;
+    if (t <= K[0][0]) return K[0][1];
+    for (var i = 1; i < K.length; i++) if (t <= K[i][0]) return lerp(K[i - 1][1], K[i][1], ss((t - K[i - 1][0]) / (K[i][0] - K[i - 1][0])));
+    return K[K.length - 1][1];
+  }
+
+  function play(o) {
+    var cv = document.createElement("canvas"); cv.className = "tm-warp"; cv.setAttribute("aria-hidden", "true");
+    document.body.appendChild(cv);
+    var ctx = cv.getContext("2d"), W = 0, H = 0, dpr = 1;
+    var size = function () { W = innerWidth; H = innerHeight; dpr = Math.min(window.devicePixelRatio || 1, W < 700 ? 1 : 1.25); cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); };
+    size(); addEventListener("resize", size);
+
+    var t0 = performance.now(), tOff = 0, last = t0, P = 0, hid = false, hand = false, raf = 0, over = false;
+    var vp0 = o.from, seed = [];
+    for (var s = 0; s < 90; s++) seed.push([Math.random() * 6.2832, Math.random(), .6 + Math.random() * .8]);
+
+    var skip = function () {
+      var t = performance.now() - t0 + tOff;
+      if (t > 1500 && t < CFG.brake[0]) tOff += CFG.brake[0] - t;
+    };
+    addEventListener("pointerdown", skip, { passive: true });
+
+    /* one image of a looping rush: p = 0..1 is its distance from the camera, it grows and fades as it passes */
+    var cover = function (im) { return Math.max(W, H * im.naturalWidth / im.naturalHeight); };
+    var put = function (k, x, y, wpx, a) {
+      var im = IM[k]; if (a < .004 || !im.naturalWidth) return;
+      var h = wpx * im.naturalHeight / im.naturalWidth, lc = LC[k] || [.5, .5];
+      ctx.globalAlpha = a; ctx.drawImage(im, x - lc[0] * wpx, y - lc[1] * h, wpx, h);
+    };
+    var grow = function (p, a, b) { return Math.exp(lerp(Math.log(a), Math.log(b), p)); };
+
+    function draw(t, v) {
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
+      var tun = ss((t - CFG.tunIn[0]) / (CFG.tunIn[1] - CFG.tunIn[0]));
+      var eW = ss((t - CFG.toEnergy[0]) / (CFG.toEnergy[1] - CFG.toEnergy[0]));
+      var b = eio((t - CFG.brake[0]) / (CFG.brake[1] - CFG.brake[0]));
+      var master = 1 - eio((t - CFG.fade[0]) / (CFG.fade[1] - CFG.fade[0]));
+      cv.style.opacity = master.toFixed(3);
+
+      var tg = o.target ? o.target() : null, tx = tg ? tg.x : vp0.x, ty = tg ? tg.y : vp0.y, R = tg ? tg.R : Math.min(W, H) * .25;
+      var vx = lerp(vp0.x, tx, b), vy = lerp(vp0.y, ty, b), vm = Math.min(W, H);
+
+      /* the camera: shake that builds in the charge, spikes at the flash, thumps at the brake and the landing; sway left/right in the blast */
+      var chg = ss((t - CFG.chargeAt) / (CFG.flashAt - CFG.chargeAt));
+      var fl = t >= CFG.flashAt ? Math.exp(-(t - CFG.flashAt) / 300) : 0;
+      var kick = t >= CFG.brake[0] ? Math.exp(-(t - CFG.brake[0]) / 380) : 0;
+      var land = t >= 6350 ? Math.exp(-(t - 6350) / 300) : 0;
+      var rush = ss((t - 1500) / 1500) * (1 - ss((t - 5600) / 1300));
+      var amp = vm * (.002 + .004 * rush + .010 * chg + .026 * fl + .014 * kick + .008 * land);
+      var shx = amp * (Math.sin(t * .043) + .6 * Math.sin(t * .071 + 1.3)), shy = amp * (Math.sin(t * .051 + .7) + .6 * Math.sin(t * .083));
+      var swW = ss((t - 3500) / 500) * (1 - ss((t - 5200) / 900));
+      var sway = W * .045 * Math.sin((t - 3500) / 640) * swW;
+      var roll = (.035 * Math.sin((t - 3500) / 640 + .6) * swW) + amp * .0006 * Math.sin(t * .037);
+
+      ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = tun; ctx.fillStyle = "rgb(3,5,11)"; ctx.fillRect(0, 0, W, H);
+
+      ctx.save();
+      ctx.translate(vx + shx, vy + shy); ctx.rotate(roll); ctx.translate(-vx, -vy);
+      var rs = tun * (1 - b);
+      ctx.globalCompositeOperation = "lighter";
+      /* far: the tunnel (two copies, half a cycle apart, weights add up to 1) */
+      for (var j = 0; j < 2; j++) {
+        var p = fr(P + j * .5), w = Math.sin(Math.PI * p); w *= w;
+        var kc = j ? "ta" : "tb", ke = j ? "eb" : "ea", xx = vx + sway * .6;
+        put(kc, xx, vy, cover(IM[kc]) * grow(p, .62, 3.4), w * rs * (1 - eW));
+        put(ke, xx, vy, cover(IM[ke]) * grow(p, .62, 3.4), w * rs * eW);
+      }
+      /* near: the dark crystal field, faster than the tunnel */
+      for (j = 0; j < 2; j++) {
+        var q = fr(P * 1.9 + j * .5), wq = Math.sin(Math.PI * q); wq *= wq;
+        put("sp", vx + sway * 1.1, vy, cover(IM.sp) * grow(q, .7, 2.6), wq * rs * (.3 + .6 * eW));
+      }
+      /* the landing: the energy picture's ring is sized to the Home medallion's outer stone ring and brakes onto it */
+      if (b > 0) {
+        var wf = (CFG.ringK * R) / RING_E, back = 1 + .42 * (1 - eo3((t - CFG.brake[0]) / (CFG.brake[1] - CFG.brake[0] + 500)));
+        put("ea", vx, vy, wf * back, b * tun);
+      }
+      /* speed streaks */
+      var rmax = Math.hypot(W, H) * .62, sv = c01(v / 1.6) * rs;
+      if (sv > .02) {
+        ctx.lineCap = "round";
+        for (var i = 0; i < seed.length; i++) {
+          var sd = seed[i], u = fr(P * 1.7 * sd[2] + i * .6180339), r1 = rmax * u * u * .98 + 14, r2 = r1 + (10 + v * rmax * .06) * (.4 + u) * sd[2];
+          var ca = Math.cos(sd[0]), sa = Math.sin(sd[0]);
+          ctx.globalAlpha = sv * u * (.35 + .5 * eW); ctx.lineWidth = .8 + 2.2 * u * sd[1];
+          ctx.strokeStyle = eW > .5 ? "rgb(140,185,255)" : "rgb(120,150,230)";
+          ctx.beginPath(); ctx.moveTo(vx + ca * r1, vy + sa * r1); ctx.lineTo(vx + ca * r2, vy + sa * r2); ctx.stroke();
+        }
+      }
+      /* the rocks (picture 5 cut-outs): three copies, flipped, passing the camera at different distances */
+      ctx.globalCompositeOperation = "source-over";
+      var rk = IM.rk, rkA = ss((t - 1150) / 900) * (1 - ss((t - 6400) / 1500)), rb = Math.max(W, H * 1.5);
+      if (rkA > .01 && rk.naturalWidth) {
+        for (j = 0; j < 3; j++) {
+          var pr = fr(P * 1.35 + j / 3 + .11), wr = Math.sin(Math.PI * pr), sr = grow(pr, .3, 3.6);
+          ctx.save();
+          ctx.translate(vx + sway * 1.7, vy);
+          ctx.scale(j === 1 ? -1 : 1, j === 2 ? -1 : 1);
+          ctx.globalAlpha = c01(wr * 1.5) * rkA;
+          var rw = rb * sr, rh = rw * rk.naturalHeight / rk.naturalWidth;
+          ctx.drawImage(rk, -rw / 2, -rh / 2, rw, rh);
+          ctx.restore();
+        }
+      }
+      ctx.restore();
+
+      /* light: the bloom while we leave the medallion, the charge, the flash */
+      ctx.globalCompositeOperation = "lighter";
+      var bl = ss((t - 1250) / 450) * (1 - ss((t - 1750) / 700));
+      var gl = Math.max(bl * .8, chg * .75 * (1 - fl));
+      if (gl > .01) {
+        var gr = ctx.createRadialGradient(vx, vy, 0, vx, vy, vm * lerp(.18, .75, Math.max(chg, bl)));
+        gr.addColorStop(0, "rgba(190,215,255," + gl.toFixed(3) + ")"); gr.addColorStop(.4, "rgba(70,110,255," + (gl * .45).toFixed(3) + ")"); gr.addColorStop(1, "rgba(20,40,160,0)");
+        ctx.globalAlpha = 1; ctx.fillStyle = gr; ctx.fillRect(0, 0, W, H);
+      }
+      if (fl > .01) { ctx.globalAlpha = Math.min(1, fl * 1.1); ctx.fillStyle = "rgb(200,220,255)"; ctx.fillRect(0, 0, W, H); }
+      ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1;
+    }
+
+    function finish() {
+      if (over) return; over = true; cancelAnimationFrame(raf);
+      removeEventListener("resize", size); removeEventListener("pointerdown", skip);
+      cv.remove(); if (o.onDone) o.onDone();
+    }
+    function tick(now) {
+      var dt = Math.min(50, now - last); last = now;
+      var dbg = window.__tmCine && window.__tmCine.dbg, t = dbg != null ? dbg : now - t0 + tOff;
+      var v = speedAt(t); P += v * dt / 1000;
+      try { draw(t, v); } catch (e) { console.warn("[tm-cine]", e); t = CFG.end + 1; }
+      if (!hid && t >= CFG.hide) { hid = true; if (o.onHide) o.onHide(); }
+      if (!hand && t >= CFG.handoff) { hand = true; if (o.onHandoff) o.onHandoff(); }
+      if (t >= CFG.end) { if (!hid && o.onHide) o.onHide(); if (!hand && o.onHandoff) o.onHandoff(); finish(); return; }
+      raf = requestAnimationFrame(tick);
+    }
+    raf = requestAnimationFrame(tick);
+  }
+
+  window.__tmCine = { CFG: CFG, dbg: null, load: load, play: play, ok: function () { return started && !bad && loaded === Object.keys(SRC).length; } };
 })();
