@@ -1,0 +1,39 @@
+/* Find Me — 5-card fan. The section keeps its original box: the old content stays as an invisible spacer. */
+@property --fnx{syntax:"<length>";inherits:false;initial-value:0px}
+@property --flift{syntax:"<length>";inherits:false;initial-value:0px}
+@property --fk{syntax:"<number>";inherits:false;initial-value:1}
+section.social-strip.fm>div:not(.fm-fan),section.social-strip.fm>.social-links{visibility:hidden;pointer-events:none}
+section.social-strip.fm>.fm-fan{position:absolute;inset:0;z-index:2;container-type:size;direction:ltr;pointer-events:none}
+.fm-card{position:absolute;left:50%;top:50%;display:block;color:#fff;text-decoration:none;pointer-events:auto;
+  --fq:1;--frx:0deg;--fry:0deg;--fmx:50%;--fmy:50%;
+  translate:-50% -50%;
+  transform:translate(calc((var(--fx,0px) + var(--fnx))*var(--fq)),calc(var(--fy,0px)*var(--fq) - var(--flift))) rotate(calc(var(--fr,0deg)*var(--fq)*var(--fk))) perspective(700px) rotateX(var(--frx)) rotateY(var(--fry)) scale(calc(.78 + .22*var(--fq)));
+  transition:--fnx .5s cubic-bezier(.22,1,.36,1),--flift .5s cubic-bezier(.22,1,.36,1),--fk .5s cubic-bezier(.22,1,.36,1),box-shadow .4s,border-color .4s;
+  will-change:transform}
+.fm-side{width:18.5cqw;height:62cqh;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,.16);opacity:calc(.2 + .8*var(--fq));
+  box-shadow:0 14px 30px rgba(0,0,0,.45);background:#0c0914}
+.fm-side img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:brightness(.72) saturate(1.05);transition:filter .45s}
+.fm-side:before{content:"";position:absolute;inset:0;z-index:1;background:linear-gradient(180deg,rgba(5,4,10,0) 38%,rgba(5,4,10,.86)),radial-gradient(circle at var(--fmx) var(--fmy),rgba(255,255,255,.22),transparent 55%);opacity:.95}
+.fm-fb img{filter:brightness(.5) saturate(.95)}
+.fm-side:hover{border-color:rgba(255,255,255,.4);box-shadow:0 22px 44px rgba(0,0,0,.6),0 0 30px rgba(139,53,255,.35)}
+.fm-side:hover,.fm-side:focus-visible{--flift:14px;--fk:.25;z-index:8!important;outline:0}
+.fm-side:hover img,.fm-side:focus-visible img{filter:brightness(1) saturate(1.1)}
+.fm-lab{position:absolute;z-index:2;left:10px;right:10px;bottom:8px;display:flex;align-items:center;gap:7px;font:700 11px/1.15 Inter,system-ui,sans-serif;text-shadow:0 1px 8px #000}
+.fm-lab svg,.fm-lab b{flex:none;width:18px;height:18px}
+.fm-lab b{display:grid;place-items:center;border-radius:5px;background:#001e36;color:#31a8ff;font-size:10px;border:1px solid #31a8ff}
+.fm-lab small{display:block;font-weight:500;font-size:9.5px;opacity:.78;letter-spacing:.02em}
+.fm-r1 .fm-lab,.fm-r2 .fm-lab{flex-direction:row-reverse;text-align:right}
+.fm-l2{--fx:-35cqw;--fy:14cqh;--fr:-12deg;z-index:3}.fm-l1{--fx:-20cqw;--fy:6cqh;--fr:-6deg;z-index:4}
+.fm-r1{--fx:20cqw;--fy:6cqh;--fr:6deg;z-index:4}.fm-r2{--fx:35cqw;--fy:14cqh;--fr:12deg;z-index:3}
+.fm-c{--fx:0px;--fy:0px;--fr:0deg;width:clamp(250px,26cqw,330px);height:88cqh;z-index:6;border-radius:20px;padding:clamp(12px,7cqh,20px) clamp(14px,1.8cqw,22px);display:flex;flex-direction:column;justify-content:center;gap:8px;
+  background:linear-gradient(150deg,rgba(52,30,104,.94),rgba(12,9,20,.97));border:1px solid rgba(255,255,255,.2);
+  box-shadow:0 22px 50px rgba(0,0,0,.55),0 0 42px rgba(139,53,255,.28),inset 0 1px 0 rgba(255,255,255,.12);pointer-events:none}
+.fm-k{font:700 10px/1 Inter,system-ui,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#a7a1b7}
+.fm-t{margin:0;font:800 clamp(15px,12.2cqh,30px)/1.04 Inter,Cairo,system-ui,sans-serif;letter-spacing:-.02em;color:#f6f3ff;text-wrap:balance}
+.fm-t em{font:italic 400 1.1em/1 "Instrument Serif",Georgia,serif;color:#a46bff;letter-spacing:0}
+[dir=rtl] .fm-c{direction:rtl;text-align:right}[dir=rtl] .fm-t{line-height:1.3;letter-spacing:0}[dir=rtl] .fm-k{letter-spacing:0}
+@media(max-width:900px){
+  .fm-side{width:22cqw;height:48cqh}.fm-lab{left:0;right:0;bottom:8px;justify-content:center!important}.fm-lab>span{display:none}.fm-lab svg,.fm-lab b{width:20px;height:20px;font-size:10px}
+  .fm-l2{--fx:-38.5cqw;--fy:10cqh}.fm-l1{--fx:-29cqw;--fy:4cqh}.fm-r1{--fx:29cqw;--fy:4cqh}.fm-r2{--fx:38.5cqw;--fy:10cqh}
+  .fm-c{width:46cqw;height:84cqh;min-width:0}.fm-t{font-size:clamp(15px,5.8cqw,26px)}}
+@media(prefers-reduced-motion:reduce){.fm-card{transition:none}}
