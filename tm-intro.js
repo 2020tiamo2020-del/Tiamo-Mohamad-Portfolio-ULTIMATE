@@ -495,6 +495,7 @@
   };
   /* ---- dust: a thin swirling cloud around the medallion, projected in 3D (tilt + perspective + pointer parallax); the music drives it ---- */
   /* after-landing effects (only when the cinematic dive brought us here): the blue TM pulse + the ember / dust burst */
+  let hitAt = 0, hitOn = false;      /* the landing hit: the whole carved stone jumps and settles back (idea from the v6 flight), together with the blue TM pulse */
   let flashAt = 0, flashOn = false, burstAt = 0, bstN = 0, bst = [];
   const FLASH_RISE = 160, FLASH_TAU = 520, BURST_SPAWN = 1300, BURST_SPARKS = 150, BURST_DUST = 240;
   const flashLevel = (now) => {
@@ -639,6 +640,18 @@
     const sc = 1 + 0.038 * L + 0.02 * plHov + 0.01 * plBass * L;
     pl.g.style.transform = "translate3d(" + jx.toFixed(2) + "px," + (-R * 0.035 * lift + jy).toFixed(2) + "px," + (R * 0.05 * lift).toFixed(1) + "px) scale(" + sc.toFixed(4) + ")";
     const lzI = clamp((L - 0.3) / 0.7, 0, 1), pulse = 0.72 + 0.28 * Math.sin(now / 380) + 0.55 * plBass;
+    /* the hit: a damped bounce of the whole stone (scale punch + a hop + a short tremor) */
+    if (hitAt && now >= hitAt) {
+      const x = (now - hitAt) / 1000;
+      if (x > 2.6) hitAt = 0;
+      else if (homeImg) {
+        const e = Math.exp(-x * 5), hop = -R * 0.085 * Math.exp(-x * 3.4) * Math.abs(Math.sin(x * 9.5));
+        homeImg.style.scale = (1 + 0.1 * e * Math.cos(x * 14)).toFixed(4);
+        homeImg.style.translate = (7 * e * Math.sin(x * 63)).toFixed(2) + "px " + (hop + 5 * e * Math.cos(x * 49)).toFixed(2) + "px";
+        hitOn = true;
+      }
+    }
+    if (!hitAt && hitOn && homeImg) { hitOn = false; homeImg.style.scale = ""; homeImg.style.translate = ""; }
     const fv = flashLevel(now);
     pl.laser.style.opacity = Math.max(lzI * Math.min(1, pulse), fv).toFixed(3);
     if (fv > 0) { flashOn = true; pl.laser.style.filter = "drop-shadow(0 0 " + (2 + 16 * fv).toFixed(1) + "px rgba(70,160,255," + (0.55 + 0.4 * fv).toFixed(2) + ")) brightness(" + (1 + 0.9 * fv).toFixed(2) + ")"; }
@@ -1106,7 +1119,7 @@
           const o = document.getElementById("tmOrb"); if (o) o.click();
         });
         entering = false; layout();
-        if (cine) { const n0 = performance.now(); flashAt = n0 + 950; burstAt = n0 + 900; }       /* the TM lights up once as the energy melts away, then the embers drift */
+        if (cine) { const n0 = performance.now(); flashAt = n0 + 950; hitAt = n0 + 950; burstAt = n0 + 900; }       /* the TM lights up once as the energy melts away, then the embers drift */
         /* the camera "lands" on it: the picture settles from a close-up and melts in */
         if (!reduce && homeImg.animate) homeImg.animate(cine ? [{ opacity: 0, transform: "scale(1.04)" }, { opacity: 1, transform: "scale(1)" }] : [{ opacity: 0, transform: "scale(1.32)" }, { opacity: 1, transform: "scale(1)" }], cine ? { duration: 1700, easing: "cubic-bezier(.22,.8,.3,1)", fill: "backwards" } : { duration: 3200, easing: "cubic-bezier(.16,1,.3,1)", fill: "backwards" });
         if ("ResizeObserver" in window) { let t = 0; new ResizeObserver(() => { clearTimeout(t); t = setTimeout(() => { if (mode === "home") layout(); }, 100); }).observe(heroEl); }
@@ -1149,7 +1162,7 @@
   gate.addEventListener("click", (e) => { if (!e.target.closest || !e.target.closest("button")) btn.click(); });   /* a tap anywhere on the gate = the Enter button */
   gate.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") enter(); });
   /* console helper: __tmFx.replay() plays the blue TM pulse + the embers again on Home */
-  window.__tmFx = { replay: () => { const n = performance.now(); flashAt = n + 60; burstAt = n; bst = []; bstN = 0; }, state: () => ({ flash: flashLevel(performance.now()), particles: bst.length, since: flashAt ? performance.now() - flashAt : null }) };
+  window.__tmFx = { replay: () => { const n = performance.now(); flashAt = n + 60; hitAt = n + 60; burstAt = n; bst = []; bstN = 0; }, state: () => ({ flash: flashLevel(performance.now()), particles: bst.length, since: flashAt ? performance.now() - flashAt : null }) };
   window.__tmIntroState = () => ({ mode, opac, zoomV, amb, glow, mk, flood, homeVisible, W, H, dpr, rect, zc, handT, alphaMode, renderScale, texDone, flat, ready, glOK: !!(gl && prog) });
   window.__tmField = () => ({ max: Math.max.apply(null, Array.from(fu8)), mean: fu8.reduce((a, b) => a + b, 0) / fu8.length });
 
