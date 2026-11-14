@@ -2618,7 +2618,8 @@ updateScrollOrbit(true);
     };
   };
   const nativeScrollTo = window.scrollTo.bind(window);
-  window.scrollTo = function (a, b) {
+  window.scrollTo = function () {
+    const a = arguments[0];
     const o = a && typeof a === "object" ? a : null;
     if (o && o.behavior === "smooth" && !reduce && typeof o.top === "number" && Math.abs(o.top - (window.scrollY || 0)) > innerHeight * FAR) {
       pending = [o.top];
@@ -2626,7 +2627,7 @@ updateScrollOrbit(true);
       run(p => nativeScrollTo({ top: p[0], behavior: "instant" }));
       return;
     }
-    return nativeScrollTo(a, b);
+    return nativeScrollTo.apply(window, arguments);   /* forward the exact arguments: (opts) and (opts, undefined) are different overloads */
   };
   /* Lenis is created by another script: hook it as soon as it exists */
   let n = 0;
