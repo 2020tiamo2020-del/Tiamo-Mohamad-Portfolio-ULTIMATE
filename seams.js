@@ -210,12 +210,9 @@
   /* ---------------------------------------------------------------- wiring */
   const q = s => document.querySelector(s);
   const SEAMS = [
-    { sel: () => q(".ab-pin-wrap") || q("#about"), d: dCine, noLabel: true, def: ["01 / ABOUT", "01 / \u0639\u0646\u0651\u064A"] },
     { sel: () => q("#work"), d: dDolly, def: ["03 / SELECTED WORK", "03 / \u0623\u0639\u0645\u0627\u0644 \u0645\u062E\u062A\u0627\u0631\u0629"] },
     { sel: () => q("#cinema"), d: dAperture, def: ["BEYOND", "\u0645\u0627 \u0648\u0631\u0627\u0621 \u0627\u0644\u062E\u064A\u0627\u0644"], noKick: true },
     { sel: () => q("#creation"), d: dRoll, def: ["CREATION", "\u0627\u0644\u0625\u0628\u062F\u0627\u0639"] },
-    { sel: () => q("#beforeafter"), d: dWipe, def: ["BEFORE / AFTER", "\u0642\u0628\u0644 / \u0628\u0639\u062F"] },
-    { sel: () => q("#brief"), d: dFlip, def: ["08 / START A PROJECT", "08 / \u0627\u0628\u062F\u0623 \u0645\u0634\u0631\u0648\u0639\u0643"] },
   ];
   SEAMS.forEach(s => { s.cur = 0; });
 
