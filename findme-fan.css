@@ -46,3 +46,9 @@ section.social-strip.fm>.fm-fan{position:absolute;inset:0;z-index:2;container-ty
   .fm-l2 .fm-lab,.fm-r2 .fm-lab{width:64%}.fm-l2 .fm-lab svg,.fm-r2 .fm-lab svg{width:34px;height:34px}
   .fm-c{width:46cqw;height:84cqh;min-width:0}.fm-t{font-size:clamp(15px,5.8cqw,26px)}}
 @media(prefers-reduced-motion:reduce){.fm-card{transition:none}}
+
+/* FIND ME PIN — the strip stays fixed (centred under the header) while the cards fan open, then holds so the links can be used.
+   Desktop only (>= 901px); phones keep the normal flow. To undo: restore the previous findme-fan.js. */
+.fm-pin-wrap{position:relative}
+.fm-pin-wrap.on > section.social-strip.fm{position:sticky !important;top:var(--fm-top,90px);z-index:3}
+.fm-pin-spacer{pointer-events:none}

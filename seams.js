@@ -44,47 +44,73 @@
   }
   const mix = (a, b, t) => "rgb(" + Math.round(lerp(a[0], b[0], t)) + "," + Math.round(lerp(a[1], b[1], t)) + "," + Math.round(lerp(a[2], b[2], t)) + ")";
 
-  /* ---------------------------------------------------------------- 0  HERO → ABOUT
-     the world irises shut onto the medallion, then the dark curtain lifts away upward */
-  function dIris(c, W, H, p, g) {
-    const diag = Math.hypot(W, H), rmin = Math.min(W, H) * .075;
-    const e1 = ease(sub(p, 0, .42)), lift = ease(sub(p, .58, 1));
-    let R = lerp(diag, rmin, e1);
-    const hold = sub(p, .42, .58); if (hold > 0 && hold < 1) R *= 1 + .14 * Math.sin(hold * Math.PI);
-    c.save(); c.translate(0, -lift * H * 1.2);
-    c.beginPath(); c.rect(-2, -2, W + 4, H + 4); c.moveTo(g.cx + R, g.cy); c.arc(g.cx, g.cy, R, 0, TAU);
-    c.fillStyle = dk(.97); c.fill("evenodd");
-    c.beginPath(); c.arc(g.cx, g.cy, R, 0, TAU);
-    c.lineWidth = 2; c.strokeStyle = GOLD(.85); c.shadowColor = "rgba(139,53,255,.9)"; c.shadowBlur = 26; c.stroke();
-    c.shadowBlur = 0;
-    if (lift > .001) {
-      const gr = c.createLinearGradient(0, H, 0, H + 150); gr.addColorStop(0, dk(.75)); gr.addColorStop(1, dk(0));
-      c.fillStyle = gr; c.fillRect(0, H, W, 150); c.fillStyle = GOLD(.6); c.fillRect(0, H - 1.5, W, 1.5);
+  /* ---------------------------------------------------------------- 0  HOME → ABOUT
+     anamorphic letterbox: cinema bars close to a slit, a blue anamorphic flare blooms along it,
+     the chapter title lights up, then the bars open onto About */
+  function dCine(c, W, H, p, g) {
+    const cx = W / 2, cy = H / 2, half = H / 2 - 1.5;
+    const close = ease(sub(p, 0, .38)), open = ease(sub(p, .62, 1));
+    const b = half * (p < .5 ? close : 1 - open);
+    const fl = ease(sub(p, .28, .5)) * (1 - ease(sub(p, .62, .82)));
+    if (b > .5) for (let k = 0; k < 2; k++) {         // top bar, bottom bar
+      const e = k ? H - b : b;
+      c.fillStyle = dk(.99); c.fillRect(-2, k ? e : -2, W + 4, b + 2);
+      const gr = c.createLinearGradient(0, e, 0, e + (k ? -60 : 60));
+      gr.addColorStop(0, "rgba(90,150,255," + (.28 * (.25 + fl)) + ")"); gr.addColorStop(1, "rgba(90,150,255,0)");
+      c.fillStyle = gr; c.fillRect(0, k ? e - 60 : e, W, 60);
+      c.fillStyle = GOLD(.55); c.fillRect(0, k ? e : e - 1.5, W, 1.5);
     }
-    c.restore();
+    if (fl > .002) {
+      const L = W * (.12 + .46 * fl);
+      c.save(); c.translate(cx, cy); c.scale(1, .05);
+      const rg = c.createRadialGradient(0, 0, 0, 0, 0, W * .5);
+      rg.addColorStop(0, "rgba(190,225,255," + (.75 * fl) + ")"); rg.addColorStop(.35, "rgba(70,140,255," + (.35 * fl) + ")"); rg.addColorStop(1, "rgba(70,140,255,0)");
+      c.fillStyle = rg; c.beginPath(); c.arc(0, 0, W * .5, 0, TAU); c.fill(); c.restore();
+      const lg = c.createLinearGradient(cx - L, 0, cx + L, 0);
+      lg.addColorStop(0, "rgba(22,216,255,0)"); lg.addColorStop(.5, "rgba(255,255,255," + fl + ")"); lg.addColorStop(1, "rgba(22,216,255,0)");
+      c.fillStyle = lg; c.fillRect(cx - L, cy - 1.5 - 2 * fl, L * 2, 3 + 4 * fl);
+      const gh = [[-.32, 5, "139,53,255"], [-.17, 12, "22,216,255"], [.13, 8, "243,231,196"], [.27, 16, "139,53,255"], [.4, 6, "22,216,255"]];
+      for (let i = 0; i < gh.length; i++) {
+        const x = cx + gh[i][0] * W * fl + (p - .5) * 40 * (i % 2 ? 1 : -1), r = gh[i][1] * (.6 + fl);
+        const og = c.createRadialGradient(x, cy, 0, x, cy, r);
+        og.addColorStop(0, "rgba(" + gh[i][2] + "," + (.5 * fl) + ")"); og.addColorStop(1, "rgba(" + gh[i][2] + ",0)");
+        c.fillStyle = og; c.beginPath(); c.arc(x, cy, r, 0, TAU); c.fill();
+      }
+    }
+    const ta = sub(p, .42, .54) * (1 - sub(p, .6, .7));
+    if (ta > .01 && g.title) {
+      const fs = Math.min(W, H) * .075, ga = c.globalAlpha;
+      c.globalAlpha = ga * ta; c.textAlign = "center"; c.textBaseline = "alphabetic";
+      try { c.letterSpacing = isAr() ? "0px" : Math.round(fs * .45) + "px"; } catch (e) {}
+      c.font = "600 " + fs + "px Cinzel,'Instrument Serif',serif"; c.fillStyle = GOLD(1);
+      c.fillText(g.title, cx + (isAr() ? 0 : fs * .22), cy - H * .055 - (1 - ta) * 14);
+      if (g.num) { try { c.letterSpacing = "6px"; } catch (e) {} c.font = "600 13px Inter,sans-serif"; c.fillStyle = LILAC(.9); c.fillText(g.num, cx, cy + H * .085 + (1 - ta) * 14); }
+      try { c.letterSpacing = "0px"; } catch (e) {}
+      c.globalAlpha = ga;
+    }
   }
 
-  /* ---------------------------------------------------------------- 1  ABOUT → SERVICES  whip-pan right */
-  function dWhip(c, W, H, p, g) {
-    const Wp = W * 1.15, x = lerp(0, W + Wp, ease(p)), x0 = x - Wp;
-    const gr = c.createLinearGradient(x0, 0, x, 0);
-    gr.addColorStop(0, dk(0)); gr.addColorStop(.5, dk(.9)); gr.addColorStop(1, dk(.98));
-    c.fillStyle = gr; c.fillRect(x0, 0, Wp, H);
-    c.save(); c.beginPath(); c.rect(x0, 0, Wp, H); c.clip();
-    const cols = ["201,168,255", "22,216,255", "255,255,255"];
-    c.lineCap = "round";
-    for (let i = 0; i < STREAK.length; i++) {
-      const s = STREAK[i], y = s[0] * H, len = (.18 + s[1] * .6) * W, end = x - s[2] * Wp * .8, st = end - len;
-      const lg = c.createLinearGradient(st, 0, end, 0);
-      lg.addColorStop(0, "rgba(" + cols[i % 3] + ",0)"); lg.addColorStop(1, "rgba(" + cols[i % 3] + "," + (.22 + s[3] * .5) + ")");
-      c.strokeStyle = lg; c.lineWidth = 1 + s[3] * 2.2; c.beginPath(); c.moveTo(st, y); c.lineTo(end, y); c.stroke();
+  /* ---------------------------------------------------------------- 1  ABOUT → SERVICES
+     venetian slats: 18 vertical slats turn shut and open again in a wave left → right (with a light front) */
+  function dSlats(c, W, H, p, g) {
+    const N = 18, sw = W / N, st = .4;
+    for (let i = 0; i < N; i++) {
+      const t = clamp01(p * (1 + st) - (i / (N - 1)) * st), k = Math.sin(Math.PI * t);
+      if (k < .004) continue;
+      const w = Math.pow(Math.min(1, k * 1.6), .8), x = i * sw + sw / 2;
+      c.save(); c.translate(x, 0); c.scale(w * 1.03, 1);
+      const gr = c.createLinearGradient(-sw / 2, 0, sw / 2, 0);
+      gr.addColorStop(0, "rgba(139,53,255," + (.55 * k) + ")"); gr.addColorStop(.18, dk(.985)); gr.addColorStop(.82, dk(.985)); gr.addColorStop(1, "rgba(22,216,255," + (.35 * k) + ")");
+      c.fillStyle = gr; c.fillRect(-sw / 2, -2, sw, H + 4);
+      c.fillStyle = GOLD(.5 * k); c.fillRect(-sw / 2, -2, 1.2 / Math.max(w, .2), H + 4);
+      c.restore();
     }
-    c.restore();
-    const gl = c.createLinearGradient(x - 70, 0, x + 34, 0);
-    gl.addColorStop(0, "rgba(139,53,255,0)"); gl.addColorStop(.7, "rgba(139,53,255,.5)"); gl.addColorStop(1, "rgba(139,53,255,0)");
-    c.fillStyle = gl; c.fillRect(x - 70, 0, 104, H);
-    c.fillStyle = "rgba(22,216,255,.55)"; c.fillRect(x + 2, 0, 2, H);
-    c.fillStyle = GOLD(.95); c.fillRect(x - 2, 0, 3, H);
+    const fx = (p * (1 + st) / st) * (N - 1) * sw;
+    if (fx > -80 && fx < W + 80) {
+      const gl = c.createLinearGradient(fx - 90, 0, fx + 20, 0);
+      gl.addColorStop(0, "rgba(201,168,255,0)"); gl.addColorStop(.8, "rgba(201,168,255," + (.3 * Math.sin(Math.PI * p)) + ")"); gl.addColorStop(1, "rgba(201,168,255,0)");
+      c.fillStyle = gl; c.fillRect(fx - 90, 0, 110, H);
+    }
   }
 
   /* ---------------------------------------------------------------- 2  SERVICES → WORK  dolly-through */
@@ -247,7 +273,7 @@
     const a = clamp01((Math.sin(Math.PI * p) - .4) / .6); if (a <= .01) return;
     const x = Math.round(W * .05), y = Math.round(H - Math.max(40, H * .065));
     c.save(); c.globalAlpha *= a;
-    c.font = "600 12px Inter,sans-serif"; try { c.letterSpacing = "5px"; } catch (e) {}
+    c.font = "600 12px Inter,sans-serif"; try { c.letterSpacing = isAr() ? "0px" : "5px"; } catch (e) {}
     c.textAlign = "left"; c.textBaseline = "alphabetic";
     c.fillStyle = GOLD(.9); c.fillText(text, x, y); c.fillRect(x, y - 24, 42, 1);
     c.restore();
@@ -256,8 +282,8 @@
   /* ---------------------------------------------------------------- wiring */
   const q = s => document.querySelector(s);
   const SEAMS = [
-    { sel: () => q(".ab-pin-wrap") || q("#about"), d: dIris, def: ["01 / ABOUT", "01 / \u0639\u0646\u0651\u064A"] },
-    { sel: () => q("#services"), d: dWhip, def: ["02 / SERVICES", "02 / \u0627\u0644\u062E\u062F\u0645\u0627\u062A"] },
+    { sel: () => q(".ab-pin-wrap") || q("#about"), d: dCine, noLabel: true, def: ["01 / ABOUT", "01 / \u0639\u0646\u0651\u064A"] },
+    { sel: () => q("#services"), d: dSlats, def: ["02 / SERVICES", "02 / \u0627\u0644\u062E\u062F\u0645\u0627\u062A"] },
     { sel: () => q("#work"), d: dDolly, def: ["03 / SELECTED WORK", "03 / \u0623\u0639\u0645\u0627\u0644 \u0645\u062E\u062A\u0627\u0631\u0629"] },
     { sel: () => q("#cinema"), d: dAperture, def: ["BEYOND", "\u0645\u0627 \u0648\u0631\u0627\u0621 \u0627\u0644\u062E\u064A\u0627\u0644"], noKick: true },
     { sel: () => q("#creation"), d: dRoll, def: ["CREATION", "\u0627\u0644\u0625\u0628\u062F\u0627\u0639"] },
@@ -285,10 +311,7 @@
     const txt = kick ? (kick.textContent || "").trim() : "";
     const g = { label: txt || s.def[isAr() ? 1 : 0], num: null, cx: W / 2, cy: H * .42 };
     const m = (txt || s.def[0]).match(/\d+/); if (m && s.d === dElev) g.num = parseInt(m[0], 10);
-    if (s.d === dIris) {
-      const o = document.getElementById("tmOrb"), r = o && o.getBoundingClientRect();
-      if (r && r.width > 4) { g.cx = Math.min(W * .9, Math.max(W * .1, r.left + r.width / 2)); g.cy = Math.min(H * .85, Math.max(H * .15, r.top + r.height / 2)); }
-    }
+    if (s.d === dCine) { const pr = g.label.split("/"); g.num = pr.length > 1 ? pr[0].trim() : ""; g.title = (pr.length > 1 ? pr.slice(1).join("/") : g.label).trim(); }
     return g;
   }
 
@@ -317,7 +340,7 @@
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
       ctx.globalAlpha = amp;
       const g = geo(s, el);
-      s.d(ctx, W, H, s.cur, g); drawLabel(ctx, W, H, s.cur, g.label);
+      s.d(ctx, W, H, s.cur, g); if (!s.noLabel) drawLabel(ctx, W, H, s.cur, g.label);
       ctx.globalAlpha = 1;
     } else hide();
     if (best >= 0 || unsettled || amp > .01) raf = requestAnimationFrame(frame);

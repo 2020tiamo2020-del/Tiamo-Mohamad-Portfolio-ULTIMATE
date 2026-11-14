@@ -4,9 +4,24 @@ const dly=c=>c.classList.contains("fm-l2")||c.classList.contains("fm-r2")?.28:0,
 let cur=red?1:0,tgt=cur,raf=0;
 const ctr=s.querySelector(".fm-c"),B=.55,cl=t=>Math.max(0,Math.min(1,t)),out=t=>1+1.7*Math.pow(t-1,3)+.7*Math.pow(t-1,2);
 const paint=()=>{ctr.style.setProperty("--fd",(1-out(cl(cur/B))).toFixed(3));const u=cl((cur-B)/(1-B));cards.forEach(c=>{const q=ease(cl((u-dly(c))/(1-.28)));c.style.setProperty("--fq",q.toFixed(3));c.style.setProperty("--frise",((1-q)*30).toFixed(2)+"cqh");c.style.setProperty("--ftx",((1-q)*38).toFixed(1)+"deg");c.style.pointerEvents=q>.5?"auto":"none"})};
-const aim=()=>{const r=s.getBoundingClientRect(),v=innerHeight;tgt=red?1:Math.max(0,Math.min(1,(v*.86-r.top)/(v*.56)));if(!raf)raf=requestAnimationFrame(tick)};
+const mq=matchMedia("(min-width:901px)"),wrap=document.createElement("div"),sp=document.createElement("div"),MB=getComputedStyle(s).marginBottom;
+wrap.className="fm-pin-wrap";sp.className="fm-pin-spacer";sp.setAttribute("aria-hidden","true");
+s.parentNode.insertBefore(wrap,s);wrap.appendChild(s);wrap.appendChild(sp);
+let pin=false,top=0,P=0;
+/* Find Me holds still on screen (sticky) for ~1.2 screens of scrolling: the cards arrive, fan open, then stay put so the links can be read and clicked */
+const aim=()=>{const v=innerHeight||1;if(pin){const wt=wrap.getBoundingClientRect().top;tgt=wt>top?B*cl((v*.92-wt)/(v*.92-top)):B+(1-B)*cl(cl((top-wt)/P)/.45)}else{const r=s.getBoundingClientRect();tgt=red?1:cl((v*.86-r.top)/(v*.56))}if(!raf)raf=requestAnimationFrame(tick)};
+const layout=()=>{pin=mq.matches&&!red;wrap.classList.toggle("on",pin);
+if(!pin){sp.style.height="0px";s.style.removeProperty("--fm-top");s.style.marginBottom="";wrap.style.marginBottom="";aim();return}
+const v=innerHeight||1,hd=document.querySelector(".site-header"),hb=hd?hd.getBoundingClientRect().bottom:90;
+top=Math.round(Math.max(hb+8,(v-s.offsetHeight)/2));P=Math.round(v*1.2);
+wrap.style.marginBottom=MB;s.style.marginBottom="0px";s.style.setProperty("--fm-top",top+"px");sp.style.height=P+"px";aim()};
+let lt=0;const relayout=()=>{clearTimeout(lt);lt=setTimeout(layout,80)};
+addEventListener("resize",relayout);addEventListener("load",layout);
+(mq.addEventListener?mq.addEventListener("change",layout):mq.addListener(layout));
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(layout);
+if("ResizeObserver"in window)new ResizeObserver(relayout).observe(s);
 const tick=()=>{raf=0;cur+=(tgt-cur)*.07;if(Math.abs(tgt-cur)<.002)cur=tgt;paint();if(cur!==tgt)raf=requestAnimationFrame(tick)};
-addEventListener("scroll",aim,{passive:true});addEventListener("resize",aim);aim();paint();
+addEventListener("scroll",aim,{passive:true});layout();paint();
 cards.forEach((c,i)=>{
  c.addEventListener("pointerenter",()=>cards.forEach((o,j)=>{if(o!==c)o.style.setProperty("--fnx",(j<i?-1:1)*(Math.abs(j-i)>0?16:0)+"px")}));
  c.addEventListener("pointermove",e=>{const b=c.getBoundingClientRect(),x=(e.clientX-b.left)/b.width,y=(e.clientY-b.top)/b.height;
