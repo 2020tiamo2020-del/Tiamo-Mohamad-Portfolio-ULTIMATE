@@ -456,7 +456,7 @@ nav?.querySelectorAll("a").forEach(a => a.addEventListener("click", closeMenu));
     if (id === "services") return frameServices();
     if (id === "beforeafter") return frameBeforeAfter();
     if (id === "contact") return frameContact();
-    if (id === "brief") { const b = document.getElementById("brief"); if (b) { scrollYTo(absTop(b) + 2); setTimeout(() => { try { window.__updateActiveNav && window.__updateActiveNav(); } catch (_) {} }, 400); } return; }   /* pinned Start a Project scene: land on its first frame */
+    if (id === "brief" || id === "process") { const b = document.getElementById(id); if (b) { scrollYTo(absTop(b) + 2); setTimeout(() => { try { window.__updateActiveNav && window.__updateActiveNav(); } catch (_) {} }, 400); } return; }   /* pinned Start a Project scene: land on its first frame */
     if (id === "cinema") { const c = document.getElementById("cinema"); if (c) { scrollYTo(absTop(c) + 2); setTimeout(() => { try { window.__updateActiveNav && window.__updateActiveNav(); } catch (_) {} }, 400); } return; }
     if (id === "home") { scrollYTo(0); setTimeout(() => { try { window.__updateActiveNav && window.__updateActiveNav(); } catch (_) {} }, 350); return; }
     if (id === "work" && typeof window.__frameWork === "function" && document.getElementById("ws")) return window.__frameWork();   /* new Work stage: land with the stage pinned under the header */
@@ -2560,4 +2560,76 @@ updateScrollOrbit(true);
     addEventListener("pointerup", up);
     addEventListener("pointercancel", up);
   }
+})();
+
+
+/* Long menu jumps: instead of flying (fast) over every section in between, fade to the page colour, jump, fade back.
+   Hooks Lenis' scrollTo (and native smooth scrollTo as a fallback), so nav, dock, side rail and every frame* helper get it. */
+(() => {
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const FADE_IN = 240, HOLD = 70, FADE_OUT = 460, FAR = 1.25;   /* FAR = distance (in screens) above which the veil is used */
+  let veil = null, busy = false, pending = null;
+  const mkVeil = () => {
+    if (veil) return veil;
+    veil = document.createElement("div");
+    veil.setAttribute("aria-hidden", "true");
+    veil.style.cssText = "position:fixed;inset:0;z-index:9990;pointer-events:none;opacity:0;will-change:opacity;";
+    document.body.appendChild(veil);
+    return veil;
+  };
+  const paint = () => {
+    const light = document.body.classList.contains("light");
+    mkVeil().style.background = light ? "#f6f2fc" : "#05040a";
+  };
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  const fade = (to, ms) => {
+    const v = mkVeil();
+    v.style.transition = "opacity " + ms + "ms cubic-bezier(.4,0,.2,1)";
+    void v.offsetWidth;
+    v.style.opacity = String(to);
+    return wait(ms);
+  };
+  const targetY = (t, o) => {
+    if (typeof t === "number") return t;
+    if (t && t.getBoundingClientRect) return t.getBoundingClientRect().top + (window.scrollY || 0) + ((o && o.offset) || 0);
+    return null;
+  };
+  const run = async (jump) => {
+    busy = true; paint();
+    window.__tmJumpUntil = performance.now() + FADE_IN + HOLD + FADE_OUT + 400;   /* sections must not play scroll sounds/effects for a veiled jump */
+    await fade(1, FADE_IN);
+    jump(pending);
+    await wait(HOLD);
+    pending = null;
+    await fade(0, FADE_OUT);
+    busy = false;
+  };
+  const patchLenis = L => {
+    if (!L || L.__fadeJump || typeof L.scrollTo !== "function") return;
+    L.__fadeJump = true;
+    const orig = L.scrollTo.bind(L);
+    L.scrollTo = (t, o) => {
+      const y = targetY(t, o);
+      const far = !reduce && y != null && !(o && o.immediate) && Math.abs(y - (window.scrollY || 0)) > innerHeight * FAR;
+      if (!far) return busy ? (pending = [t, o], undefined) : orig(t, o);
+      pending = [t, o];
+      if (busy) return;                                   /* a veiled jump is already running: it will use the newest target */
+      run(a => orig(a[0], Object.assign({}, a[1], { immediate: true, force: true })));
+    };
+  };
+  const nativeScrollTo = window.scrollTo.bind(window);
+  window.scrollTo = function (a, b) {
+    const o = a && typeof a === "object" ? a : null;
+    if (o && o.behavior === "smooth" && !reduce && typeof o.top === "number" && Math.abs(o.top - (window.scrollY || 0)) > innerHeight * FAR) {
+      pending = [o.top];
+      if (busy) return;
+      run(p => nativeScrollTo({ top: p[0], behavior: "instant" }));
+      return;
+    }
+    return nativeScrollTo(a, b);
+  };
+  /* Lenis is created by another script: hook it as soon as it exists */
+  let n = 0;
+  const poll = setInterval(() => { patchLenis(window.__lenis); if (window.__lenis && window.__lenis.__fadeJump || ++n > 100) clearInterval(poll); }, 150);
+  document.addEventListener("click", () => patchLenis(window.__lenis), true);
 })();

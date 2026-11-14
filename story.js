@@ -194,7 +194,7 @@
       a.addEventListener("click", ev => {
         ev.preventDefault();
         /* same sections as the top bar -> use the top bar's own framing, so both land on exactly the same spot */
-        if (window.__frameSection && ["home", "about", "services", "work", "cinema", "creation", "beforeafter", "findme", "brief", "contact"].indexOf(d.id) > -1) {
+        if (window.__frameSection && ["home", "about", "services", "work", "cinema", "creation", "beforeafter", "process", "findme", "brief", "contact"].indexOf(d.id) > -1) {
           history.pushState(null, "", "#" + d.id);
           window.__frameSection(d.id);
           return;
