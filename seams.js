@@ -90,29 +90,6 @@
     }
   }
 
-  /* ---------------------------------------------------------------- 1  ABOUT → SERVICES
-     venetian slats: 18 vertical slats turn shut and open again in a wave left → right (with a light front) */
-  function dSlats(c, W, H, p, g) {
-    const N = 18, sw = W / N, st = .4;
-    for (let i = 0; i < N; i++) {
-      const t = clamp01(p * (1 + st) - (i / (N - 1)) * st), k = Math.sin(Math.PI * t);
-      if (k < .004) continue;
-      const w = Math.pow(Math.min(1, k * 1.6), .8), x = i * sw + sw / 2;
-      c.save(); c.translate(x, 0); c.scale(w * 1.03, 1);
-      const gr = c.createLinearGradient(-sw / 2, 0, sw / 2, 0);
-      gr.addColorStop(0, "rgba(139,53,255," + (.55 * k) + ")"); gr.addColorStop(.18, dk(.985)); gr.addColorStop(.82, dk(.985)); gr.addColorStop(1, "rgba(22,216,255," + (.35 * k) + ")");
-      c.fillStyle = gr; c.fillRect(-sw / 2, -2, sw, H + 4);
-      c.fillStyle = GOLD(.5 * k); c.fillRect(-sw / 2, -2, 1.2 / Math.max(w, .2), H + 4);
-      c.restore();
-    }
-    const fx = (p * (1 + st) / st) * (N - 1) * sw;
-    if (fx > -80 && fx < W + 80) {
-      const gl = c.createLinearGradient(fx - 90, 0, fx + 20, 0);
-      gl.addColorStop(0, "rgba(201,168,255,0)"); gl.addColorStop(.8, "rgba(201,168,255," + (.3 * Math.sin(Math.PI * p)) + ")"); gl.addColorStop(1, "rgba(201,168,255,0)");
-      c.fillStyle = gl; c.fillRect(fx - 90, 0, 110, H);
-    }
-  }
-
   /* ---------------------------------------------------------------- 2  SERVICES → WORK  dolly-through */
   function dDolly(c, W, H, p, g) {
     const cx = W / 2, cy = H / 2, diag = Math.hypot(W, H);
@@ -199,27 +176,6 @@
     }
   }
 
-  /* ---------------------------------------------------------------- 6  BEFORE/AFTER → PROCESS  elevator descent */
-  function dElev(c, W, H, p, g) {
-    const bell = Math.pow(Math.sin(Math.PI * p), .8);
-    c.fillStyle = dk(.9 * bell); c.fillRect(0, 0, W, H);
-    const L = [[34, 1.1, .06, 1], [78, 2.6, .1, 1.4], [170, 5.2, .18, 2]];
-    for (let k = 0; k < L.length; k++) {
-      const sp = L[k][0], off = (p * L[k][1] * H) % sp;
-      c.fillStyle = LILAC(L[k][2] * bell);
-      for (let y = -sp + off; y < H; y += sp) { c.fillRect(0, y, W, L[k][3]); if (k > 0) { c.fillRect(W * .05, y, 36 + k * 14, 2); c.fillRect(W * .95 - 36 - k * 14, y, 36 + k * 14, 2); } }
-    }
-    if (g.num != null) {
-      const fs = Math.min(W, H) * .3, t = ease(p);
-      c.font = "600 " + fs + "px Cinzel,'Instrument Serif',serif"; c.textAlign = "center"; c.textBaseline = "middle";
-      c.fillStyle = GOLD(1);
-      const ga = c.globalAlpha;
-      c.globalAlpha = ga * (1 - t); c.fillText(pad2(Math.max(0, g.num - 1)), W / 2, H / 2 - t * H * .8);
-      c.globalAlpha = ga * t; c.fillText(pad2(g.num), W / 2, H / 2 + (1 - t) * H * .8);
-      c.globalAlpha = ga;
-    }
-  }
-
   /* ---------------------------------------------------------------- 7  FIND ME → BRIEF  card flip */
   function dFlip(c, W, H, p, g) {
     const bell = Math.pow(Math.sin(Math.PI * p), .7);
@@ -239,34 +195,6 @@
     c.restore(); c.globalAlpha = ga;
   }
 
-  /* ---------------------------------------------------------------- 8  BRIEF → CONTACT  zoom into the ticket → WhatsApp pill */
-  function dTicket(c, W, H, p, g) {
-    const bell = Math.pow(Math.sin(Math.PI * p), .6);
-    c.fillStyle = dk(.9 * bell); c.fillRect(0, 0, W, H);
-    const tw = Math.min(W * .3, 360), th = tw * 1.32, sc = lerp(.5, 1.5, ease(sub(p, 0, .46))), t = ease(sub(p, .44, .8));
-    const w = lerp(tw * sc, 300, t), h = lerp(th * sc, 74, t), rad = lerp(26 * sc, h / 2, t);
-    const ga = c.globalAlpha; c.globalAlpha = ga * (1 - sub(p, .88, 1));
-    c.save(); c.translate(W / 2, H / 2);
-    c.beginPath(); rr(c, -w / 2, -h / 2, w, h, rad);
-    c.fillStyle = mix([42, 15, 85], [16, 130, 76], t); c.fill(); c.lineWidth = 2; c.strokeStyle = GOLD(.8 - .3 * t); c.stroke();
-    const ga2 = c.globalAlpha;
-    if (t < .98) {
-      c.globalAlpha = ga2 * (1 - t);
-      c.font = "600 " + (h * .2) + "px Cinzel,serif"; c.textAlign = "center"; c.textBaseline = "middle"; c.fillStyle = GOLD(.95); c.fillText("TM", 0, -h * .24);
-      c.fillStyle = LILAC(.45);
-      for (let i = 0; i < 3; i++) c.fillRect(-w * .34, h * .02 + i * h * .1, w * .68 * (1 - i * .18), 3 * sc);
-      c.fillStyle = dk(.9 * bell);
-      c.beginPath(); c.arc(-w / 2, h * .2, 11 * sc, 0, TAU); c.fill();
-      c.beginPath(); c.arc(w / 2, h * .2, 11 * sc, 0, TAU); c.fill();
-    }
-    if (t > .15) {
-      c.globalAlpha = ga2 * sub(t, .35, 1);
-      c.font = "700 " + Math.min(h * .34, w * .09) + "px Inter,sans-serif"; c.textAlign = "center"; c.textBaseline = "middle"; c.fillStyle = "#fff";
-      c.fillText("WhatsApp \u2197", 0, 1);
-    }
-    c.restore(); c.globalAlpha = ga;
-  }
-
   /* chapter caption shown during every seam */
   function drawLabel(c, W, H, p, text) {
     if (!text) return;
@@ -283,14 +211,11 @@
   const q = s => document.querySelector(s);
   const SEAMS = [
     { sel: () => q(".ab-pin-wrap") || q("#about"), d: dCine, noLabel: true, def: ["01 / ABOUT", "01 / \u0639\u0646\u0651\u064A"] },
-    { sel: () => q("#services"), d: dSlats, def: ["02 / SERVICES", "02 / \u0627\u0644\u062E\u062F\u0645\u0627\u062A"] },
     { sel: () => q("#work"), d: dDolly, def: ["03 / SELECTED WORK", "03 / \u0623\u0639\u0645\u0627\u0644 \u0645\u062E\u062A\u0627\u0631\u0629"] },
     { sel: () => q("#cinema"), d: dAperture, def: ["BEYOND", "\u0645\u0627 \u0648\u0631\u0627\u0621 \u0627\u0644\u062E\u064A\u0627\u0644"], noKick: true },
     { sel: () => q("#creation"), d: dRoll, def: ["CREATION", "\u0627\u0644\u0625\u0628\u062F\u0627\u0639"] },
     { sel: () => q("#beforeafter"), d: dWipe, def: ["BEFORE / AFTER", "\u0642\u0628\u0644 / \u0628\u0639\u062F"] },
-    { sel: () => q("#process"), d: dElev, def: ["06 / PROCESS", "06 / \u0637\u0631\u064A\u0642\u0629 \u0627\u0644\u0639\u0645\u0644"] },
     { sel: () => q("#brief"), d: dFlip, def: ["08 / START A PROJECT", "08 / \u0627\u0628\u062F\u0623 \u0645\u0634\u0631\u0648\u0639\u0643"] },
-    { sel: () => q("#contact"), d: dTicket, def: ["09 / CONTACT", "09 / \u062A\u0648\u0627\u0635\u0644"] }
   ];
   SEAMS.forEach(s => { s.cur = 0; });
 
@@ -310,7 +235,7 @@
     const kick = el.querySelector && el.querySelector(".section-kicker");
     const txt = kick ? (kick.textContent || "").trim() : "";
     const g = { label: txt || s.def[isAr() ? 1 : 0], num: null, cx: W / 2, cy: H * .42 };
-    const m = (txt || s.def[0]).match(/\d+/); if (m && s.d === dElev) g.num = parseInt(m[0], 10);
+    
     if (s.d === dCine) { const pr = g.label.split("/"); g.num = pr.length > 1 ? pr[0].trim() : ""; g.title = (pr.length > 1 ? pr.slice(1).join("/") : g.label).trim(); }
     return g;
   }
