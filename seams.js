@@ -251,6 +251,7 @@
   const RAIN_AR = ["فكرة ✦ اتجاه ✦ إبداع", "سيناريو ✦ تصميم ✦ حركة", "مونتاج ✦ صوت ✦ تسليم", "لقطة ✦ لمسة ✦ تسليم"];
   D.push({
     sel: "section.social-strip.fm, .social-strip.fm", key: "fm",
+    win: [0.98, 0.5], nomagnet: true,      /* Find Me is a short strip with its own fan of live links: finish before it opens, never cover it */
     build(el) {
       el.classList.add("sm-s8");
       this.v = mk("sm-vl", el); this.cols = [];
@@ -260,13 +261,13 @@
         c.style.left = `${(i + 0.5) * (100 / N)}%`;
         this.cols.push({ e: c, d: rnd() * 0.35, i });
       }
-      this.bl = Array.from({ length: 7 }, () => mk("sm-bl", el));
+      this.bl = [];
       this.lab = mk("sm-lab", el);
     },
     update(p) {
       const ar = isRtl();
-      this.v.style.opacity = (0.9 * bell(clamp(p / 0.95))).toFixed(3);
-      const rain = seg(p, 0, 0.56);
+      this.v.style.opacity = (0.55 * bell(clamp(p / 0.95)) ** 0.8).toFixed(3);
+      const rain = seg(p, 0, 0.82);
       for (const c of this.cols) {
         const l = eio(clamp(rain * 1.5 - c.d));
         const t = (ar ? RAIN_AR : RAIN)[c.i % 4];
@@ -274,12 +275,7 @@
         put(c.e, `translateY(${lerp(-115, 115, l).toFixed(1)}%)`);
         c.e.style.opacity = (bell(l) * 1.4).toFixed(3);
       }
-      const f = eio(seg(p, 0.46, 0.95)), o = bell(seg(p, 0.42, 1)) ** 0.5;
-      this.bl.forEach((b, i) => {
-        put(b, `rotate(${((i - 3) * 15 * f).toFixed(2)}deg) scale(${lerp(0.7, 1, f).toFixed(3)})`);
-        b.style.opacity = (o * (p > 0.42 ? 1 : 0)).toFixed(3);
-      });
-      this.lab.textContent = label("fm"); this.lab.style.opacity = (seg(p, 0.5, 0.62) * (1 - seg(p, 0.78, 0.92))).toFixed(3);
+      this.lab.textContent = label("fm"); this.lab.style.opacity = (seg(p, 0.3, 0.45) * (1 - seg(p, 0.6, 0.78))).toFixed(3);
     },
   });
 
@@ -288,6 +284,7 @@
   const setTk = (tk) => { const sp = tk.querySelector(".tkl"); const t = isRtl() ? "ملخّص المشروع" : "PROJECT BRIEF"; if (sp.textContent !== t) sp.textContent = t; };
   D.push({
     sel: ".sc-brief, #brief", key: "brief",
+    win: [0.36, -0.05],                    /* starts only after the Find Me strip has mostly scrolled away */
     build(el) {
       el.classList.add("sm-s9");
       this.vt = mk("sm-vt", el);
@@ -373,8 +370,8 @@
       if (!s.target || !s.target.isConnected) s.target = resolve(s);
       let p = 0;
       if (s.target) {
-        const top = s.target.getBoundingClientRect().top / vh;
-        p = clamp((CFG.enter - top) / (CFG.enter - CFG.leave));
+        const w = s.d.win || [CFG.enter, CFG.leave], top = s.target.getBoundingClientRect().top / vh;
+        p = clamp((w[0] - top) / (w[0] - w[1]));
       }
       if (frozen && frozen.i === s.i) p = frozen.p;
       s.p = p;
@@ -403,11 +400,12 @@
     if (any || Math.abs(vel) > 2 || Math.abs(gate - 1) > 0.01) schedule();
 
     /* magnet: stopped in the dead centre of a seam → glide on in the scroll direction */
-    if (CFG.magnet && !cm && active && !frozen && !busy && now - lastMove > CFG.magnetIdle && Math.abs(vel) < 4) {
+    if (CFG.magnet && !cm && active && !active.d.nomagnet && !frozen && !busy && now - lastMove > CFG.magnetIdle && Math.abs(vel) < 4) {
       const p = active.p;
       if (p > 0.1 && p < 0.9 && !document.body.classList.contains("lightbox-open")) {
         const abs = active.target.getBoundingClientRect().top + scrollY;
-        const goal = dir > 0 ? abs - CFG.leave * vh + 2 : abs - CFG.enter * vh - 2;
+        const w = active.d.win || [CFG.enter, CFG.leave];
+        const goal = dir > 0 ? abs - w[1] * vh + 2 : abs - w[0] * vh - 2;
         busy = 1; setTimeout(() => { busy = 0; }, 1400);
         const L = window.__lenis;
         if (L && L.scrollTo) L.scrollTo(goal, { duration: 1.0, lock: false });
