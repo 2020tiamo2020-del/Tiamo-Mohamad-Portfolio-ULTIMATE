@@ -440,14 +440,13 @@ nav?.querySelectorAll("a").forEach(a => a.addEventListener("click", closeMenu));
   };
 
   const frameContact = () => {
-    /* Prefer "Find Me" strip so Contact card sits under the header without jumping to top */
-    const strip = document.querySelector("section.social-strip");
+    /* Contact is the last section: land with the Contact card where the framing script in index.html put it
+       (scroll-margin-top = --contact-snap), no longer on Find Me (which is now pinned and has Brief after it) */
     const sec = document.getElementById("contact");
     if (!sec) return;
-    try { calc = null; } catch (_) {}
-    const target = strip || sec;
-    const kicker = target.querySelector(".section-kicker");
-    scrollYTo(absTop(kicker || target) - headerPad());
+    const smt = parseFloat(getComputedStyle(sec).scrollMarginTop) || 0;
+    const sp = parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0;
+    scrollYTo(Math.max(0, absTop(sec) - smt - sp));
     setTimeout(() => { try { window.__updateActiveNav && window.__updateActiveNav(); } catch (_) {} }, 400);
   };
 
