@@ -1,0 +1,9 @@
+/* SEAMS — cinematic scroll transitions between sections.
+   One fixed canvas, drawn only while a seam is on screen. It never changes layout
+   and never transforms a section, so the pinned scenes keep working untouched.
+   Desktop (mouse) only. Remove the <link> + <script> in index.html to switch it off. */
+#seamsCv{position:fixed;left:0;top:0;width:100vw;height:100vh;height:100lvh;z-index:28;
+  pointer-events:none;display:none;contain:strict}
+@media (max-width:900px),(hover:none),(pointer:coarse),(prefers-reduced-motion:reduce){
+  #seamsCv{display:none !important}
+}
