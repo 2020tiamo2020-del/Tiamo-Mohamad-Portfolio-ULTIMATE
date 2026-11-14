@@ -25,7 +25,7 @@ if(L&&L.scrollTo&&!L.isStopped)L.scrollTo(y,{duration:1.4});else scrollTo({top:y
 [400,1100,1700].forEach(t=>setTimeout(()=>{try{window.__updateActiveNav&&window.__updateActiveNav()}catch(_){}},t));return true};
 window.__frameFindMe=go;
 document.addEventListener("click",e=>{const l=e.target.closest&&e.target.closest('a[href="#findme"]');if(!l||!pin)return;e.preventDefault();e.stopImmediatePropagation();
-try{if(l.closest("#nav"))window.playNavSound&&window.playNavSound()}catch(_){}try{history.pushState(null,"","#findme")}catch(_){}go()},true);
+try{if(!l.closest(".st-rail,#stRail"))window.playNavSound&&window.playNavSound()}catch(_){}try{history.pushState(null,"","#findme")}catch(_){}go()},true);
 (mq.addEventListener?mq.addEventListener("change",layout):mq.addListener(layout));
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(layout);
 if("ResizeObserver"in window)new ResizeObserver(relayout).observe(s);
