@@ -170,6 +170,7 @@
       ["creation", "#creation", "AI Creation", "إبداع الـ AI"],
       ["beforeafter", "#beforeafter", "Before & After", "قبل وبعد"],
       ["process", "#process", "Process", "طريقة العمل"],
+      ["findme", "#findme", "Find Me", "تجدني هنا"],
       ["brief", "#brief", "Start a Project", "ابدأ مشروعك"],
       ["contact", "#contact", "Contact", "تواصل"]
     ].map(([id, sel, en, ar]) => ({ id, el: $(sel), en, ar })).filter(d => d.el);
@@ -193,7 +194,7 @@
       a.addEventListener("click", ev => {
         ev.preventDefault();
         /* same sections as the top bar -> use the top bar's own framing, so both land on exactly the same spot */
-        if (window.__frameSection && ["home", "about", "services", "work", "cinema", "creation", "beforeafter", "contact"].indexOf(d.id) > -1) {
+        if (window.__frameSection && ["home", "about", "services", "work", "cinema", "creation", "beforeafter", "findme", "contact"].indexOf(d.id) > -1) {
           history.pushState(null, "", "#" + d.id);
           window.__frameSection(d.id);
           return;
