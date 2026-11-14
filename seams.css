@@ -7,3 +7,12 @@
 @media (max-width:900px),(hover:none),(pointer:coarse),(prefers-reduced-motion:reduce){
   #seamsCv{display:none !important}
 }
+
+/* 09 / CONTACT — the "WhatsApp" label must never touch the number (English).
+   The label gets its own line box + a clear gap, and the digits that fall in from above are
+   masked at the top edge of the number line, so they can't pass through the label. */
+#contact .contact-btn{position:relative;display:inline-flex;flex-direction:column;align-items:flex-start;gap:16px}
+#contact .contact-btn > span{margin:0;line-height:1.3;position:relative;z-index:2}
+#contact .contact-btn b{line-height:1.15;position:relative;z-index:1;clip-path:inset(-2px -400px -40px -400px)}
+#contact .contact-btn .arr{position:absolute;right:-1.4em;bottom:.45em}
+[dir="rtl"] #contact .contact-btn .arr{right:auto;left:-1.4em}

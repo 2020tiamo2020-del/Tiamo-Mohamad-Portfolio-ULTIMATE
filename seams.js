@@ -1,5 +1,5 @@
 /* =====================================================================
-   SEAMS — 10 cinematic transitions, one per section boundary.
+   SEAMS — 9 cinematic transitions between sections (Process → Find Me is done by the real Find Me cards, see findme-fan.js).
    - Each seam is scrubbed by the page scroll (reversible, no wheel-hijack).
    - Everything is drawn on ONE fixed canvas (#seamsCv); sections are never transformed.
    - The canvas is only visible/drawn while a boundary is crossing the screen.
@@ -194,27 +194,7 @@
     }
   }
 
-  /* ---------------------------------------------------------------- 7  PROCESS → FIND ME  card pile fans out */
-  function dFan(c, W, H, p, g) {
-    const bell = Math.pow(Math.sin(Math.PI * p), .7);
-    c.fillStyle = dk(.9 * bell); c.fillRect(0, 0, W, H);
-    const cw = Math.min(W * .17, H * .3), ch = cw * 1.42;
-    const spread = ease(sub(p, .1, .55)), rise = ease(sub(p, 0, .5)), out = ease(sub(p, .62, 1)), al = 1 - sub(p, .7, .97);
-    const ga = c.globalAlpha; c.globalAlpha = ga * al;
-    const order = [0, 4, 1, 3, 2];
-    for (let k = 0; k < order.length; k++) {
-      const i = order[k], a = (i - 2) * .2 * spread, px = W / 2 + (i - 2) * cw * .2 * spread, py = lerp(H * .98, H * .66, rise) - out * H * .6;
-      c.save(); c.translate(px, py); c.rotate(a); c.scale(1, .9 + .1 * spread);
-      const gr = c.createLinearGradient(0, -ch, 0, 0); gr.addColorStop(0, "rgba(139,53,255,.6)"); gr.addColorStop(1, "rgba(20,8,48,.95)");
-      c.beginPath(); rr(c, -cw / 2, -ch, cw, ch, 16); c.fillStyle = gr; c.fill(); c.lineWidth = 1.6; c.strokeStyle = GOLD(.55); c.stroke();
-      c.font = "600 " + (cw * .22) + "px Cinzel,serif"; c.textAlign = "center"; c.textBaseline = "middle"; c.fillStyle = GOLD(i === 2 ? .95 : .45);
-      c.fillText("TM", 0, -ch / 2);
-      c.restore();
-    }
-    c.globalAlpha = ga;
-  }
-
-  /* ---------------------------------------------------------------- 8  FIND ME → BRIEF  card flip */
+  /* ---------------------------------------------------------------- 7  FIND ME → BRIEF  card flip */
   function dFlip(c, W, H, p, g) {
     const bell = Math.pow(Math.sin(Math.PI * p), .7);
     c.fillStyle = dk(.92 * bell); c.fillRect(0, 0, W, H);
@@ -233,7 +213,7 @@
     c.restore(); c.globalAlpha = ga;
   }
 
-  /* ---------------------------------------------------------------- 9  BRIEF → CONTACT  zoom into the ticket → WhatsApp pill */
+  /* ---------------------------------------------------------------- 8  BRIEF → CONTACT  zoom into the ticket → WhatsApp pill */
   function dTicket(c, W, H, p, g) {
     const bell = Math.pow(Math.sin(Math.PI * p), .6);
     c.fillStyle = dk(.9 * bell); c.fillRect(0, 0, W, H);
@@ -283,7 +263,6 @@
     { sel: () => q("#creation"), d: dRoll, def: ["CREATION", "\u0627\u0644\u0625\u0628\u062F\u0627\u0639"] },
     { sel: () => q("#beforeafter"), d: dWipe, def: ["BEFORE / AFTER", "\u0642\u0628\u0644 / \u0628\u0639\u062F"] },
     { sel: () => q("#process"), d: dElev, def: ["06 / PROCESS", "06 / \u0637\u0631\u064A\u0642\u0629 \u0627\u0644\u0639\u0645\u0644"] },
-    { sel: () => q(".social-strip.fm"), d: dFan, def: ["07 / FIND ME", "07 / \u062A\u062C\u062F\u0646\u064A \u0647\u0646\u0627"] },
     { sel: () => q("#brief"), d: dFlip, def: ["08 / START A PROJECT", "08 / \u0627\u0628\u062F\u0623 \u0645\u0634\u0631\u0648\u0639\u0643"] },
     { sel: () => q("#contact"), d: dTicket, def: ["09 / CONTACT", "09 / \u062A\u0648\u0627\u0635\u0644"] }
   ];

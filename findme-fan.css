@@ -7,7 +7,7 @@ section.social-strip.fm>.fm-fan{position:absolute;inset:0;z-index:2;container-ty
 .fm-card{position:absolute;left:50%;top:50%;display:block;color:#fff;text-decoration:none;pointer-events:auto;
   --fq:1;--frx:0deg;--fry:0deg;--fmx:50%;--fmy:50%;
   translate:-50% -50%;
-  transform:translate(calc((var(--fx,0px) + var(--fnx))*var(--fq)),calc(var(--fy,0px)*var(--fq) - var(--flift) - var(--fd,0)*130cqh)) rotate(calc(var(--fr,0deg)*var(--fq)*var(--fk))) perspective(700px) rotateX(var(--frx)) rotateY(var(--fry)) scale(calc(.78 + .22*var(--fq)));
+  transform:translate(calc((var(--fx,0px) + var(--fnx))*var(--fq)),calc(var(--fy,0px)*var(--fq) - var(--flift) - var(--fd,0)*130cqh + var(--frise,0cqh))) rotate(calc(var(--fr,0deg)*var(--fq)*var(--fk))) perspective(700px) rotateX(calc(var(--frx) + var(--ftx,0deg))) rotateY(var(--fry)) scale(calc(.78 + .22*var(--fq)));
   transition:--fnx .5s cubic-bezier(.22,1,.36,1),--flift .5s cubic-bezier(.22,1,.36,1),--fk .5s cubic-bezier(.22,1,.36,1),box-shadow .4s,border-color .4s;
   will-change:transform}
 .fm-side{width:18.5cqw;height:62cqh;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,.16);opacity:calc(var(--fq)*3);

@@ -3,7 +3,7 @@ const cards=[...s.querySelectorAll(".fm-side")],red=matchMedia("(prefers-reduced
 const dly=c=>c.classList.contains("fm-l2")||c.classList.contains("fm-r2")?.28:0,ease=t=>t*t*(3-2*t);
 let cur=red?1:0,tgt=cur,raf=0;
 const ctr=s.querySelector(".fm-c"),B=.55,cl=t=>Math.max(0,Math.min(1,t)),out=t=>1+1.7*Math.pow(t-1,3)+.7*Math.pow(t-1,2);
-const paint=()=>{ctr.style.setProperty("--fd",(1-out(cl(cur/B))).toFixed(3));const u=cl((cur-B)/(1-B));cards.forEach(c=>{const q=ease(cl((u-dly(c))/(1-.28)));c.style.setProperty("--fq",q.toFixed(3));c.style.pointerEvents=q>.5?"auto":"none"})};
+const paint=()=>{ctr.style.setProperty("--fd",(1-out(cl(cur/B))).toFixed(3));const u=cl((cur-B)/(1-B));cards.forEach(c=>{const q=ease(cl((u-dly(c))/(1-.28)));c.style.setProperty("--fq",q.toFixed(3));c.style.setProperty("--frise",((1-q)*30).toFixed(2)+"cqh");c.style.setProperty("--ftx",((1-q)*38).toFixed(1)+"deg");c.style.pointerEvents=q>.5?"auto":"none"})};
 const aim=()=>{const r=s.getBoundingClientRect(),v=innerHeight;tgt=red?1:Math.max(0,Math.min(1,(v*.86-r.top)/(v*.56)));if(!raf)raf=requestAnimationFrame(tick)};
 const tick=()=>{raf=0;cur+=(tgt-cur)*.07;if(Math.abs(tgt-cur)<.002)cur=tgt;paint();if(cur!==tgt)raf=requestAnimationFrame(tick)};
 addEventListener("scroll",aim,{passive:true});addEventListener("resize",aim);aim();paint();
