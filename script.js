@@ -451,6 +451,7 @@ nav?.querySelectorAll("a").forEach(a => a.addEventListener("click", closeMenu));
   };
 
   const frameSection = (id) => {
+    if (id === "findme" && typeof window.__frameFindMe === "function" && window.__frameFindMe()) return;   /* pinned Find Me: land with the cards fully open */
     if (id === "about") return frameAbout();
     if (id === "services") return frameServices();
     if (id === "beforeafter") return frameBeforeAfter();
