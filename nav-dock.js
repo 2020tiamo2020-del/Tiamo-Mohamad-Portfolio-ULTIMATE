@@ -53,9 +53,11 @@
   };
   const arm = () => { clearTimeout(closeT); setOpen(true); };
   const disarm = () => { clearTimeout(closeT); closeT = setTimeout(() => { if (!dock.matches(":focus-within") || !dock.matches(":hover")) setOpen(false); }, 260); };
-  dock.addEventListener("pointerenter", e => { if (e.pointerType !== "touch") arm(); });
+  let lockUntil = 0; const hz = document.querySelector(".header-actions");
+  if (hz) { hz.addEventListener("pointerenter", () => { lockUntil = performance.now() + 600; clearTimeout(closeT); setOpen(false); }); hz.addEventListener("click", () => { lockUntil = performance.now() + 1400; clearTimeout(closeT); setOpen(false); }); }
+  dock.addEventListener("pointerenter", e => { if (e.pointerType === "touch" || performance.now() < lockUntil) return; const r = dock.getBoundingClientRect(); if (e.clientX >= r.left - 6 && e.clientX <= r.right + 6 && e.clientY >= r.top - 6 && e.clientY <= r.bottom + 6) arm(); });
   dock.addEventListener("pointerleave", e => { if (e.pointerType !== "touch") { px = null; disarm(); } });
-  dock.addEventListener("focusin", arm);
+  dock.addEventListener("focusin", () => { if (performance.now() >= lockUntil) arm(); });
   dock.addEventListener("focusout", e => { if (!dock.contains(e.relatedTarget)) disarm(); });
   rest.addEventListener("click", () => setOpen(!open));
   dock.addEventListener("keydown", e => { if (e.key === "Escape") { setOpen(false); rest.focus(); } });

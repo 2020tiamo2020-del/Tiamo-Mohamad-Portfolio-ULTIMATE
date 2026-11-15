@@ -7,14 +7,14 @@ const paint=()=>{if(wrap)wrap.style.setProperty("--fmp",cur.toFixed(3));ctr.styl
 const mq=matchMedia("(min-width:901px)"),wrap=s.parentNode.id==="findme"?s.parentNode:document.createElement("div"),sp=document.createElement("div"),MB=getComputedStyle(s).marginBottom;
 wrap.className="fm-pin-wrap";wrap.id="findme";sp.className="fm-pin-spacer";sp.setAttribute("aria-hidden","true");
 if(wrap!==s.parentNode){s.parentNode.insertBefore(wrap,s);wrap.appendChild(s)}wrap.appendChild(sp);
-if(!wrap.querySelector(".fm-bg")){const bg=document.createElement("div");bg.className="fm-bg";bg.setAttribute("aria-hidden","true");bg.innerHTML='<i class="gd"></i><i class="b1"></i><i class="b2"></i><i class="b3"></i><b class="w1">FIND ME</b><b class="w2">TIAMO MOHAMAD</b>';wrap.insertBefore(bg,wrap.firstChild)}
+if(!wrap.querySelector(".fm-bg")){const bg=document.createElement("div");bg.className="fm-bg";bg.setAttribute("aria-hidden","true");bg.innerHTML='<i class="gd"></i><i class="b1"></i><i class="b2"></i><i class="b3"></i><b class="w1"></b><b class="w2"></b>';wrap.insertBefore(bg,wrap.firstChild);const w1=bg.querySelector(".w1"),w2=bg.querySelector(".w2");const setW=()=>{const d=document.documentElement,ar=d.lang==="ar"||d.dir==="rtl";w1.textContent=ar?"تجدني هنا":"FIND ME";w2.textContent=ar?"تيامو محمد":"TIAMO MOHAMAD";w1.classList.toggle("ar",ar);w2.classList.toggle("ar",ar)};setW();new MutationObserver(setW).observe(document.documentElement,{attributes:true,attributeFilter:["lang","dir"]})}
 let pin=false,top=0,P=0;
 /* Find Me holds still on screen (sticky) for ~1.2 screens of scrolling: the cards arrive, fan open, then stay put so the links can be read and clicked */
 const aim=()=>{const v=innerHeight||1;if(pin){const wt=wrap.getBoundingClientRect().top;tgt=wt>top?B*cl((v*.92-wt)/(v*.92-top)):B+(1-B)*cl(cl((top-wt)/P)/.45)}else{const r=s.getBoundingClientRect();tgt=red?1:cl((v*.86-r.top)/(v*.56))}if(!raf)raf=requestAnimationFrame(tick)};
 const layout=()=>{pin=mq.matches&&!red;wrap.classList.toggle("on",pin);
 if(!pin){sp.style.height="0px";s.style.removeProperty("--fm-top");s.style.marginBottom="";wrap.style.marginBottom="";aim();return}
 const v=innerHeight||1,hd=document.querySelector(".site-header"),hb=hd?hd.getBoundingClientRect().bottom:90;
-top=Math.round(Math.max(hb+8,(v-s.offsetHeight)/2));P=Math.round(v*1.2);wrap.style.setProperty("--fmh",s.offsetHeight+"px");
+top=Math.round(Math.max(hb+8,(v-s.offsetHeight)/2));P=Math.round(v*1.2);wrap.style.setProperty("--fmh",s.offsetHeight+"px");wrap.style.setProperty("--fmt",top+"px");
 wrap.style.marginBottom=MB;s.style.marginBottom="0px";s.style.setProperty("--fm-top",top+"px");sp.style.height=P+"px";aim()};
 let lt=0;const relayout=()=>{clearTimeout(lt);lt=setTimeout(layout,80)};
 addEventListener("resize",relayout);addEventListener("load",layout);

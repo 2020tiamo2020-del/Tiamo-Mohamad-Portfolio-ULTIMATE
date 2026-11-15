@@ -69,3 +69,20 @@ section.social-strip.fm>.fm-fan{position:absolute;inset:0;z-index:2;container-ty
   .fm-side:hover{box-shadow:0 26px 54px rgba(0,0,0,.65),0 0 42px rgba(139,53,255,.5)}
 }
 .fm-c .fm-gr{transition:transform .2s ease,box-shadow .2s ease,filter .2s ease,translate .25s ease-out}
+
+/* ===== v7: centered words (EN + AR), Facebook cards fit, IG/TikTok logo-centered ===== */
+.fm-bg b{font-size:clamp(56px,min(calc(min(1180px,100vw - 32px)/9.2),14vh),150px)}
+.fm-bg b.ar{letter-spacing:0;font-family:Cairo,Tajawal,Inter,system-ui,sans-serif;font-weight:900;direction:rtl;font-size:clamp(70px,min(calc(min(1180px,100vw - 32px)/6.4),17vh),190px);line-height:.95}
+.fm-bg .w1{left:50%;top:auto;bottom:calc(100% - var(--fmt,260px) + 10px);transform:translateX(calc(-50% + (var(--fmp) - .5)*3vw))}
+.fm-bg .w2{left:50%;bottom:auto;top:calc(var(--fmt,260px) + var(--fmh,44vh) + 10px);transform:translateX(calc(-50% + (var(--fmp) - .5)*-3vw))}
+/* Facebook group + personal: show the whole image, blurred copy behind it */
+.fm-l1 img,.fm-fb img{object-fit:contain;object-position:center 40%;z-index:0;filter:brightness(.92) saturate(1.05)}
+.fm-l1::after,.fm-fb::after{content:"";position:absolute;inset:-24px;z-index:-1;background-size:cover;background-position:center;filter:blur(16px) brightness(.45)}
+.fm-l1::after{background-image:url(fm-photoshop.jpg)}
+.fm-fb::after{background-image:url(fm-facebook.jpg)}
+/* Instagram + TikTok: big logo in the middle of the card, text at the bottom like the others */
+.fm-l2 .fm-lab,.fm-r2 .fm-lab{inset:0;width:auto;display:block;flex-direction:initial;text-align:left}
+.fm-r2 .fm-lab{text-align:right}
+.fm-l2 .fm-lab svg,.fm-r2 .fm-lab svg{position:absolute;left:50%;top:44%;width:44%;height:auto;aspect-ratio:1;translate:-50% -50%}
+.fm-l2 .fm-lab>span,.fm-r2 .fm-lab>span{position:absolute;left:10px;right:10px;bottom:8px;font-size:11px;line-height:1.15}
+@media(max-width:900px){.fm-l2 .fm-lab>span,.fm-r2 .fm-lab>span{display:none}.fm-l2 .fm-lab svg,.fm-r2 .fm-lab svg{width:40%}}
