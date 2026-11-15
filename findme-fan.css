@@ -7,7 +7,7 @@ section.social-strip.fm>.fm-fan{position:absolute;inset:0;z-index:2;container-ty
 .fm-card{position:absolute;left:50%;top:50%;display:block;color:#fff;text-decoration:none;pointer-events:auto;
   --fq:1;--frx:0deg;--fry:0deg;--fmx:50%;--fmy:50%;
   translate:-50% -50%;
-  transform:translate(calc((var(--fx,0px) + var(--fnx))*var(--fq)),calc(var(--fy,0px)*var(--fq) - var(--flift) - var(--fd,0)*130cqh + var(--frise,0cqh))) rotate(calc(var(--fr,0deg)*var(--fq)*var(--fk))) perspective(700px) rotateX(calc(var(--frx) + var(--ftx,0deg))) rotateY(var(--fry)) scale(calc(.78 + .22*var(--fq)));
+  transform:translate(calc((var(--fx,0px) + var(--fnx))*var(--fq)),calc(var(--fy,0px)*var(--fq) - var(--flift) - var(--fd,0)*130cqh)) rotate(calc(var(--fr,0deg)*var(--fq)*var(--fk))) perspective(700px) rotateX(var(--frx)) rotateY(var(--fry)) scale(calc(.78 + .22*var(--fq)));
   transition:--fnx .5s cubic-bezier(.22,1,.36,1),--flift .5s cubic-bezier(.22,1,.36,1),--fk .5s cubic-bezier(.22,1,.36,1),box-shadow .4s,border-color .4s;
   will-change:transform}
 .fm-side{width:18.5cqw;height:62cqh;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,.16);opacity:calc(var(--fq)*3);
@@ -47,8 +47,25 @@ section.social-strip.fm>.fm-fan{position:absolute;inset:0;z-index:2;container-ty
   .fm-c{width:46cqw;height:84cqh;min-width:0}.fm-t{font-size:clamp(15px,5.8cqw,26px)}}
 @media(prefers-reduced-motion:reduce){.fm-card{transition:none}}
 
-/* FIND ME PIN — the strip stays fixed (centred under the header) while the cards fan open, then holds so the links can be used.
-   Desktop only (>= 901px); phones keep the normal flow. To undo: restore the previous findme-fan.js. */
+/* ===== Find Me · living stage (aurora + giant outline words + bigger cards) ===== */
 .fm-pin-wrap{position:relative}
-.fm-pin-wrap.on > section.social-strip.fm{position:sticky !important;top:var(--fm-top,90px);z-index:3}
-.fm-pin-spacer{pointer-events:none}
+.fm-bg{display:none}
+.fm-pin-wrap.on{--fmp:0;--mx:0;--my:0}
+.fm-pin-wrap.on>section.social-strip.fm{position:sticky;top:var(--fm-top,90px);z-index:3}
+.fm-pin-wrap.on>.fm-bg{display:block;position:sticky;top:0;height:100vh;margin-bottom:-100vh;z-index:0;pointer-events:none;overflow:hidden;
+  -webkit-mask-image:linear-gradient(180deg,transparent,#000 16%,#000 84%,transparent);mask-image:linear-gradient(180deg,transparent,#000 16%,#000 84%,transparent)}
+.fm-bg i{position:absolute;border-radius:50%;will-change:transform;animation:fmDrift 16s ease-in-out infinite alternate}
+.fm-bg .b1{left:-6vw;top:8%;width:52vw;height:52vw;background:radial-gradient(circle,rgba(139,53,255,.40),transparent 62%);transform:translate(calc(var(--mx)*60px),calc(var(--my)*40px))}
+.fm-bg .b2{right:-8vw;top:30%;width:46vw;height:46vw;background:radial-gradient(circle,rgba(34,211,238,.24),transparent 62%);transform:translate(calc(var(--mx)*-80px),calc(var(--my)*-50px));animation-duration:19s;animation-delay:-6s}
+.fm-bg .b3{left:32vw;bottom:-14vh;width:44vw;height:44vw;background:radial-gradient(circle,rgba(236,72,153,.22),transparent 62%);transform:translate(calc(var(--mx)*40px),calc(var(--my)*-60px));animation-duration:22s;animation-delay:-11s}
+@keyframes fmDrift{to{translate:4vw 3vh;scale:1.14}}
+.fm-bg .gd{inset:0;border-radius:0;animation:none;background-image:radial-gradient(rgba(255,255,255,.10) 1px,transparent 1.6px);background-size:34px 34px;
+  -webkit-mask-image:radial-gradient(ellipse at center,#000 20%,transparent 72%);mask-image:radial-gradient(ellipse at center,#000 20%,transparent 72%);transform:translate(calc(var(--mx)*-14px),calc(var(--my)*-10px))}
+.fm-bg b{position:absolute;left:0;white-space:nowrap;font:900 clamp(90px,17vh,200px)/.82 Inter,system-ui,sans-serif;letter-spacing:-.03em;color:transparent;user-select:none;direction:ltr}
+.fm-bg .w1{top:calc(50% - var(--fmh,44vh)/2 - 17vh);-webkit-text-stroke:1.5px rgba(167,139,250,.38);transform:translateX(calc(8vw + (var(--fmp) - .5)*-16vw))}
+.fm-bg .w2{bottom:calc(50% - var(--fmh,44vh)/2 - 17vh);-webkit-text-stroke:1.5px rgba(34,211,238,.32);transform:translateX(calc(-30vw + (var(--fmp) - .5)*16vw))}
+@media(min-width:901px){
+  section.social-strip.fm{min-height:clamp(300px,44vh,440px)}
+  .fm-side:hover{box-shadow:0 26px 54px rgba(0,0,0,.65),0 0 42px rgba(139,53,255,.5)}
+}
+.fm-c .fm-gr{transition:transform .2s ease,box-shadow .2s ease,filter .2s ease,translate .25s ease-out}
