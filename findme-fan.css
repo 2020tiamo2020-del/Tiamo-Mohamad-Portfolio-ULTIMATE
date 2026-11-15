@@ -86,3 +86,11 @@ section.social-strip.fm>.fm-fan{position:absolute;inset:0;z-index:2;container-ty
 .fm-l2 .fm-lab svg,.fm-r2 .fm-lab svg{position:absolute;left:50%;top:44%;width:44%;height:auto;aspect-ratio:1;translate:-50% -50%}
 .fm-l2 .fm-lab>span,.fm-r2 .fm-lab>span{position:absolute;left:10px;right:10px;bottom:8px;font-size:11px;line-height:1.15}
 @media(max-width:900px){.fm-l2 .fm-lab>span,.fm-r2 .fm-lab>span{display:none}.fm-l2 .fm-lab svg,.fm-r2 .fm-lab svg{width:40%}}
+
+/* ===== v8: RTL-safe centering, portrait Facebook cards ===== */
+.fm-pin-wrap.on>.fm-bg{margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw)}
+.fm-bg b{left:0;right:0;width:100%;text-align:center}
+.fm-bg .w1{left:0;transform:translateX(calc((var(--fmp) - .5)*3vw))}
+.fm-bg .w2{left:0;transform:translateX(calc((var(--fmp) - .5)*-3vw))}
+.fm-l1::after,.fm-fb::after{content:none}
+.fm-l1 img,.fm-fb img{object-fit:cover;object-position:center;filter:brightness(.9) saturate(1.05)}
