@@ -1,97 +1,97 @@
-/* TOP NAV — morphing pill + magnifying dock. Reads the existing #nav links (spy, language, smooth-scroll and sounds stay theirs): a dock click just clicks the real link. */
+/* TOP NAV v2 — HUD scene-travel bar. Reads the existing #nav links (spy, language, smooth-scroll and sounds stay theirs): a click on the bar just clicks the real link. */
 (() => {
   const nav = document.getElementById("nav");
   if (!nav || document.getElementById("tmDock")) return;
   const links = [...nav.querySelectorAll("a[href^='#']")];
   if (!links.length) return;
-  const ICON = {
-    "#home": '<path d="M3 11.5 12 4l9 7.5M5.5 10v9.5h13V10M10 19.5v-5h4v5"/>',
-    "#about": '<circle cx="12" cy="8" r="3.6"/><path d="M5 20c0-3.6 3-6 7-6s7 2.4 7 6"/>',
-    "#services": '<path d="M12 3 3 8l9 5 9-5-9-5Z"/><path d="m3 12 9 5 9-5"/><path d="m3 16 9 5 9-5"/>',
-    "#work": '<rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="1.6"/><path d="m21 16-5-5-8 9"/>',
-    "#cinema": '<path d="m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8Z"/><path d="m19 16 .8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8Z"/>',
-    "#creation": '<rect x="6" y="6" width="12" height="12" rx="2"/><rect x="10" y="10" width="4" height="4"/><path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3"/>',
-    "#beforeafter": '<rect x="3" y="5" width="18" height="14" rx="3"/><path d="M12 5v14"/><path d="M3 8a3 3 0 0 1 3-3h6v14H6a3 3 0 0 1-3-3Z" fill="currentColor" fill-opacity=".3"/>',
-    "#process": '<circle cx="5" cy="12" r="2.2"/><circle cx="12" cy="12" r="2.2"/><circle cx="19" cy="12" r="2.2"/><path d="M7.2 12h2.6M14.2 12h2.6"/>',
-    "#findme": '<circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="6" r="2.6"/><circle cx="18" cy="18" r="2.6"/><path d="m8.3 10.8 7.4-3.6M8.3 13.2l7.4 3.6"/>',
-    "#brief": '<rect x="4" y="4" width="16" height="16" rx="4"/><path d="M12 8.5v7M8.5 12h7"/>',
-    "#contact": '<rect x="3" y="5" width="18" height="14" rx="3"/><path d="m3.5 7 8.5 6 8.5-6"/>'
-  };
+  const RM = matchMedia("(prefers-reduced-motion:reduce)").matches;
+  const by = h => links.find(a => a.getAttribute("href") === h);
+  const mainL = ["#home", "#about", "#services", "#work", "#contact"].map(by).filter(Boolean), ctaL = by("#brief");
+  const moreL = links.filter(a => !mainL.includes(a));
   const label = a => (a.textContent || "").replace(/\s+/g, " ").trim();
+  const two = n => String(n + 1).padStart(2, "0");
+
   const dock = document.createElement("div");
   dock.className = "tmd"; dock.id = "tmDock";
-  dock.innerHTML = '<div class="tmd-pill"><button class="tmd-rest" type="button" aria-expanded="false" aria-controls="tmdItems"><i class="tmd-dot"></i><span class="tmd-name"></span>' +
+  dock.innerHTML = '<div class="tmd-hud"><div class="tmd-in"><button class="tmd-rest" type="button" aria-expanded="false" aria-controls="tmdRow"><i class="tmd-dot"></i><span class="tmd-name"></span>' +
     '<svg class="tmd-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>' +
-    '<div class="tmd-items" id="tmdItems" role="navigation" aria-label="Sections"></div><div class="tmd-prog"><i></i></div></div><div class="tmd-tip" aria-hidden="true"></div>';
-  document.body.appendChild(dock);
-  const rest = dock.querySelector(".tmd-rest"), nameEl = dock.querySelector(".tmd-name"), box = dock.querySelector(".tmd-items"), tip = dock.querySelector(".tmd-tip"), prog = dock.querySelector(".tmd-prog i");
-  const items = links.map((a, i) => {
-    const href = a.getAttribute("href");
-    const b = document.createElement("a");
-    b.className = "tmd-it" + (href === "#cinema" ? " is-beyond" : ""); b.href = href;
-    b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">' + (ICON[href] || ICON["#home"]) + "</svg>";
-    b.addEventListener("click", e => { e.preventDefault(); a.click(); });
-    if (i === 1) { const sep = document.createElement("i"); sep.className = "tmd-sep"; box.appendChild(sep); }
-    box.appendChild(b);
-    return { a, b, s: 1, t: 1, x: 0, tx: 0, c: 0 };
-  });
+    '<nav class="tmd-row" id="tmdRow" aria-label="Sections"></nav><div class="tmd-prog"><i></i></div></div></div>' +
+    '<div class="tmd-panel" id="tmdPanel"><div class="tmd-pin"></div></div>';
+  const warp = document.createElement("div"); warp.className = "tmd-warp"; warp.setAttribute("aria-hidden", "true");
+  document.body.append(dock, warp);
+  const $ = s => dock.querySelector(s);
+  const inEl = $(".tmd-in"), row = $(".tmd-row"), rest = $(".tmd-rest"), nameEl = $(".tmd-name"), panel = $(".tmd-panel"), pin = $(".tmd-pin"), prog = $(".tmd-prog i");
+  const ind = document.createElement("i"); ind.className = "tmd-ind";
+
+  const items = [];
+  const mk = (a, host, cls, num) => {
+    const b = document.createElement("a"); b.href = a.getAttribute("href"); b.className = "tmd-it" + (cls ? " " + cls : "") + (a.getAttribute("href") === "#cinema" ? " is-beyond" : "");
+    b.innerHTML = '<span class="lb"></span>' + (num ? "<small>" + num + "</small>" : "");
+    b.addEventListener("click", e => { e.preventDefault(); travel(); a.click(); closeAll(); });
+    host.appendChild(b); items.push({ a, b, lb: b.querySelector(".lb") }); return b;
+  };
+  mainL.forEach(a => mk(a, row));
+  const more = document.createElement("button"); more.type = "button"; more.className = "tmd-it tmd-more"; more.setAttribute("aria-expanded", "false"); more.setAttribute("aria-controls", "tmdPanel");
+  more.innerHTML = '<span class="lb"></span><i aria-hidden="true">▾</i>';
+  if (moreL.length) row.appendChild(more);
+  moreL.forEach(a => mk(a, pin, a === ctaL ? "tmd-cta" : "", two(links.indexOf(a))));
+  row.appendChild(ind);
+  const MORE_T = { en: "More", ar: "المزيد" };
+
+  /* active state + labels (the real nav's classes and text stay the source of truth) */
+  let last = null;
+  const place = () => {
+    const cur = items.find(o => o.b.classList.contains("is-active"));
+    const el = !cur ? null : mainL.includes(cur.a) ? cur.b : more;
+    if (!el || !el.offsetWidth) return;
+    ind.style.left = el.offsetLeft + 16 + "px"; ind.style.width = Math.max(10, el.offsetWidth - 32) + "px";
+  };
   const sync = () => {
-    let cur = items.find(o => o.a.classList.contains("is-active")) || items[0];
-    items.forEach(o => { const on = o === cur; o.b.classList.toggle("is-active", on); if (on) o.b.setAttribute("aria-current", "page"); else o.b.removeAttribute("aria-current"); o.b.setAttribute("aria-label", label(o.a)); });
-    nameEl.textContent = label(cur.a);
+    const cur = links.find(a => a.classList.contains("is-active")) || links[0];
+    items.forEach(o => { const on = o.a === cur; o.b.classList.toggle("is-active", on); on ? o.b.setAttribute("aria-current", "page") : o.b.removeAttribute("aria-current"); o.lb.textContent = label(o.a); });
+    more.classList.toggle("is-active", moreL.includes(cur));
+    more.querySelector(".lb").textContent = MORE_T[document.documentElement.lang === "ar" ? "ar" : "en"];
+    nameEl.textContent = label(cur);
+    if (last && last !== cur && !RM) { inEl.classList.remove("scan"); void inEl.offsetWidth; inEl.classList.add("scan"); }
+    last = cur; place();
   };
   new MutationObserver(sync).observe(nav, { attributes: true, attributeFilter: ["class"], subtree: true, characterData: true, childList: true });
   new MutationObserver(sync).observe(document.documentElement, { attributes: true, attributeFilter: ["lang", "dir"] });
   sync();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(place);
+  addEventListener("resize", place);
 
-  /* open / close */
-  let open = false, closeT = 0, px = null, raf = 0;
-  const setOpen = v => {
-    if (open === v) return; open = v; dock.classList.toggle("is-open", v); rest.setAttribute("aria-expanded", v);
-    if (v) measure(); else { px = null; hideTip(); }
-    kick();
-  };
-  const arm = () => { clearTimeout(closeT); setOpen(true); };
-  const disarm = () => { clearTimeout(closeT); closeT = setTimeout(() => { if (!dock.matches(":focus-within") || !dock.matches(":hover")) setOpen(false); }, 260); };
-  let lockUntil = 0; const hz = document.querySelector(".header-actions");
-  if (hz) { hz.addEventListener("pointerenter", () => { lockUntil = performance.now() + 600; clearTimeout(closeT); setOpen(false); }); hz.addEventListener("click", () => { lockUntil = performance.now() + 1400; clearTimeout(closeT); setOpen(false); }); }
-  dock.addEventListener("pointerenter", e => { if (e.pointerType === "touch" || performance.now() < lockUntil) return; const r = dock.getBoundingClientRect(); if (e.clientX >= r.left - 6 && e.clientX <= r.right + 6 && e.clientY >= r.top - 6 && e.clientY <= r.bottom + 6) arm(); });
-  dock.addEventListener("pointerleave", e => { if (e.pointerType !== "touch") { px = null; disarm(); } });
-  dock.addEventListener("focusin", () => { if (performance.now() >= lockUntil) arm(); });
-  dock.addEventListener("focusout", e => { if (!dock.contains(e.relatedTarget)) disarm(); });
+  /* warp streak when jumping between sections */
+  let wt = 0;
+  function travel() { if (RM) return; warp.classList.remove("go"); void warp.offsetWidth; warp.classList.add("go"); clearTimeout(wt); wt = setTimeout(() => warp.classList.remove("go"), 800); }
+
+  /* open / close: the "More" panel, and the folded bar on narrower desktops */
+  let ct = 0, panelOpen = false, open = false;
+  const setPanel = v => { panelOpen = v; panel.classList.toggle("is-open", v); more.classList.toggle("is-open", v); more.setAttribute("aria-expanded", v); };
+  const setOpen = v => { open = v; dock.classList.toggle("is-open", v); rest.setAttribute("aria-expanded", v); setTimeout(place, 650); };
+  function closeAll() { clearTimeout(ct); setPanel(false); if (open) setOpen(false); }
+  const disarm = () => { clearTimeout(ct); ct = setTimeout(() => { if (!dock.matches(":hover") && !dock.matches(":focus-within")) closeAll(); }, 320); };
+  more.addEventListener("click", () => setPanel(!panelOpen));
+  more.addEventListener("pointerenter", e => { if (e.pointerType !== "touch") { clearTimeout(ct); setPanel(true); } });
   rest.addEventListener("click", () => setOpen(!open));
-  dock.addEventListener("keydown", e => { if (e.key === "Escape") { setOpen(false); rest.focus(); } });
-  document.addEventListener("pointerdown", e => { if (open && !dock.contains(e.target)) setOpen(false); }, { passive: true });
+  const hz = document.querySelector(".header-actions");
+  let lockUntil = 0;
+  if (hz) { hz.addEventListener("pointerenter", () => { lockUntil = performance.now() + 600; closeAll(); }); hz.addEventListener("click", () => { lockUntil = performance.now() + 1400; closeAll(); }); }
+  dock.addEventListener("pointerenter", e => { if (e.pointerType === "touch" || performance.now() < lockUntil) return; clearTimeout(ct); if (getComputedStyle(rest).display !== "none") setOpen(true); });
+  dock.addEventListener("pointerleave", e => { if (e.pointerType !== "touch") disarm(); });
+  dock.addEventListener("focusin", () => { if (performance.now() >= lockUntil && getComputedStyle(rest).display !== "none") setOpen(true); });
+  dock.addEventListener("focusout", e => { if (!dock.contains(e.relatedTarget)) disarm(); });
+  dock.addEventListener("keydown", e => { if (e.key === "Escape") { closeAll(); (open ? rest : more).focus(); } });
+  document.addEventListener("pointerdown", e => { if (!dock.contains(e.target)) closeAll(); }, { passive: true });
 
-  /* magnify: scale each icon by distance to the pointer, push neighbours apart so the pill never jitters */
-  const W = 40, MAXS = 0.62, SIG = 46;
-  const measure = () => { items.forEach(o => { o.c = o.b.offsetLeft + o.b.offsetWidth / 2; }); };
-  box.addEventListener("pointermove", e => { const r = box.getBoundingClientRect(); px = e.clientX - r.left; kick(); });
-  box.addEventListener("pointerleave", () => { px = null; hideTip(); kick(); });
-  const showTip = o => {
-    tip.textContent = label(o.a);
-    const pr = dock.getBoundingClientRect(), r = o.b.getBoundingClientRect();
-    tip.style.left = (r.left + r.width / 2 - pr.left) + "px"; tip.classList.add("on");
-  };
-  const hideTip = () => tip.classList.remove("on");
-  let tipFor = null;
-  const frame = () => {
-    raf = 0; let moving = false;
-    measure();                                                           // positions are read fresh each frame (the pill is still opening when the first frame runs)
-    const order = items.slice().sort((a, b) => a.c - b.c);
-    order.forEach(o => { o.t = px == null ? 1 : 1 + MAXS * Math.exp(-((px - o.c) ** 2) / (2 * SIG * SIG)); o.s += (o.t - o.s) * 0.28; if (Math.abs(o.t - o.s) > 0.002) moving = true; else o.s = o.t; });
-    const E = order.reduce((n, o) => n + (o.s - 1) * W, 0); let acc = 0;
-    order.forEach(o => { const ex = (o.s - 1) * W; const tx = -E / 2 + acc + ex / 2; o.tx += (tx - o.tx) * 0.5; acc += ex; o.b.style.setProperty("--s", o.s.toFixed(3)); o.b.style.setProperty("--tx", o.tx.toFixed(2) + "px"); });
-    if (open && px != null) { let best = null, bd = 1e9; order.forEach(o => { const d = Math.abs(px - o.c); if (d < bd) { bd = d; best = o; } }); if (best && bd < 34 && best !== tipFor) { tipFor = best; showTip(best); } else if (bd >= 34 && tipFor) { tipFor = null; hideTip(); } }
-    else tipFor = null;
-    dock.style.setProperty("--ep", (E / 2).toFixed(1) + "px");   /* the pill grows by exactly what the magnified icons need, so none ever pokes out of it */
-    if (tipFor) showTip(tipFor);
-    if (moving || (open && px != null)) raf = requestAnimationFrame(frame);
-  };
-  const kick = () => { if (!raf) raf = requestAnimationFrame(frame); };
-  addEventListener("resize", () => { measure(); });
+  /* intro boot: plays once the page intro releases the bar */
+  const boot = () => { dock.classList.remove("boot"); void dock.offsetWidth; dock.classList.add("boot"); };
+  if (document.body.classList.contains("tm-pre-h")) {
+    const mo = new MutationObserver(() => { if (!document.body.classList.contains("tm-pre-h")) { mo.disconnect(); boot(); } });
+    mo.observe(document.body, { attributes: true, attributeFilter: ["class"] });
+  } else boot();
 
-  /* thin page-progress line under the pill */
+  /* thin page-progress line along the bottom edge */
   let pt = 0;
   const progress = () => { pt = 0; const h = document.documentElement.scrollHeight - innerHeight; prog.style.setProperty("--p", h > 0 ? Math.min(1, Math.max(0, (scrollY || 0) / h)).toFixed(4) : 0); };
   addEventListener("scroll", () => { if (!pt) pt = requestAnimationFrame(progress); }, { passive: true });
