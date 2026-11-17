@@ -1,552 +1,157 @@
-/* TIAMO — Journey Mode
-   A separate holographic world holding every section of the site.
-   - Header button (#journeyBtn) opens it; the normal site and nav are untouched.
-   - Map: scroll / swipe / arrows travel between section cards floating in depth.
-   - Inside: click a card to see the section from inside (glass panel + content flying past).
-   - Phones, touch and reduced-motion get a simple "lite" list (no canvas, no 3D). */
-(function () {
-  "use strict";
+/* Journey Mode — وضع الرحلة (v2): fly-through navigation with light lines */
+(()=>{
+const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
+const ls=()=>{try{return localStorage.getItem('tiamo-lang')}catch(e){return null}};
+const ar=()=>document.documentElement.lang==='ar'||document.documentElement.dir==='rtl'||ls()==='ar';
+const txt=e=>e?e.textContent.replace(/\s+/g,' ').replace(/[↗↖]/g,'').trim():'';
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const L={home:['Home','الرئيسية'],about:['About','عنّي'],services:['Services','الخدمات'],work:['Work','الأعمال'],contact:['Contact','تواصل'],exit:['Exit','خروج'],enter:['Start the journey','ابدأ الرحلة'],view:['View in site','شاهد في الموقع'],hint:['SCROLL · SWIPE · ARROWS','مرّر · اسحب · الأسهم'],title:['Journey Mode','وضع الرحلة'],skills:['SKILLS','المهارات'],name:['TIAMO MOHAMAD','تيامو محمد']};
+const t=k=>L[k][ar()?1:0];
+const SC=['home','about','services','work','contact'],MODE={home:'burst',about:'drift',services:'drift',work:'sweep',contact:'funnel'};
+const btn=$('#journeyBtn');if(!btn)return;
+let root,cv,cx,W,H,P=[],mode='burst',raf=0,isOpen=false,steps=[],si=0,D,last=0,scene='home',cloud={pts:[],ar:1,a:0},cloudReq=false;
+const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches,R=Math.random;
 
-  var UI = {
-    en: {
-      brand: "TIAMO \u00b7 <b>JOURNEY</b>", exit: "EXIT \u2715",
-      hintMap: "SCROLL TO TRAVEL \u00b7 CLICK TO ENTER", hintIn: "SCROLL TO FLY THROUGH \u00b7 ESC TO RETURN",
-      ov: "OVERVIEW", inside: "INSIDE", go: "OPEN SECTION \u2197", back: "BACK TO MAP", enter: "ENTER",
-      label: "Journey Mode \u2014 all sections", exitAria: "Exit Journey Mode", prev: "Previous section", next: "Next section"
-    },
-    ar: {
-      brand: "\u062a\u064a\u0627\u0645\u0648 \u00b7 <b>\u0627\u0644\u0631\u062d\u0644\u0629</b>", exit: "\u062e\u0631\u0648\u062c \u2715",
-      hintMap: "\u0645\u0631\u0651\u0631 \u0644\u0644\u062a\u0646\u0642\u0644 \u00b7 \u0627\u0636\u063a\u0637 \u0644\u0644\u062f\u062e\u0648\u0644",
-      hintIn: "\u0645\u0631\u0651\u0631 \u0644\u0644\u0637\u064a\u0631\u0627\u0646 \u062f\u0627\u062e\u0644 \u0627\u0644\u0642\u0633\u0645 \u00b7 Esc \u0644\u0644\u0639\u0648\u062f\u0629",
-      ov: "\u0646\u0638\u0631\u0629 \u0639\u0627\u0645\u0629", inside: "\u0628\u062f\u0627\u062e\u0644\u0647", go: "\u0627\u0641\u062a\u062d \u0627\u0644\u0642\u0633\u0645 \u2196",
-      back: "\u0627\u0644\u0639\u0648\u062f\u0629 \u0644\u0644\u062e\u0631\u064a\u0637\u0629", enter: "\u062f\u062e\u0648\u0644",
-      label: "\u0648\u0636\u0639 \u0627\u0644\u0631\u062d\u0644\u0629 \u2014 \u0643\u0644 \u0627\u0644\u0623\u0642\u0633\u0627\u0645",
-      exitAria: "\u062e\u0631\u0648\u062c \u0645\u0646 \u0648\u0636\u0639 \u0627\u0644\u0631\u062d\u0644\u0629", prev: "\u0627\u0644\u0642\u0633\u0645 \u0627\u0644\u0633\u0627\u0628\u0642", next: "\u0627\u0644\u0642\u0633\u0645 \u0627\u0644\u062a\u0627\u0644\u064a"
-    }
-  };
+const ICON={
+ whatsapp:'<path d="M3 21l1.6-4.6A8.5 8.5 0 1 1 8 19.6z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 8.6c0 3.4 2.9 6.4 6.4 6.4l1.1-1.5-2-1-.9.8c-1-.4-1.9-1.3-2.3-2.3l.8-.9-1-2z" fill="currentColor"/>',
+ facebook:'<path d="M14 8V6.5c0-.7.3-1 1-1h2V2h-3c-2.8 0-4 1.7-4 4v2H7.5v3.5H10V22h4V11.5h2.6L17 8z" fill="currentColor"/>',
+ instagram:'<rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="17.5" cy="6.5" r="1.2" fill="currentColor"/>',
+ tiktok:'<path d="M16.5 3c.3 2.3 1.7 3.8 4 4v3.2c-1.5 0-2.9-.5-4-1.2v6.3a5.8 5.8 0 1 1-5-5.7v3.3a2.6 2.6 0 1 0 1.8 2.4V3z" fill="currentColor"/>',
+ ps:'<text x="12" y="16.5" text-anchor="middle" font-size="12" font-weight="800" fill="currentColor" font-family="Inter,sans-serif">Ps</text>',
+ star:'<path d="M12 3l2.6 5.6 6 .8-4.4 4.2 1.1 6L12 16.7 6.7 19.6l1.1-6L3.4 9.4l6-.8z" fill="currentColor"/>',
+ link:'<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'};
+const iconOf=(h,l)=>/photoshop/i.test(l||'')?'ps':/wa\.me|whatsapp/.test(h)?'whatsapp':/facebook/.test(h)?'facebook':/instagram/.test(h)?'instagram':/tiktok/.test(h)?'tiktok':/maps|google/.test(h)?'star':'link';
 
-  /* id = the real section id on the page; fr = items that fly past inside the section.
-     i = image path (falls back to a text frame if the file is missing), t = text frame. */
-  var SECTIONS = [
-    { id: "about", hue: 265, cover: "images/tiamo.jpg",
-      en: { t: "About", k: "The creator behind the work",
-        o: "Independent visual creator combining AI, Photoshop, compositing, color work and motion to build visuals that feel cinematic, modern and memorable.",
-        l: ["AI \u00b7 Photoshop \u00b7 Compositing", "Color work and motion", "From a single image to a full ad"] },
-      ar: { t: "\u0639\u0646\u0651\u064a", k: "\u0635\u0627\u0646\u0639 \u0627\u0644\u0623\u0639\u0645\u0627\u0644",
-        o: "\u0635\u0627\u0646\u0639 \u0645\u062d\u062a\u0648\u0649 \u0628\u0635\u0631\u064a \u0645\u0633\u062a\u0642\u0644\u060c \u064a\u062c\u0645\u0639 \u0628\u064a\u0646 \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064a \u0648\u0627\u0644\u0641\u0648\u062a\u0648\u0634\u0648\u0628 \u0648\u0627\u0644\u062f\u0645\u062c \u0648\u062a\u0635\u062d\u064a\u062d \u0627\u0644\u0623\u0644\u0648\u0627\u0646 \u0648\u0627\u0644\u062d\u0631\u0643\u0629 \u0644\u0635\u0646\u0627\u0639\u0629 \u0623\u0639\u0645\u0627\u0644 \u0639\u0635\u0631\u064a\u0629 \u0628\u0637\u0627\u0628\u0639 \u0633\u064a\u0646\u0645\u0627\u0626\u064a.",
-        l: ["\u0630\u0643\u0627\u0621 \u0627\u0635\u0637\u0646\u0627\u0639\u064a \u00b7 \u0641\u0648\u062a\u0648\u0634\u0648\u0628 \u00b7 \u062f\u0645\u062c", "\u062a\u0635\u062d\u064a\u062d \u0623\u0644\u0648\u0627\u0646 \u0648\u062d\u0631\u0643\u0629", "\u0645\u0646 \u0635\u0648\u0631\u0629 \u0648\u0627\u062d\u062f\u0629 \u0625\u0644\u0649 \u0625\u0639\u0644\u0627\u0646 \u0643\u0627\u0645\u0644"] },
-      fr: [{ i: "images/tiamo.jpg" }, { t: "AI" }, { t: "PHOTOSHOP" }, { t: "COLOR" }, { t: "MOTION" }] },
+function gather(){
+  const role=txt($('.role')).split('•').map(s=>s.trim()).filter(Boolean);
+  const about=[
+    {k:txt($('#about .section-kicker')),h:txt($('#about .section-title h2')),p:txt($('#about .section-title p'))},
+    {k:t('skills'),h:txt($('.hero h1')),p:'',tags:role},
+    {k:txt($('.cert-kicker')),h:txt($('.cert-title')),p:txt($('.cert-text'))}
+  ].filter(c=>c.h||c.p);
+  const services=$$('#services .service-grid article').map(a=>({k:txt($('small',a)),h:txt($('h3',a)),p:txt($('p',a))})).filter(c=>c.h);
+  const work=[],seen=new Set();
+  $$('#work .gallery-card').forEach(card=>{const cat=txt($('.gallery-head h3',card));let n=0;
+    $$('.slides img',card).forEach(im=>{const s=im.currentSrc||im.src||im.dataset.src;if(s&&!seen.has(s)&&n<3&&work.length<15){seen.add(s);n++;work.push({src:s,cat})}})});
+  const wa=$('.mini-wa');
+  const links=[...(wa?[{href:wa.href,label:'WhatsApp'}]:[]),...$$('.social-links a').slice(0,5).map(a=>({href:a.href,label:txt(a)}))];
+  return{about,services,work,links,contact:{h:txt($('#contact h2')),p:txt($('#contact p'))},role:role.join('  •  ')};
+}
+const cardHTML=c=>`<article class="jm-card"><i class="jm-k">${esc(c.k||'')}</i><h3>${esc(c.h||'')}</h3>${c.p?`<p>${esc(c.p)}</p>`:''}${c.tags?`<ul class="jm-tags">${c.tags.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}</article>`;
+const GH=[[6,12,150],[78,8,170],[14,64,130],[82,62,160],[40,4,110],[46,78,120],[66,30,100],[24,34,100]];
 
-    { id: "services", hue: 190,
-      en: { t: "Services", k: "What I create",
-        o: "AI visuals, Photoshop and manipulation, reels and ads, cinematic video and VFX, graphic design, CV design, drawing and documents.",
-        l: ["AI Art & Visuals", "Photoshop & Manipulation", "Reels & Ads", "Cinematic Video & VFX"] },
-      ar: { t: "\u0627\u0644\u062e\u062f\u0645\u0627\u062a", k: "\u0645\u0627 \u0623\u064f\u0628\u062f\u0639\u0647",
-        o: "\u0645\u0631\u0626\u064a\u0627\u062a \u0628\u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064a\u060c \u0641\u0648\u062a\u0648\u0634\u0648\u0628 \u0648\u062f\u0645\u062c \u0627\u0644\u0635\u0648\u0631\u060c \u0631\u064a\u0644\u0632 \u0648\u0625\u0639\u0644\u0627\u0646\u0627\u062a\u060c \u0641\u064a\u062f\u064a\u0648 \u0633\u064a\u0646\u0645\u0627\u0626\u064a \u0648VFX\u060c \u062a\u0635\u0645\u064a\u0645 \u062c\u0631\u0627\u0641\u064a\u0643\u064a \u0648CV\u060c \u0648\u0631\u0633\u0645 \u0648\u0645\u0633\u062a\u0646\u062f\u0627\u062a.",
-        l: ["\u0641\u0646 \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064a \u0648\u0627\u0644\u0645\u0631\u0626\u064a\u0627\u062a", "\u0641\u0648\u062a\u0648\u0634\u0648\u0628 \u0648\u062f\u0645\u062c \u0627\u0644\u0635\u0648\u0631", "\u0631\u064a\u0644\u0632 \u0648\u0625\u0639\u0644\u0627\u0646\u0627\u062a", "\u0641\u064a\u062f\u064a\u0648 \u0633\u064a\u0646\u0645\u0627\u0626\u064a \u0648VFX"] },
-      fr: [{ t: "AI ART" }, { t: "PHOTOSHOP" }, { t: "REELS" }, { t: "VFX" }, { t: "DESIGN" }, { t: "CV" }] },
+function build(){
+  D=gather();steps=[];
+  const cnt={home:1,about:D.about.length,services:D.services.length,work:Math.max(D.work.length,1),contact:1};
+  SC.forEach(s=>{for(let i=0;i<cnt[s];i++)steps.push([s,i])});
+  root.dir=ar()?'rtl':'ltr';
+  $('.jm-nav',root).innerHTML=SC.map(s=>`<button type="button" data-s="${s}">${t(s)}</button>`).join('');
+  $('.jm-x span',root).textContent=t('exit');$('.jm-hint',root).textContent=t('hint');$('.jm-title',root).textContent=t('title').toUpperCase();
+  $('.jm-stage',root).innerHTML=
+   `<section class="jm-sc" data-s="home"><div class="jm-hero"><h1 class="jm-word">${t('name')}</h1><p class="jm-role">${esc(D.role)}</p><button class="jm-cta jm-tilt" type="button" data-go="about">${t('enter')}</button></div></section>`+
+   ['about','services'].map(s=>`<section class="jm-sc" data-s="${s}"><div class="jm-cards">${D[s].map(c=>cardHTML(c)).join('')}</div></section>`).join('')+
+   `<section class="jm-sc" data-s="work"><div class="jm-portal"><div class="jm-vl"></div><div class="jm-ring"></div><div class="jm-ghosts">${D.work.slice(0,GH.length).map((w,k)=>`<img src="${esc(w.src)}" alt="" style="left:${GH[k][0]}%;top:${GH[k][1]}%;--w:${GH[k][2]}px">`).join('')}</div><div class="jm-mid"><div class="jm-frame"><img alt=""></div><div class="jm-cap"><small></small><a class="jm-link" href="#work">${t('view')}</a></div></div></div></section>`+
+   `<section class="jm-sc" data-s="contact"><div class="jm-beam"></div><div class="jm-contact"><h3>${esc(D.contact.h)}</h3><p>${esc(D.contact.p)}</p><div class="jm-soc">${D.links.map(l=>`<a class="jm-ic" href="${esc(l.href)}" target="_blank" rel="noopener" title="${esc(l.label)}" aria-label="${esc(l.label)}"><svg viewBox="0 0 24 24" aria-hidden="true">${ICON[iconOf(l.href,l.label)]}</svg></a>`).join('')}</div></div></section>`;
+}
 
-    { id: "work", hue: 300, cover: "images/pm1.jpg",
-      en: { t: "Work", k: "Built for impact",
-        o: "A focused showcase of AI art, Photoshop, cinematic reels, VFX and visual design \u2014 presented with full-frame clarity and smooth motion.",
-        l: ["AI art", "Photoshop", "Cinematic reels", "VFX and visual design"] },
-      ar: { t: "\u0627\u0644\u0623\u0639\u0645\u0627\u0644", k: "\u0645\u0635\u0645\u0645\u0629 \u0644\u062a\u062a\u0631\u0643 \u0623\u062b\u0631\u064b\u0627",
-        o: "\u0639\u0631\u0636 \u0645\u0631\u0643\u0651\u0632 \u0644\u0623\u0639\u0645\u0627\u0644 \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064a \u0648\u0627\u0644\u0641\u0648\u062a\u0648\u0634\u0648\u0628 \u0648\u0627\u0644\u0631\u064a\u0644\u0632 \u0627\u0644\u0633\u064a\u0646\u0645\u0627\u0626\u064a\u0629 \u0648VFX \u0648\u0627\u0644\u062a\u0635\u0645\u064a\u0645 \u0627\u0644\u0628\u0635\u0631\u064a \u2014 \u0628\u0648\u0636\u0648\u062d \u0643\u0627\u0645\u0644 \u0648\u062d\u0631\u0643\u0629 \u0633\u0644\u0633\u0629.",
-        l: ["\u0641\u0646 \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064a", "\u0641\u0648\u062a\u0648\u0634\u0648\u0628", "\u0631\u064a\u0644\u0632 \u0633\u064a\u0646\u0645\u0627\u0626\u064a\u0629", "VFX \u0648\u062a\u0635\u0645\u064a\u0645 \u0628\u0635\u0631\u064a"] },
-      fr: [{ i: "images/pm1.jpg" }, { i: "images/pm2.jpg" }, { i: "images/pm3.jpg" }, { i: "images/pm9.jpg" }, { t: "WORK" }] },
+function update(first){
+  const [s,i]=steps[si];scene=s;const ci=SC.indexOf(s);
+  $$('.jm-sc',root).forEach(e=>{const k=SC.indexOf(e.dataset.s);e.classList.toggle('on',k===ci);e.classList.toggle('past',k<ci)});
+  $$('.jm-nav button',root).forEach(b=>b.classList.toggle('on',b.dataset.s===s));
+  if(s==='about'||s==='services')$$('.jm-card',$(`.jm-sc[data-s=${s}]`,root)).forEach((c,k)=>{c.style.setProperty('--p',k-i);c.style.setProperty('--a',Math.abs(k-i));c.classList.toggle('s',k!==i)});
+  if(s==='work'&&D.work.length){const im=$('.jm-frame img',root),w=D.work[i];
+    if(im.getAttribute('src')!==w.src){im.src=w.src;im.classList.remove('sw');void im.offsetWidth;im.classList.add('sw')}
+    $('.jm-cap small',root).textContent=`${w.cat} · ${String(i+1).padStart(2,'0')} / ${String(D.work.length).padStart(2,'0')}`;
+    $$('.jm-ghosts img',root).forEach((g,k)=>{g.style.transform=`translate(${Math.sin(i*1.7+k)*26}px,${Math.cos(i*1.3+k*2)*20}px)`});
+    const nx=D.work[i+1];if(nx)new Image().src=nx.src}
+  $('.jm-bar i',root).style.width=((si+1)/steps.length*100)+'%';
+  setMode(reduce?'drift':MODE[s]);
+  if(s==='about')loadCloud();
+  if(!first){const sw=$('.jm-sweep',root);sw.classList.remove('go');void sw.offsetWidth;sw.classList.add('go')}
+}
+function go(n){n=Math.max(0,Math.min(steps.length-1,n));if(n===si)return;si=n;update()}
+function goScene(s){const k=steps.findIndex(x=>x[0]===s);if(k>=0)go(k)}
 
-    { id: "cinema", hue: 210,
-      en: { t: "Beyond", k: "Powers beyond your imagination",
-        o: "The cinematic chapter of the portfolio \u2014 scenes built around powers and worlds beyond imagination.",
-        l: ["Cinematic scenes", "Atmosphere and effects", "Motion and finishing"] },
-      ar: { t: "\u0645\u0627 \u0648\u0631\u0627\u0621 \u0627\u0644\u062e\u064a\u0627\u0644", k: "\u0642\u062f\u0631\u0627\u062a \u0641\u0648\u0642 \u062e\u064a\u0627\u0644\u0643",
-        o: "\u0627\u0644\u0641\u0635\u0644 \u0627\u0644\u0633\u064a\u0646\u0645\u0627\u0626\u064a \u0645\u0646 \u0627\u0644\u0645\u0648\u0642\u0639 \u2014 \u0645\u0634\u0627\u0647\u062f \u0645\u0628\u0646\u064a\u0629 \u0639\u0644\u0649 \u0642\u062f\u0631\u0627\u062a \u0648\u0639\u0648\u0627\u0644\u0645 \u062a\u062a\u062c\u0627\u0648\u0632 \u0627\u0644\u062e\u064a\u0627\u0644.",
-        l: ["\u0645\u0634\u0627\u0647\u062f \u0633\u064a\u0646\u0645\u0627\u0626\u064a\u0629", "\u0623\u062c\u0648\u0627\u0621 \u0648\u0645\u0624\u062b\u0631\u0627\u062a", "\u062d\u0631\u0643\u0629 \u0648\u0644\u0645\u0633\u0629 \u0646\u0647\u0627\u0626\u064a\u0629"] },
-      fr: [{ t: "BEYOND" }, { t: "POWER" }, { t: "CINEMA" }, { t: "VFX" }] },
+/* portrait → glowing point cloud (like the head in the reference video) */
+function loadCloud(){if(cloudReq)return;cloudReq=true;const im=new Image();
+  im.onload=()=>{try{const w=150,h=Math.max(1,Math.round(w*im.naturalHeight/im.naturalWidth)),c=document.createElement('canvas');c.width=w;c.height=h;
+    const g=c.getContext('2d');g.drawImage(im,0,0,w,h);const d=g.getImageData(0,0,w,h).data,A=[],B=[];
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++){const k=(y*w+x)*4,a=d[k+3]/255,l=(d[k]*.3+d[k+1]*.59+d[k+2]*.11)/255;
+      if(a>.4&&R()<(.12+l*.88)*.6){const p={x:x/w,y:y/h,l,r:R()*6.28};(l>.5?A:B).push(p)}}
+    cloud={A,B,pts:A.concat(B),ar:w/h,a:cloud.a}}catch(e){}};
+  im.onerror=()=>{if(!im.dataset.f){im.dataset.f=1;im.src='images/tiamo.jpg'}};im.src='images/tiamo-about.png'}
+function drawCloud(now){
+  cloud.a+=((scene==='about'&&cloud.pts.length?1:0)-cloud.a)*.09;if(cloud.a<.02)return;
+  const ch=H*.78,cw=ch*cloud.ar,ox=W/2-cw/2,oy=H*.14;
+  [['#7fe0ff',cloud.A],['#9a6bff',cloud.B]].forEach(([col,arr])=>{cx.fillStyle=col;cx.globalAlpha=cloud.a*.75;
+    for(const p of arr)cx.fillRect(ox+p.x*cw+Math.sin(now/900+p.r)*1.2,oy+p.y*ch+Math.cos(now/1100+p.r)*1.2,1.7,1.7)})}
 
-    { id: "creation", hue: 320, cover: "images/l1.jpg",
-      en: { t: "AI Creation", k: "Worlds beyond imagination",
-        o: "A living wall of AI artwork \u2014 fantasy realms, supernatural beings and superhuman power, each frame built from a single idea and pushed until it feels real.",
-        l: ["Fantasy realms", "Supernatural beings", "Superhuman power"] },
-      ar: { t: "\u0625\u0628\u062f\u0627\u0639 \u0627\u0644\u0640 AI", k: "\u0639\u0648\u0627\u0644\u0645 \u062a\u062a\u062c\u0627\u0648\u0632 \u0627\u0644\u062e\u064a\u0627\u0644",
-        o: "\u062c\u062f\u0627\u0631 \u062d\u064a\u0651 \u0645\u0646 \u0623\u0639\u0645\u0627\u0644 \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064a \u2014 \u0639\u0648\u0627\u0644\u0645 \u0641\u0627\u0646\u062a\u0627\u0632\u064a\u0627 \u0648\u0643\u0627\u0626\u0646\u0627\u062a \u0645\u0627 \u0648\u0631\u0627\u0621 \u0627\u0644\u0637\u0628\u064a\u0639\u0629 \u0648\u0642\u0648\u0649 \u062e\u0627\u0631\u0642\u0629\u060c \u0643\u0644 \u0625\u0637\u0627\u0631 \u0648\u064f\u0644\u062f \u0645\u0646 \u0641\u0643\u0631\u0629 \u0648\u0627\u062d\u062f\u0629 \u0648\u0635\u064f\u0642\u0644 \u062d\u062a\u0649 \u064a\u0628\u062f\u0648 \u062d\u0642\u064a\u0642\u064a\u064b\u0627.",
-        l: ["\u0639\u0648\u0627\u0644\u0645 \u0641\u0627\u0646\u062a\u0627\u0632\u064a\u0627", "\u0643\u0627\u0626\u0646\u0627\u062a \u0645\u0627 \u0648\u0631\u0627\u0621 \u0627\u0644\u0637\u0628\u064a\u0639\u0629", "\u0642\u0648\u0649 \u062e\u0627\u0631\u0642\u0629"] },
-      fr: [{ i: "images/l1.jpg" }, { t: "FANTASY" }, { t: "SUPERNATURAL" }, { t: "POWER" }] },
+/* light-line canvas */
+const COL=['#8b35ff','#16d8ff','#c9a8ff'];
+function size(){const d=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;cv.width=W*d;cv.height=H*d;cx.setTransform(d,0,0,d,0,0);cx.fillStyle='#05040a';cx.fillRect(0,0,W,H)}
+function reset(p,i){const m=mode;p.c=COL[i%3];p.o=.35+R()*.6;p.w=.6+R()*1.1;
+  if(m==='burst'){p.x=W/2+(R()-.5)*30;p.y=H/2+(R()-.5)*30;p.a=R()*6.283;p.v=.3+R()*.8}
+  else if(m==='funnel'){p.x=R()*W;p.y=-R()*H*.3;p.v=1+R()*2.2;p.s=.5+R()}
+  else if(m==='sweep'){p.x=-R()*W*.2;p.y=R()*H;p.v=.8+R()*2.4}
+  else{p.x=R()*W;p.y=R()*H;p.dx=(R()-.5)*.35;p.dy=-.15-R()*.4}}
+function setMode(m){if(m===mode&&P.length)return;mode=m;P.forEach(reset);if(m==='funnel')P.forEach(p=>{p.y=R()*H*.8})}
+function frame(now){if(!isOpen)return;raf=requestAnimationFrame(frame);
+  cx.globalAlpha=1;cx.fillStyle='rgba(5,4,10,.2)';cx.fillRect(0,0,W,H);
+  drawCloud(now);
+  for(let k=0;k<P.length;k++){const p=P[k],ox=p.x,oy=p.y;
+    if(mode==='burst'){p.v*=1.03;p.x+=Math.cos(p.a)*p.v;p.y+=Math.sin(p.a)*p.v}
+    else if(mode==='funnel'){p.x+=(W/2-p.x)*.02*p.s;p.y+=p.v*1.6}
+    else if(mode==='sweep'){p.x+=p.v*5}
+    else{p.x+=p.dx;p.y+=p.dy}
+    cx.globalAlpha=p.o;cx.strokeStyle=p.c;cx.lineWidth=p.w;cx.beginPath();cx.moveTo(ox,oy);cx.lineTo(p.x,p.y);cx.stroke();
+    if(p.x<-60||p.x>W+60||p.y<-60||p.y>H+60||(mode==='funnel'&&p.y>H*.82))reset(p,k)}}
 
-    { id: "beforeafter", hue: 35,
-      en: { t: "Before & After", k: "The Photoshop transformation",
-        o: "Drag the handle to compare the original shot with the final retouched and color-graded result.",
-        l: ["Skin", "Color", "Composite"] },
-      ar: { t: "\u0642\u0628\u0644 \u0648\u0628\u0639\u062f", k: "\u062a\u062d\u0648\u0651\u0644 \u0627\u0644\u0641\u0648\u062a\u0648\u0634\u0648\u0628",
-        o: "\u0627\u0633\u062d\u0628 \u0627\u0644\u0645\u0642\u0628\u0636 \u0644\u0645\u0642\u0627\u0631\u0646\u0629 \u0627\u0644\u0635\u0648\u0631\u0629 \u0627\u0644\u0623\u0635\u0644\u064a\u0629 \u0628\u0627\u0644\u0646\u062a\u064a\u062c\u0629 \u0627\u0644\u0646\u0647\u0627\u0626\u064a\u0629 \u0628\u0639\u062f \u0627\u0644\u062a\u0646\u0642\u064a\u062d \u0648\u062a\u0635\u062d\u064a\u062d \u0627\u0644\u0623\u0644\u0648\u0627\u0646.",
-        l: ["\u0627\u0644\u0628\u0634\u0631\u0629", "\u0627\u0644\u0623\u0644\u0648\u0627\u0646", "\u0627\u0644\u062f\u0645\u062c"] },
-      fr: [{ t: "BEFORE" }, { t: "AFTER" }, { t: "SKIN" }, { t: "COLOR" }, { t: "COMPOSITE" }] },
+function open(){
+  if(isOpen)return;
+  try{build();size();
+    P=Array.from({length:innerWidth<700?70:150},()=>({}));P.forEach(reset);
+    let s='home';['about','services','work','contact'].forEach(id=>{const e=document.getElementById(id);if(e&&e.getBoundingClientRect().top<innerHeight*.5)s=id});
+    si=Math.max(0,steps.findIndex(x=>x[0]===s));
+    isOpen=true;document.documentElement.classList.add('jm-open');root.classList.add('on');root.setAttribute('aria-hidden','false');
+    update(true);raf=requestAnimationFrame(frame);$('.jm-x',root).focus({preventScroll:true});
+  }catch(e){isOpen=false;document.documentElement.classList.remove('jm-open');root.classList.remove('on');console.error('Journey Mode',e)}
+}
+function close(toId){
+  if(!isOpen)return;isOpen=false;cancelAnimationFrame(raf);
+  root.classList.remove('on');root.setAttribute('aria-hidden','true');document.documentElement.classList.remove('jm-open');
+  if(toId){const e=document.getElementById(toId);if(e)setTimeout(()=>e.scrollIntoView({behavior:'smooth'}),60)}else btn.focus({preventScroll:true});
+}
 
-    { id: "process", hue: 160,
-      en: { t: "Process", k: "From first idea to final frame",
-        o: "Six steps from the brief to the final delivery. References, colors and mood are agreed before any heavy work starts.",
-        l: ["Brief & Idea", "Direction & Mood", "The Creation"] },
-      ar: { t: "\u0637\u0631\u064a\u0642\u0629 \u0627\u0644\u0639\u0645\u0644", k: "\u0645\u0646 \u0627\u0644\u0641\u0643\u0631\u0629 \u0627\u0644\u0623\u0648\u0644\u0649 \u0625\u0644\u0649 \u0627\u0644\u0625\u0637\u0627\u0631 \u0627\u0644\u0623\u062e\u064a\u0631",
-        o: "\u0633\u062a \u062e\u0637\u0648\u0627\u062a \u0645\u0646 \u0627\u0644\u0641\u0643\u0631\u0629 \u0625\u0644\u0649 \u0627\u0644\u062a\u0633\u0644\u064a\u0645. \u0646\u062a\u0641\u0642 \u0639\u0644\u0649 \u0627\u0644\u0645\u0631\u0627\u062c\u0639 \u0648\u0627\u0644\u0623\u0644\u0648\u0627\u0646 \u0648\u0627\u0644\u0623\u062c\u0648\u0627\u0621 \u0642\u0628\u0644 \u0628\u062f\u0621 \u0627\u0644\u062a\u0646\u0641\u064a\u0630 \u0627\u0644\u0641\u0639\u0644\u064a.",
-        l: ["\u0627\u0644\u0641\u0643\u0631\u0629 \u0648\u0627\u0644\u0645\u062a\u0637\u0644\u0628\u0627\u062a", "\u0627\u0644\u0627\u062a\u062c\u0627\u0647 \u0648\u0627\u0644\u0623\u062c\u0648\u0627\u0621", "\u0645\u0631\u062d\u0644\u0629 \u0627\u0644\u0625\u0628\u062f\u0627\u0639"] },
-      fr: [{ t: "BRIEF" }, { t: "MOOD" }, { t: "CREATION" }, { t: "FINAL FRAME" }] },
+root=document.createElement('div');root.id='journey';root.setAttribute('role','dialog');root.setAttribute('aria-modal','true');root.setAttribute('aria-hidden','true');root.setAttribute('data-lenis-prevent','');
+root.innerHTML='<canvas class="jm-cv"></canvas><div class="jm-vig"></div><div class="jm-sweep"></div><div class="jm-stage"></div><div class="jm-top"><nav class="jm-nav jm-ch"></nav><button class="jm-x jm-ch" type="button"><b aria-hidden="true">✕</b><span></span></button></div><div class="jm-hud"><span class="jm-title"></span><div class="jm-bar"><i></i></div><span class="jm-hint"></span></div>';
+document.body.appendChild(root);cv=$('.jm-cv',root);cx=cv.getContext('2d');
 
-    { id: "findme", hue: 230,
-      en: { t: "Find Me", k: "More work. More motion.",
-        o: "Instagram, TikTok, Facebook and the Photoshop Mode group \u2014 more work and more motion, where I post it.",
-        l: ["Instagram", "TikTok", "Facebook", "Photoshop Mode group"] },
-      ar: { t: "\u062a\u062c\u062f\u0646\u064a \u0647\u0646\u0627", k: "\u0627\u0644\u0645\u0632\u064a\u062f \u0645\u0646 \u0627\u0644\u0623\u0639\u0645\u0627\u0644 \u0648\u0627\u0644\u062d\u0631\u0643\u0629",
-        o: "\u0625\u0646\u0633\u062a\u062c\u0631\u0627\u0645 \u0648\u062a\u064a\u0643 \u062a\u0648\u0643 \u0648\u0641\u064a\u0633\u0628\u0648\u0643 \u0648\u0645\u062c\u0645\u0648\u0639\u0629 Photoshop Mode \u2014 \u0627\u0644\u0645\u0632\u064a\u062f \u0645\u0646 \u0627\u0644\u0623\u0639\u0645\u0627\u0644 \u0648\u0627\u0644\u062d\u0631\u0643\u0629 \u062d\u064a\u062b \u0623\u0646\u0634\u0631\u0647\u0627.",
-        l: ["Instagram", "TikTok", "Facebook", "Photoshop Mode"] },
-      fr: [{ i: "fm-instagram.jpg" }, { i: "fm-tiktok.jpg" }, { i: "fm-photoshop-p.jpg" }, { t: "FACEBOOK" }] },
-
-    { id: "brief", hue: 280,
-      en: { t: "Start a Project", k: "Tell me what you need",
-        o: "Pick your services, add the idea, quantity and deadline \u2014 it opens WhatsApp with your message ready. Nothing is stored on this site.",
-        l: ["Your brief", "Quantity and deadline", "Opens WhatsApp"] },
-      ar: { t: "\u0627\u0628\u062f\u0623 \u0645\u0634\u0631\u0648\u0639\u0643", k: "\u0642\u0644 \u0644\u064a \u0645\u0627 \u062a\u062d\u062a\u0627\u062c\u0647",
-        o: "\u0627\u062e\u062a\u0631 \u0627\u0644\u062e\u062f\u0645\u0627\u062a \u0648\u0623\u0636\u0641 \u0627\u0644\u0641\u0643\u0631\u0629 \u0648\u0627\u0644\u0643\u0645\u064a\u0629 \u0648\u0627\u0644\u0645\u0648\u0639\u062f \u2014 \u064a\u0641\u062a\u062d \u0648\u0627\u062a\u0633\u0627\u0628 \u0648\u0627\u0644\u0631\u0633\u0627\u0644\u0629 \u062c\u0627\u0647\u0632\u0629. \u0644\u0627 \u064a\u062a\u0645 \u062d\u0641\u0638 \u0623\u064a \u0628\u064a\u0627\u0646\u0627\u062a \u0641\u064a \u0647\u0630\u0627 \u0627\u0644\u0645\u0648\u0642\u0639.",
-        l: ["\u0637\u0644\u0628\u0643", "\u0627\u0644\u0643\u0645\u064a\u0629 \u0648\u0627\u0644\u0645\u0648\u0639\u062f", "\u064a\u0641\u062a\u062d \u0648\u0627\u062a\u0633\u0627\u0628"] },
-      fr: [{ t: "BRIEF" }, { t: "IDEA" }, { t: "DEADLINE" }, { t: "SEND" }] },
-
-    { id: "contact", hue: 190,
-      en: { t: "Contact", k: "Let\u2019s make it visual",
-        o: "For AI art, Photoshop work, reels, ads, cinematic videos, VFX, graphic design or a modern CV \u2014 message me directly.",
-        l: ["AI art", "Photoshop", "Reels and ads", "VFX, graphic design and CV"] },
-      ar: { t: "\u062a\u0648\u0627\u0635\u0644", k: "\u062f\u0639\u0646\u0627 \u0646\u062d\u0648\u0651\u0644\u0647\u0627 \u0625\u0644\u0649 \u0639\u0645\u0644 \u0628\u0635\u0631\u064a",
-        o: "\u0644\u0623\u0639\u0645\u0627\u0644 \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064a \u0623\u0648 \u0627\u0644\u0641\u0648\u062a\u0648\u0634\u0648\u0628 \u0623\u0648 \u0627\u0644\u0631\u064a\u0644\u0632 \u0623\u0648 \u0627\u0644\u0625\u0639\u0644\u0627\u0646\u0627\u062a \u0623\u0648 \u0627\u0644\u0641\u064a\u062f\u064a\u0648\u0647\u0627\u062a \u0627\u0644\u0633\u064a\u0646\u0645\u0627\u0626\u064a\u0629 \u0623\u0648 VFX \u0623\u0648 \u0627\u0644\u062a\u0635\u0645\u064a\u0645 \u0627\u0644\u062c\u0631\u0627\u0641\u064a\u0643\u064a \u0623\u0648 \u0633\u064a\u0631\u0629 \u0630\u0627\u062a\u064a\u0629 (CV) \u0639\u0635\u0631\u064a\u0629 \u2014 \u0631\u0627\u0633\u0644\u0646\u064a \u0645\u0628\u0627\u0634\u0631\u0629.",
-        l: ["\u0641\u0646 \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064a", "\u0641\u0648\u062a\u0648\u0634\u0648\u0628", "\u0631\u064a\u0644\u0632 \u0648\u0625\u0639\u0644\u0627\u0646\u0627\u062a", "VFX \u0648\u062a\u0635\u0645\u064a\u0645 \u062c\u0631\u0627\u0641\u064a\u0643\u064a \u0648CV"] },
-      fr: [{ t: "HELLO" }, { t: "WHATSAPP" }, { t: "CONTACT" }] }
-  ];
-
-  var N = SECTIONS.length;
-  var LANES = [-0.5, 0.42, -0.12, 0.55, -0.38, 0.2];
-  var LIFTS = [-0.12, 0.1, 0.18, -0.2, 0.06, -0.05];
-
-  var root, cv, ctx, stage, flight, panel, countEl, hintEl, brandEl, exitEl;
-  var cards = [], dots = [], frames = [], parts = [];
-  var built = false, isOpen = false, state = "map", lite = false;
-  var cur = 0, pos = 0, target = 0, speed = 0, flightV = 0, flightP = 0, gridOff = 0;
-  var W = 0, H = 0, dpr = 1, cw = 420, lastCount = -1, raf = 0, lastT = 0, idleTimer = 0;
-  var drag = null, dragged = false, lastActive = null;
-
-  function L() { return document.documentElement.lang === "ar" ? "ar" : "en"; }
-  function pad(n) { return (n < 10 ? "0" : "") + n; }
-  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
-  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
-
-  /* ---------- build the world once ---------- */
-  function build() {
-    if (built) return;
-    built = true;
-    root = document.createElement("div");
-    root.className = "jy";
-    root.id = "journey";
-    root.setAttribute("role", "dialog");
-    root.setAttribute("aria-modal", "true");
-    root.setAttribute("aria-hidden", "true");
-    root.setAttribute("data-lenis-prevent", "");
-    root.innerHTML =
-      '<canvas class="jy-bg" aria-hidden="true"></canvas><div class="jy-vig"></div>' +
-      '<div class="jy-stage"></div>' +
-      '<div class="jy-detail"><div class="jy-flight"></div><aside class="jy-panel" tabindex="-1"></aside></div>' +
-      '<div class="jy-hud"><div class="jy-top"><span class="jy-brand"></span><button class="jy-exit" type="button"></button></div>' +
-      '<nav class="jy-rail"></nav><div class="jy-count"></div><div class="jy-hint"></div></div>';
-    document.body.appendChild(root);
-
-    cv = root.querySelector(".jy-bg");
-    stage = root.querySelector(".jy-stage");
-    flight = root.querySelector(".jy-flight");
-    panel = root.querySelector(".jy-panel");
-    countEl = root.querySelector(".jy-count");
-    hintEl = root.querySelector(".jy-hint");
-    brandEl = root.querySelector(".jy-brand");
-    exitEl = root.querySelector(".jy-exit");
-    var rail = root.querySelector(".jy-rail");
-
-    SECTIONS.forEach(function (s, i) {
-      var c = document.createElement("button");
-      c.type = "button";
-      c.className = "jy-card";
-      c.setAttribute("data-i", i);
-      c.style.setProperty("--h", s.hue);
-      c.innerHTML =
-        '<span class="jy-card-in"><span class="jy-art">' +
-        (s.cover ? '<img alt="" decoding="async" loading="lazy" src="' + esc(s.cover) + '">' : "") +
-        '<span class="jy-glyph">' + pad(i + 1) + "</span></span>" +
-        '<span class="jy-meta"><span class="jy-n">' + pad(i + 1) + " / " + pad(N) + '</span><span class="jy-t"></span><span class="jy-k"></span></span>' +
-        '<span class="jy-enter"></span><i class="jy-tick tl"></i><i class="jy-tick tr"></i><i class="jy-tick bl"></i><i class="jy-tick br"></i></span>';
-      var im = c.querySelector("img");
-      if (im) im.onerror = function () { im.remove(); };
-      c.addEventListener("click", function () {
-        if (dragged || state !== "map") return;
-        if (lite || Math.round(pos) === i) enter(i); else target = i;
-      });
-      stage.appendChild(c);
-      cards.push(c);
-
-      var d = document.createElement("button");
-      d.type = "button";
-      d.className = "jy-dot";
-      d.addEventListener("click", function () { if (state === "map") target = i; else { cur = i; step(0); } });
-      rail.appendChild(d);
-      dots.push(d);
-    });
-
-    exitEl.addEventListener("click", function () { close(); });
-    panel.addEventListener("click", function (e) {
-      var b = e.target.closest ? e.target.closest("button") : null;
-      if (!b) return;
-      if (b.classList.contains("jy-go")) goSection();
-      else if (b.classList.contains("jy-back")) back();
-      else if (b.classList.contains("jy-prev")) step(-1);
-      else if (b.classList.contains("jy-next")) step(1);
-    });
-    root.addEventListener("wheel", onWheel, { passive: false });
-    root.addEventListener("pointerdown", onDown);
-    root.addEventListener("pointermove", onMove);
-    root.addEventListener("pointerup", endDrag);
-    root.addEventListener("pointercancel", endDrag);
-  }
-
-  /* ---------- language ---------- */
-  function applyLang() {
-    if (!built) return;
-    var lg = L(), u = UI[lg];
-    root.setAttribute("lang", lg);
-    root.setAttribute("aria-label", u.label);
-    brandEl.innerHTML = u.brand;
-    exitEl.textContent = u.exit;
-    exitEl.setAttribute("aria-label", u.exitAria);
-    SECTIONS.forEach(function (s, i) {
-      var d = s[lg], c = cards[i];
-      c.querySelector(".jy-t").textContent = d.t;
-      c.querySelector(".jy-k").textContent = d.k;
-      c.querySelector(".jy-enter").textContent = u.enter;
-      c.setAttribute("aria-label", d.t);
-      dots[i].setAttribute("aria-label", d.t);
-      dots[i].title = d.t;
-    });
-    hintEl.textContent = state === "detail" ? u.hintIn : u.hintMap;
-    if (state === "detail") fillPanel(cur);
-  }
-
-  /* ---------- sizes ---------- */
-  function resize() {
-    W = window.innerWidth;
-    H = window.innerHeight;
-    dpr = Math.min(window.devicePixelRatio || 1, 1.5);
-    if (cv && !lite) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
-    cw = Math.round(Math.min(560, Math.max(300, W * 0.34)));
-    root.style.setProperty("--cw", cw + "px");
-  }
-  function onResize() { resize(); }
-
-  /* ---------- open / close ---------- */
-  function open() {
-    build();
-    if (isOpen) return;
-    isOpen = true;
-    var mm = window.matchMedia ? window.matchMedia("(max-width: 820px), (pointer: coarse), (prefers-reduced-motion: reduce)").matches : false;
-    lite = mm;
-    root.classList.toggle("jy-lite", lite);
-    root.classList.remove("jy-in");
-    var b = document.getElementById("journeyBtn");
-    if (b) {
-      var r = b.getBoundingClientRect();
-      root.style.setProperty("--ox", Math.round(r.left + r.width / 2) + "px");
-      root.style.setProperty("--oy", Math.round(r.top + r.height / 2) + "px");
-    }
-    state = "map"; cur = 0; speed = 0; flightV = 0; lastCount = -1; target = 0;
-    pos = lite ? 0 : -1.7;
-    ctx = (!lite && cv.getContext) ? cv.getContext("2d") : null;
-    resize();
-    initParts();
-    applyLang();
-    layout(0);
-    updateCount();
-    lastActive = document.activeElement;
-    document.documentElement.classList.add("jy-open");
-    root.setAttribute("aria-hidden", "false");
-    void root.offsetWidth;
-    root.classList.add("jy-on");
-    window.addEventListener("resize", onResize);
-    document.addEventListener("keydown", onKey, true);
-    lastT = performance.now();
-    if (!lite) raf = requestAnimationFrame(frame);
-    setTimeout(function () { if (isOpen) exitEl.focus({ preventScroll: true }); }, 450);
-    try { window.dispatchEvent(new CustomEvent("tm:journey", { detail: { open: true } })); } catch (e) {}
-  }
-
-  function close(noFocus) {
-    if (!isOpen) return;
-    isOpen = false;
-    root.classList.remove("jy-on");
-    root.setAttribute("aria-hidden", "true");
-    document.documentElement.classList.remove("jy-open");
-    window.removeEventListener("resize", onResize);
-    document.removeEventListener("keydown", onKey, true);
-    cancelAnimationFrame(raf);
-    raf = 0;
-    setTimeout(function () { if (!isOpen) { root.classList.remove("jy-in"); state = "map"; } }, 1000);
-    if (!noFocus && lastActive && lastActive.focus) lastActive.focus({ preventScroll: true });
-    try { window.dispatchEvent(new CustomEvent("tm:journey", { detail: { open: false } })); } catch (e) {}
-  }
-
-  /* ---------- map <-> inside ---------- */
-  function enter(i) {
-    cur = i; target = i;
-    if (lite) pos = i;
-    state = "detail";
-    flightP = Math.random(); flightV = 0.35;
-    fillPanel(i);
-    if (!lite) buildFrames(i);
-    root.classList.add("jy-in");
-    hintEl.textContent = UI[L()].hintIn;
-    updateCount();
-    setTimeout(function () { var g = panel.querySelector(".jy-go"); if (g && state === "detail") g.focus({ preventScroll: true }); }, 550);
-  }
-  function back() {
-    state = "map";
-    root.classList.remove("jy-in");
-    hintEl.textContent = UI[L()].hintMap;
-    updateCount();
-    var c = cards[cur];
-    if (c) setTimeout(function () { if (state === "map" && isOpen) c.focus({ preventScroll: true }); }, 550);
-  }
-  function step(dir) {
-    cur = (cur + dir + N) % N;
-    target = cur; pos = cur;
-    fillPanel(cur);
-    if (!lite) buildFrames(cur);
-    flightV = 0.5;
-    updateCount();
-  }
-  function goSection() {
-    var id = SECTIONS[cur].id;
-    close(true);
-    setTimeout(function () {
-      var a = document.querySelector('#nav a[href="#' + id + '"]');
-      if (a) a.click();
-      else { var el = document.getElementById(id); if (el && el.scrollIntoView) el.scrollIntoView(); }
-    }, 450);
-  }
-
-  function fillPanel(i) {
-    var lg = L(), s = SECTIONS[i], d = s[lg], u = UI[lg];
-    panel.setAttribute("dir", lg === "ar" ? "rtl" : "ltr");
-    panel.setAttribute("lang", lg);
-    panel.setAttribute("aria-label", d.t);
-    panel.innerHTML =
-      '<p class="jy-kick">' + pad(i + 1) + " / " + pad(N) + " \u2014 " + esc(SECTIONS[i].en.t.toUpperCase()) + "</p>" +
-      "<h2>" + esc(d.t) + '</h2><p class="jy-sub">' + esc(d.k) + "</p>" +
-      '<p class="jy-lab">' + u.ov + '</p><p class="jy-ov">' + esc(d.o) + "</p>" +
-      '<p class="jy-lab">' + u.inside + '</p><ul class="jy-list">' +
-      d.l.map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("") + "</ul>" +
-      '<div class="jy-btns"><button class="jy-go" type="button">' + u.go + '</button><button class="jy-back" type="button">' + u.back + "</button>" +
-      '<button class="jy-nav jy-prev" type="button" aria-label="' + u.prev + '">\u2039</button><button class="jy-nav jy-next" type="button" aria-label="' + u.next + '">\u203a</button></div>';
-  }
-
-  function buildFrames(i) {
-    flight.innerHTML = "";
-    frames = [];
-    var s = SECTIONS[i];
-    s.fr.forEach(function (f, k) {
-      var el = document.createElement("div");
-      el.className = "jy-fr";
-      el.style.setProperty("--h", (s.hue + k * 22) % 360);
-      function label(txt) { var b = document.createElement("b"); b.textContent = txt; el.appendChild(b); }
-      if (f.i) {
-        var im = new Image();
-        im.alt = ""; im.decoding = "async"; im.src = f.i;
-        im.onerror = function () { im.remove(); label(s.en.t.toUpperCase()); };
-        el.appendChild(im);
-      } else label(f.t);
-      flight.appendChild(el);
-      frames.push({ el: el, lane: LANES[k % LANES.length], lift: LIFTS[k % LIFTS.length], ph: k / s.fr.length });
-    });
-  }
-
-  /* ---------- input ---------- */
-  function snap() { target = clamp(Math.round(target), 0, N - 1); }
-  function onWheel(e) {
-    e.stopPropagation();
-    if (lite) return;
-    e.preventDefault();
-    var d = (Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX) * (e.deltaMode === 1 ? 33 : 1);
-    if (state === "map") {
-      target = clamp(target + d * 0.0022, 0, N - 1);
-      clearTimeout(idleTimer);
-      idleTimer = setTimeout(snap, 170);
-    } else {
-      flightV = clamp(flightV + d * 0.0005, -0.7, 0.9);
-    }
-  }
-  function onDown(e) {
-    if (lite || state !== "map" || (e.target.closest && e.target.closest(".jy-hud button"))) return;
-    drag = { x: e.clientX, y: e.clientY, t: target, moved: false };
-  }
-  function onMove(e) {
-    if (!drag) return;
-    var dx = e.clientX - drag.x, dy = e.clientY - drag.y;
-    if (!drag.moved && Math.abs(dx) + Math.abs(dy) < 8) return;
-    drag.moved = true; dragged = true;
-    var dd = Math.abs(dx) > Math.abs(dy) ? -dx / (cw * 0.82) : -dy / 240;
-    target = clamp(drag.t + dd, 0, N - 1);
-  }
-  function endDrag() {
-    if (!drag) return;
-    var m = drag.moved;
-    drag = null;
-    if (m) { snap(); setTimeout(function () { dragged = false; }, 0); }
-  }
-  function focusables() {
-    var all = root.querySelectorAll("button:not([disabled])"), out = [];
-    for (var i = 0; i < all.length; i++) {
-      var cs = window.getComputedStyle(all[i]);
-      if (cs.visibility !== "hidden" && cs.display !== "none") out.push(all[i]);
-    }
-    return out;
-  }
-  function onKey(e) {
-    if (!isOpen) return;
-    var k = e.key;
-    if (k === "Escape") { e.preventDefault(); e.stopPropagation(); if (state === "detail") back(); else close(); return; }
-    if (k === "Tab") {
-      var f = focusables();
-      if (!f.length) return;
-      var first = f[0], last = f[f.length - 1], a = document.activeElement;
-      if (!root.contains(a)) { e.preventDefault(); first.focus(); }
-      else if (e.shiftKey && a === first) { e.preventDefault(); last.focus(); }
-      else if (!e.shiftKey && a === last) { e.preventDefault(); first.focus(); }
-      return;
-    }
-    if (state === "map" && !lite) {
-      if (k === "ArrowRight" || k === "ArrowDown" || k === "PageDown") { e.preventDefault(); target = clamp(Math.round(target) + 1, 0, N - 1); }
-      else if (k === "ArrowLeft" || k === "ArrowUp" || k === "PageUp") { e.preventDefault(); target = clamp(Math.round(target) - 1, 0, N - 1); }
-      else if (k === "Home") { e.preventDefault(); target = 0; }
-      else if (k === "End") { e.preventDefault(); target = N - 1; }
-    } else if (state === "detail") {
-      if (k === "ArrowRight") step(1); else if (k === "ArrowLeft") step(-1);
-    }
-  }
-
-  /* ---------- render ---------- */
-  function updateCount() {
-    var idx = state === "detail" ? cur : clamp(Math.round(pos), 0, N - 1);
-    if (idx === lastCount) return;
-    lastCount = idx;
-    countEl.innerHTML = "<b>" + pad(idx + 1) + "</b> <span>/ " + pad(N) + "</span>";
-    for (var i = 0; i < dots.length; i++) dots[i].classList.toggle("on", i === idx);
-  }
-
-  function layout(time) {
-    if (lite) {
-      for (var j = 0; j < cards.length; j++) { cards[j].style.transform = ""; cards[j].style.opacity = ""; cards[j].style.filter = ""; }
-      return;
-    }
-    for (var i = 0; i < cards.length; i++) {
-      var c = cards[i], d = i - pos, a = Math.abs(d);
-      if (a > 3.6) { c.style.visibility = "hidden"; continue; }
-      c.style.visibility = "visible";
-      var x = d * cw * 0.82, z = -a * 330, ry = -d * 16;
-      var y = Math.sin(time * 0.9 + i) * 4 + a * 14;
-      var sc = 1 + (a < 1 ? (1 - a) * 0.14 : 0);
-      var op = Math.max(0, 1 - a * 0.27);
-      var bl = a < 0.4 ? 0 : Math.min(7, (a - 0.4) * 3);
-      c.style.transform = "translate3d(" + x.toFixed(1) + "px," + y.toFixed(1) + "px," + z.toFixed(1) + "px) rotateY(" + ry.toFixed(2) + "deg) scale(" + sc.toFixed(3) + ")";
-      c.style.opacity = op.toFixed(3);
-      c.style.filter = bl > 0.1 ? "blur(" + bl.toFixed(1) + "px)" : "none";
-      c.style.zIndex = String(100 - Math.round(a * 10));
-      c.style.pointerEvents = op > 0.15 ? "auto" : "none";
-      c.classList.toggle("is-focus", a < 0.5);
-    }
-  }
-
-  function flightStep(dt) {
-    flightP += (0.055 + flightV) * dt;
-    flightV *= Math.pow(0.35, dt);
-    var fw = flight.clientWidth, fh = flight.clientHeight;
-    for (var i = 0; i < frames.length; i++) {
-      var f = frames[i], t = flightP + f.ph;
-      t = t - Math.floor(t);
-      var z = -2300 + t * 2700, x = f.lane * fw * 0.55, y = f.lift * fh * 0.9, ry = -f.lane * 26;
-      var op = Math.min(1, t / 0.14, (1 - t) / 0.14);
-      f.el.style.transform = "translate3d(" + x.toFixed(1) + "px," + y.toFixed(1) + "px," + z.toFixed(1) + "px) rotateY(" + ry.toFixed(1) + "deg)";
-      f.el.style.opacity = (op < 0 ? 0 : op).toFixed(3);
-    }
-  }
-
-  function initParts() {
-    parts = [];
-    if (lite) return;
-    for (var i = 0; i < 240; i++) parts.push({ x: Math.random() * 2 - 1, y: Math.random() * 2 - 1, z: Math.random(), c: Math.random() < 0.7 ? "22,216,255" : "170,110,255" });
-  }
-
-  function draw(dt) {
-    if (!ctx) return;
-    var w = cv.width, h = cv.height;
-    ctx.clearRect(0, 0, w, h);
-    var inD = state === "detail";
-    var fs = (inD ? 0.5 : 0.1) + speed * 0.45 + Math.abs(flightV) * 0.5;
-    var hy = h * 0.6, cx = w / 2, i, z, y, a;
-    gridOff = (gridOff + fs * dt * 1.4) % 1;
-    ctx.lineWidth = Math.max(1, dpr * 0.9);
-    /* floor: horizontals race toward the camera */
-    for (i = 0; i < 16; i++) {
-      z = (i + gridOff) / 16;
-      y = hy + (h - hy) * Math.pow(z, 2.4);
-      a = 0.04 + 0.3 * z;
-      ctx.strokeStyle = "rgba(22,216,255," + a.toFixed(3) + ")";
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
-    }
-    ctx.strokeStyle = "rgba(139,53,255,0.2)";
-    ctx.beginPath();
-    for (i = -14; i <= 14; i++) { ctx.moveTo(cx + i * w * 0.004, hy); ctx.lineTo(cx + i * w * 0.11, h); }
-    ctx.stroke();
-    var g = ctx.createLinearGradient(0, 0, w, 0);
-    g.addColorStop(0, "rgba(139,53,255,0)"); g.addColorStop(0.5, "rgba(22,216,255,0.6)"); g.addColorStop(1, "rgba(139,53,255,0)");
-    ctx.strokeStyle = g; ctx.lineWidth = Math.max(1, dpr * 1.4);
-    ctx.beginPath(); ctx.moveTo(0, hy); ctx.lineTo(w, hy); ctx.stroke();
-    /* particles streaming past, streaks grow with speed */
-    ctx.lineWidth = Math.max(1, dpr);
-    var cy = h * 0.5;
-    for (i = 0; i < parts.length; i++) {
-      var p = parts[i];
-      p.z -= fs * dt * 0.9;
-      if (p.z <= 0.04) { p.z = 1; p.x = Math.random() * 2 - 1; p.y = Math.random() * 2 - 1; }
-      var sx = cx + p.x / p.z * w * 0.18, sy = cy + p.y / p.z * h * 0.18;
-      var z2 = p.z + Math.max(0.006, fs * 0.05);
-      var px = cx + p.x / z2 * w * 0.18, py = cy + p.y / z2 * h * 0.18;
-      var al = Math.min(1, (1 - p.z) * 1.3 + 0.1) * 0.8;
-      ctx.strokeStyle = "rgba(" + p.c + "," + al.toFixed(3) + ")";
-      ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(sx, sy); ctx.stroke();
-    }
-  }
-
-  function frame(t) {
-    raf = requestAnimationFrame(frame);
-    var dt = Math.min(0.05, Math.max(0.001, (t - lastT) / 1000));
-    lastT = t;
-    var prev = pos;
-    pos += (target - pos) * (1 - Math.pow(0.0006, dt));
-    if (Math.abs(target - pos) < 0.0004) pos = target;
-    var vel = Math.abs(pos - prev) / dt;
-    speed += (vel - speed) * Math.min(1, dt * 7);
-    if (state === "detail") flightStep(dt); else layout(t / 1000);
-    draw(dt);
-    updateCount();
-  }
-
-  /* ---------- init ---------- */
-  function init() {
-    var b = document.getElementById("journeyBtn");
-    if (!b) return;
-    b.addEventListener("click", function (e) { e.preventDefault(); open(); });
-    if (window.MutationObserver) {
-      new MutationObserver(function () { if (built) applyLang(); }).observe(document.documentElement, { attributes: true, attributeFilter: ["lang"] });
-    }
-    window.TMJourney = { open: open, close: close };
-  }
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
+/* every handler runs in the CAPTURE phase on document, so the site's own scripts (smooth-scroll, custom cursor, intro) can't swallow the events */
+const inside=e=>isOpen&&root.contains(e.target);
+btn.addEventListener('click',e=>{e.stopPropagation();open()});
+document.addEventListener('click',e=>{if(!inside(e))return;
+  const n=e.target.closest('.jm-nav button');if(n){e.stopPropagation();return goScene(n.dataset.s)}
+  if(e.target.closest('.jm-x')){e.stopPropagation();return close()}
+  const g=e.target.closest('[data-go]');if(g){e.stopPropagation();return goScene(g.dataset.go)}
+  if(e.target.closest('.jm-link')){e.preventDefault();e.stopPropagation();return close('work')}
+  const c=e.target.closest('.jm-card.s');if(c){e.stopPropagation();go(si+Math.round(+c.style.getPropertyValue('--p')))}
+},true);
+document.addEventListener('wheel',e=>{if(!isOpen)return;e.preventDefault();e.stopPropagation();
+  if(Math.abs(e.deltaY)<15&&Math.abs(e.deltaX)<15)return;const n=Date.now();if(n-last<650)return;last=n;go(si+((e.deltaY||e.deltaX)>0?1:-1))},{passive:false,capture:true});
+document.addEventListener('keydown',e=>{if(!isOpen)return;let h=1;
+  if(e.key==='Escape')close();
+  else if(/^(ArrowRight|ArrowDown|PageDown)$/.test(e.key))go(si+1);
+  else if(/^(ArrowLeft|ArrowUp|PageUp)$/.test(e.key))go(si-1);
+  else if(e.key==='Home')go(0);else if(e.key==='End')go(steps.length-1);else h=0;
+  if(h){e.preventDefault();e.stopPropagation()}},true);
+let tx=0,ty=0;
+document.addEventListener('touchstart',e=>{if(inside(e)){tx=e.touches[0].clientX;ty=e.touches[0].clientY}},{passive:true,capture:true});
+document.addEventListener('touchmove',e=>{if(inside(e))e.stopPropagation()},{passive:true,capture:true});
+document.addEventListener('touchend',e=>{if(!inside(e))return;const dx=e.changedTouches[0].clientX-tx,dy=e.changedTouches[0].clientY-ty;
+  if(Math.max(Math.abs(dx),Math.abs(dy))>50)go(si+((Math.abs(dx)>Math.abs(dy)?-dx:-dy)>0?1:-1))},{passive:true,capture:true});
+addEventListener('resize',()=>{if(isOpen)size()});
+const relang=()=>{btn.setAttribute('aria-label',t('title'));btn.title=t('title');if(isOpen){const k=si;build();si=Math.min(k,steps.length-1);update(true)}};
+new MutationObserver(relang).observe(document.documentElement,{attributes:true,attributeFilter:['lang','dir']});
+$('#langBtn')?.addEventListener('click',()=>setTimeout(relang,120));
+relang();
 })();
