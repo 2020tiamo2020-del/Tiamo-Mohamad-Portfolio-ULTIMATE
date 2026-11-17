@@ -1,0 +1,70 @@
+{
+  "sourceBase": "https://2020tiamo2020-del.github.io/Tiamo-Mohamad-Portfolio-ULTIMATE/",
+  "dimensions": {
+    "AI DIMENSION": [
+      "images/project1.jpg",
+      "images/project2.jpg",
+      "images/project3.jpg",
+      "images/project4.jpg",
+      "images/project5.jpg",
+      "images/project6.jpg",
+      "images/project7.jpg",
+      "images/project8.jpg",
+      "images/project9.jpg",
+      "images/project10.jpg",
+      "images/project11.jpg",
+      "images/project12.jpg",
+      "images/project13.jpg",
+      "images/project14.jpg",
+      "images/project15.jpg"
+    ],
+    "VISUAL REALITY": [
+      "images/pm1.jpg",
+      "images/pm2.jpg",
+      "images/pm3.jpg",
+      "images/pm4.jpg",
+      "images/pm5.jpg",
+      "images/pm6.jpg",
+      "images/pm7.jpg",
+      "images/pm8.jpg"
+    ],
+    "MOTION CORE": [
+      "Cinematic/cinematic0.jpg",
+      "Cinematic/cinematic1.jpg",
+      "Cinematic/cinematic2.jpg",
+      "Cinematic/cinematic3.jpg",
+      "Cinematic/cinematic4.jpg",
+      "Cinematic/cinematic5.jpg",
+      "Cinematic/cinematic6.jpg",
+      "Cinematic/cinematic7.jpg",
+      "Cinematic/cinematic8.jpg",
+      "Cinematic/cinematic0.webm",
+      "Cinematic/cinematic1.webm",
+      "Cinematic/cinematic2.webm",
+      "Cinematic/cinematic3.webm",
+      "Cinematic/cinematic4.webm",
+      "Cinematic/cinematic5.webm",
+      "Cinematic/cinematic6.webm",
+      "Cinematic/cinematic7.webm",
+      "Cinematic/cinematic8.webm"
+    ],
+    "VFX REALM": [
+      "VFX/rm0.jpg",
+      "VFX/rm1.jpg",
+      "VFX/rm2.jpg",
+      "VFX/rm3.jpg",
+      "VFX/rm4.jpg",
+      "VFX/rm5.jpg",
+      "VFX/rm0.webm",
+      "VFX/rm1.webm",
+      "VFX/rm2.webm",
+      "VFX/rm3.webm",
+      "VFX/rm4.webm",
+      "VFX/rm5.webm"
+    ],
+    "THE CREATOR": [
+      "images/tiamo.jpg"
+    ]
+  },
+  "note": "Paths were derived from the previously inspected portfolio source description; verify actual remote paths and video extensions before final release."
+}
