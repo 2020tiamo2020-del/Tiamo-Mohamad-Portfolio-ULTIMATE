@@ -44,7 +44,7 @@
   let jw, $, live = false, lastFocus = null, y0 = 0, inerted = [], cards = {};
   function build() {
     jw = D.createElement("div"); jw.id = "jw"; jw.setAttribute("role", "dialog"); jw.setAttribute("aria-modal", "true"); jw.setAttribute("aria-label", "Journey");
-    jw.innerHTML = '<div class="jw-grid" aria-hidden="true"></div><canvas id="jwfx" aria-hidden="true"></canvas><div class="jw-w" id="jwW2"></div>' +
+    jw.innerHTML = '<canvas id="jwroom" aria-hidden="true"></canvas><div class="jw-bg" id="jwbgA" aria-hidden="true"></div><div class="jw-bg" id="jwbgB" aria-hidden="true"></div><div class="jw-scrim" aria-hidden="true"></div><div class="jw-grid" aria-hidden="true"></div><canvas id="jwfx" aria-hidden="true"></canvas><div class="jw-w" id="jwW2"></div>' +
       '<header class="jw-nav"><div class="jw-in" id="jwIn"></div><div class="jw-pan" id="jwPan"><div class="jw-pin" id="jwPin"></div></div></header>' +
       '<button class="jw-x" id="jwX" type="button"><svg viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19"/></svg></button><div class="jw-dots" id="jwD"></div><div class="jw-ro" id="jwRo" aria-hidden="true"></div><div class="jw-hint" id="jwH"></div><div class="jw-win" id="jwW"></div>';
     D.body.appendChild(jw); $ = id => D.getElementById(id);
@@ -117,6 +117,106 @@
   }
   const initPT = () => { PT = Array.from({ length: W < 760 ? 900 : 1500 }, (_, i) => ({ x: W / 2, y: H2 * .45, tx: 0, ty: 0, d: 0, sp: Math.random(), ph: Math.random() * 6, r: .7 + Math.random() * 1.1, c: COL[i % 3] + ".8)", col: 0, v: 0 })); };
 
+
+  /* ROOMS: each station is a real room. A WebGL layer fakes depth (radial parallax + dolly), so scrolling flies through the room and passes through light into the next one. */
+  const RD = "rooms/";
+  const RS = { home: ["hero", 0], about: ["oculus", 0], services: ["arch", 0], work: ["pink", 0], cinema: ["skylight", 0], creation: ["corridor", 0], beforeafter: ["dome", 0], process: ["plan", 0], findme: ["arch", 1], brief: ["pink", 1], contact: ["hero", 1] };
+  const RN = ["hero", "oculus", "arch", "pink", "skylight", "corridor", "dome", "plan"];
+  let rc, gl, prog, U2 = {}, TX = {}, TA = {}, rloaded = false, rmx = 0, rmy = 0, grp = [], rok = false;
+  function roomLoad() {
+    if (rloaded) return; rloaded = true;
+    RN.forEach(n => { const im = new Image(); im.decoding = "async"; im.onload = () => { TA[n] = im; if (gl && !TX[n]) mkTex(n); if (!gl) cssBg(); }; im.src = RD + n + ".webp"; });
+  }
+  function mkTex(n) {
+    const im = TA[n], t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, im);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    TX[n] = { t, a: im.naturalWidth / im.naturalHeight };
+  }
+  const VS = "attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}";
+  const FS = `precision highp float;
+uniform sampler2D tA,tB;uniform vec2 res,m;uniform float aA,aB,fA,fB,zA,zB,mx,tr,tm,hA,hB;
+vec3 room(sampler2D t,vec2 uv,float ia,float fl,float z){
+  float sa=res.x/res.y;vec2 vp=vec2(.5,.45);vec2 d=uv-vp;
+  float r=length(d*vec2(sa,1.));
+  float s=1.-z*(.2+.8*smoothstep(0.,.95,r));
+  vec2 p=vp+d*s;
+  float near=smoothstep(0.,.9,r);
+  p+=m*(.01+.045*near)*vec2(1.,.55);
+  vec2 c=p-.5;
+  if(ia>sa)c.x*=sa/ia;else c.y*=ia/sa;
+  c*=.9;c.x*=fl;
+  vec2 q=c+.5;q=1.-abs(1.-mod(q,2.));
+  return texture2D(t,q).rgb;
+}
+vec3 samp(sampler2D t,vec2 uv,float ia,float fl,float z,float bl){
+  vec3 a=vec3(0.);vec2 d=(uv-vec2(.5,.45));
+  for(int i=0;i<8;i++){float k=float(i)/7.;a+=room(t,uv-d*bl*k,ia,fl,z);}
+  return a/8.;
+}
+float h(vec2 p){return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);}
+void main(){
+  vec2 uv=gl_FragCoord.xy/res;uv.y=1.-uv.y;
+  float bl=tr*.14;
+  vec3 col=samp(tA,uv,aA,fA,zA,bl);
+  if(hB>.5){vec3 b=samp(tB,uv,aB,fB,zB,bl);col=mix(col,b,smoothstep(.3,.7,mx));}
+  float gl_=pow(sin(3.14159*mx),2.)*tr;
+  col=pow(col,vec3(1.45))*.7;
+  col=mix(col*vec3(.74,.7,1.),col,.3);
+  col+=vec3(.5,.38,1.)*gl_*.42;
+  float sa=res.x/res.y;float v=smoothstep(1.15,.3,length((uv-.5)*vec2(sa,1.)*1.05));
+  col*=mix(.38,1.,v);
+  col+=(h(gl_FragCoord.xy+tm)-.5)*.035;
+  gl_FragColor=vec4(col,1.);
+}`;
+  function roomInit() {
+    if (rok) return; rok = true; roomLoad(); rc = $("jwroom");
+    try { gl = rc.getContext("webgl", { antialias: false, alpha: false, powerPreference: "low-power" }); } catch (e) { gl = null; }
+    if (!gl) { rc.style.display = "none"; return; }
+    const sh = (ty, src) => { const o = gl.createShader(ty); gl.shaderSource(o, src); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw 0; return o; };
+    try {
+      prog = gl.createProgram(); gl.attachShader(prog, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(prog); gl.useProgram(prog);
+    } catch (e) { gl = null; rc.style.display = "none"; return; }
+    const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+    const loc = gl.getAttribLocation(prog, "p"); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+    ["tA", "tB", "res", "m", "aA", "aB", "fA", "fB", "zA", "zB", "mx", "tr", "tm", "hA", "hB"].forEach(k => U2[k] = gl.getUniformLocation(prog, k));
+    gl.uniform1i(U2.tA, 0); gl.uniform1i(U2.tB, 1);
+    RN.forEach(n => { if (TA[n] && !TX[n]) mkTex(n); });
+  }
+  function roomSize() {
+    if (!rc) return; const d = Math.min(devicePixelRatio || 1, W < 760 ? 1.25 : 1.6);
+    rc.width = Math.round(W * d); rc.height = Math.round(H2 * d); if (gl) gl.viewport(0, 0, rc.width, rc.height);
+  }
+  /* waypoints that sit in the same room share one slow push-in */
+  function groups() {
+    grp = []; let i = 0; const key = k => RS[WPS[k].id].join(":");
+    while (i < WPS.length) { let j = i; while (j + 1 < WPS.length && key(j + 1) === key(i)) j++; for (let k = i; k <= j; k++) grp[k] = [i, j]; i = j + 1; }
+  }
+  const rkey = id => RS[id].join(":");
+  function cssBg() { /* fallback without WebGL: plain cross-fade of the room images */
+    const A = $("jwbgA"), B = $("jwbgB"); if (!A) return; A.style.display = B.style.display = "block";
+  }
+  function roomDraw(t, dt) {
+    rmx += (mx - rmx) * (1 - Math.exp(-dt * 4)); rmy += (my - rmy) * (1 - Math.exp(-dt * 4));
+    const n = WPS.length; if (!n) return; if (grp.length !== n) groups();
+    const pp = clamp(P, 0, n - 1), i = Math.floor(pp), j = Math.min(n - 1, i + 1), u = pp - i;
+    const ia = WPS[i].id, ib = WPS[j].id, same = rkey(ia) === rkey(ib), ga = grp[i], br = RM ? 0 : .012 * Math.sin(t * .0004);
+    const zA0 = .1 * clamp((pp - ga[0]) / Math.max(1, ga[1] - ga[0]), 0, 1) + br;
+    const A = RS[ia], B = RS[ib];
+    if (!gl) { const a = $("jwbgA"), b = $("jwbgB"); if (a && TA[A[0]]) { a.style.backgroundImage = "url(" + RD + A[0] + ".webp)"; a.style.transform = "scale(" + (1.06 + zA0 + (same ? 0 : u * .5)).toFixed(3) + ") scaleX(" + (A[1] ? -1 : 1) + ")"; a.style.opacity = same ? 1 : 1 - u; } if (b && TA[B[0]]) { b.style.backgroundImage = "url(" + RD + B[0] + ".webp)"; b.style.opacity = same ? 0 : u; b.style.transform = "scale(" + (1.06 + (1 - u) * -.05).toFixed(3) + ") scaleX(" + (B[1] ? -1 : 1) + ")"; } return; }
+    const ta = TX[A[0]], tb = TX[B[0]]; if (!ta) return;
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, ta.t);
+    const hasB = !same && tb ? 1 : 0; if (hasB) { gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, tb.t); }
+    gl.uniform2f(U2.res, rc.width, rc.height); gl.uniform2f(U2.m, rmx, rmy);
+    gl.uniform1f(U2.aA, ta.a); gl.uniform1f(U2.aB, hasB ? tb.a : 1); gl.uniform1f(U2.fA, A[1] ? -1 : 1); gl.uniform1f(U2.fB, B[1] ? -1 : 1);
+    const ease = same ? 0 : u;
+    gl.uniform1f(U2.zA, zA0 + (same ? 0 : ease * .75)); gl.uniform1f(U2.zB, hasB ? -(1 - ease) * .4 : 0);
+    gl.uniform1f(U2.mx, ease); gl.uniform1f(U2.tr, same ? 0 : 1); gl.uniform1f(U2.tm, RM ? 0 : (t * .001) % 10);
+    gl.uniform1f(U2.hA, 1); gl.uniform1f(U2.hB, hasB);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+  }
+
   /* camera path (Catmull-Rom through the waypoints) */
   const cr = (a, b, c, d, t) => .5 * ((2 * b) + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t * t + (-a + 3 * b - 3 * c + d) * t * t * t);
   function camAt(p) {
@@ -137,6 +237,7 @@
     else P += (tgt - P) * (RM ? 1 : 1 - Math.exp(-dt * 6));
     cam = camAt(P);
     const idx = Math.round(clamp(P, 0, WPS.length - 1)), id = WPS[idx].id; if (id !== cur) { cur = id; mark(); morph(id); }
+    roomDraw(t, dt);
     g.clearRect(0, 0, W, H2);
     /* stars (parallax) */
     for (const s of stars) { const p = proj(s.x, s.y, s.z); if (!p || p.dz > 3600) continue; g.fillStyle = "rgba(190,200,255," + (clamp(1 - p.dz / 3600, 0, 1) * (.35 + s.a * .6)).toFixed(2) + ")"; const r = Math.max(.5, 1.7 * p.s); g.fillRect(p.x, p.y, r, r); }
@@ -216,10 +317,10 @@
   /* open / exit */
   function startId() { const a = D.querySelector("#nav a.is-active"), id = a ? a.getAttribute("href").slice(1) : "home"; return ORDER.includes(id) ? id : "home"; }
   const inertAll = v => { if (v) [...D.body.children].forEach(e => { if (e !== jw && !e.inert) { e.inert = true; inerted.push(e); } }); else { inerted.forEach(e => e.inert = false); inerted = []; } };
-  function size() { pcache = {}; const d = Math.min(devicePixelRatio || 1, 2); W = innerWidth; H2 = innerHeight; fx.width = W * d; fx.height = H2 * d; g = fx.getContext("2d"); g.setTransform(d, 0, 0, d, 0, 0); }
+  function size() { pcache = {}; const d = Math.min(devicePixelRatio || 1, 2); W = innerWidth; H2 = innerHeight; fx.width = W * d; fx.height = H2 * d; g = fx.getContext("2d"); g.setTransform(d, 0, 0, d, 0, 0); roomSize(); }
   function open() {
     if (live) return; if (!jw) build();
-    fx = $("jwfx"); size(); render();
+    fx = $("jwfx"); size(); roomInit(); render();
     const r = btn.getBoundingClientRect(); jw.style.setProperty("--bx", r.left + r.width / 2 + "px"); jw.style.setProperty("--by", r.top + r.height / 2 + "px");
     lastFocus = D.activeElement; y0 = scrollY; H.classList.add("jw-lock"); window.__lenis && __lenis.stop && __lenis.stop(); inertAll(true);
     jw.classList.remove("win"); cur = startId(); P = tgt = ST[cur].wi; fly = null; mark(); initPT(); morph(cur);
@@ -232,6 +333,7 @@
     if (a) a.click(); else scrollTo(0, y0);
     lastFocus && lastFocus.focus && lastFocus.focus({ preventScroll: true });
   }
+  btn.addEventListener("pointerenter", () => roomLoad(), { once: true }); btn.addEventListener("focus", () => roomLoad(), { once: true });
   btn.addEventListener("click", open);
   D.addEventListener("keydown", e => {
     if (!live) return;

@@ -204,3 +204,16 @@ html.jw-lock #jw button,html.jw-lock #jw a{cursor:pointer !important}
 [dir=rtl] .jw-hc{font-family:Cairo,sans-serif;letter-spacing:0;text-transform:none}
 .jw-hf{position:absolute;left:14px;bottom:10px;font:500 10px ui-monospace,Menlo,monospace;letter-spacing:.14em;color:#5fb8cc;text-transform:uppercase}[dir=rtl] .jw-hf{left:auto;right:14px}
 .jw-hc{max-width:40%;overflow:hidden;text-overflow:ellipsis}
+
+/* ===== ROOMS: real-room backdrops behind the hologram world ===== */
+#jwroom{position:absolute;inset:0;width:100%;height:100%;display:block;transition:opacity .5s,filter .5s}
+.jw-bg{display:none;position:absolute;inset:-4%;background-size:cover;background-position:center;filter:brightness(.55) saturate(1.1);will-change:transform,opacity}
+.jw-scrim{position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,rgba(5,4,10,.62) 0%,rgba(5,4,10,.28) 42%,transparent 70%),linear-gradient(0deg,rgba(5,4,10,.5),transparent 28%)}
+[dir=rtl] .jw-scrim{background:linear-gradient(270deg,rgba(5,4,10,.62) 0%,rgba(5,4,10,.28) 42%,transparent 70%),linear-gradient(0deg,rgba(5,4,10,.5),transparent 28%)}
+.jw-grid{opacity:.55;mix-blend-mode:screen}
+#jwfx{mix-blend-mode:screen}
+.jt h2,.jt p{text-shadow:0 2px 18px rgba(5,4,10,.85),0 0 30px rgba(139,53,255,.45)}
+.jt p{color:#d7d1e8}
+.jc-in{background:rgba(10,7,20,.72);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+#jw.win #jwroom,#jw.win .jw-bg{filter:blur(10px) brightness(.6)}
+@media (max-width:760px){.jw-scrim{background:linear-gradient(0deg,rgba(5,4,10,.7),rgba(5,4,10,.25) 55%,rgba(5,4,10,.45))}.jc-in{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(10,7,20,.86)}}
