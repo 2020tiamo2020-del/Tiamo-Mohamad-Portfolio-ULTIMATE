@@ -1,8 +1,93 @@
 /* ===== JOURNEY MODE: header button + a full-screen holographic world (separate from the normal site) ===== */
-.jbtn{display:inline-flex;align-items:center;gap:7px;height:35px;padding:0 13px;border-radius:999px;border:1px solid rgba(139,53,255,.55);background:linear-gradient(135deg,rgba(139,53,255,.28),rgba(22,216,255,.12));color:#fff;font:600 12px Inter,Cairo,system-ui,sans-serif;cursor:pointer;box-shadow:0 0 18px rgba(139,53,255,.3);transition:box-shadow .3s,border-color .3s,transform .3s}
-.jbtn:hover,.jbtn:focus-visible{border-color:#16d8ff;box-shadow:0 0 26px rgba(22,216,255,.45);outline:0}
-.jbtn svg{width:16px;height:16px;flex:none}
-@media (max-width:560px){.jbtn span{display:none}.jbtn{width:34px;height:34px;padding:0;justify-content:center}.header-actions{gap:6px}}
+/* ---------- 1. Header Journey Button (Between Lang & WhatsApp) ---------- */
+.journey-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 13px;
+  background: linear-gradient(135deg, rgba(139, 53, 255, 0.16), rgba(22, 216, 255, 0.12));
+  border: 1px solid rgba(139, 53, 255, 0.45);
+  border-radius: 12px;
+  color: #fff;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  cursor: pointer;
+  outline: none;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 0 16px rgba(139, 53, 255, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  overflow: visible;
+  z-index: 2;
+}
+
+.journey-btn:hover,
+.journey-btn:focus-visible {
+  background: linear-gradient(135deg, rgba(139, 53, 255, 0.32), rgba(22, 216, 255, 0.25));
+  border-color: rgba(22, 216, 255, 0.85);
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 0 24px rgba(139, 53, 255, 0.5), 0 0 35px rgba(22, 216, 255, 0.35);
+  color: #fff;
+}
+
+.journey-btn:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.journey-btn .j-ico {
+  display: grid;
+  place-items: center;
+  color: #16d8ff;
+  filter: drop-shadow(0 0 6px #16d8ff);
+  transition: transform 0.4s ease;
+}
+
+.journey-btn:hover .j-ico {
+  transform: rotate(180deg) scale(1.15);
+  color: #fff;
+}
+
+.journey-btn .j-txt {
+  white-space: nowrap;
+  background: linear-gradient(90deg, #ffffff 0%, #d8c4ff 60%, #16d8ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.journey-btn .j-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #16d8ff;
+  box-shadow: 0 0 8px #16d8ff, 0 0 14px #8b35ff;
+  animation: jPulse 1.8s infinite ease-in-out;
+}
+
+@keyframes jPulse {
+  0%, 100% {
+    transform: scale(0.85);
+    opacity: 0.65;
+    box-shadow: 0 0 6px #16d8ff;
+  }
+  50% {
+    transform: scale(1.35);
+    opacity: 1;
+    box-shadow: 0 0 14px #16d8ff, 0 0 20px #8b35ff;
+  }
+}
+
+/* Mobile responsive for header button */
+@media (max-width: 640px) {
+  .journey-btn {
+    padding: 8px 10px;
+    gap: 4px;
+  }
+  .journey-btn .j-txt {
+    display: none;
+  }
+}
 
 html.jw-lock,html.jw-lock body{overflow:hidden !important}
 html.jw-lock *{cursor:auto !important}
