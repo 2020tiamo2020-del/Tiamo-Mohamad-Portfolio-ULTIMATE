@@ -122,45 +122,51 @@
   const RD = "rooms/";
   const RS = { home: ["hero", 0], about: ["oculus", 0], services: ["arch", 0], work: ["pink", 0], cinema: ["skylight", 0], creation: ["corridor", 0], beforeafter: ["dome", 0], process: ["plan", 0], findme: ["arch", 1], brief: ["pink", 1], contact: ["hero", 1] };
   const RN = ["hero", "oculus", "arch", "pink", "skylight", "corridor", "dome", "plan"];
-  let rc, gl, prog, U2 = {}, TX = {}, TA = {}, rloaded = false, rmx = 0, rmy = 0, grp = [], rok = false;
+  let rc, gl, prog, U2 = {}, TX = {}, TA = {}, rloaded = false, TD = {}, rmx = 0, rmy = 0, grp = [], rok = false;
   function roomLoad() {
     if (rloaded) return; rloaded = true;
-    RN.forEach(n => { const im = new Image(); im.decoding = "async"; im.onload = () => { TA[n] = im; if (gl && !TX[n]) mkTex(n); if (!gl) cssBg(); }; im.src = RD + n + ".webp"; });
+    RN.forEach(n => {
+      const im = new Image(), dm = new Image(); im.decoding = dm.decoding = "async";
+      im.onload = () => { TA[n] = im; if (gl && !TX[n] && TD[n]) mkTex(n); if (!gl) cssBg(); };
+      dm.onload = () => { TD[n] = dm; if (gl && !TX[n] && TA[n]) mkTex(n); };
+      im.src = RD + n + ".webp"; dm.src = RD + n + "_d.webp";
+    });
   }
   function mkTex(n) {
-    const im = TA[n], t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, im);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    TX[n] = { t, a: im.naturalWidth / im.naturalHeight };
+    const im = TA[n], one = src => { const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, src);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); return t; };
+    TX[n] = { t: one(im), d: one(TD[n]), a: im.naturalWidth / im.naturalHeight };
   }
   const VS = "attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}";
   const FS = `precision highp float;
-uniform sampler2D tA,tB;uniform vec2 res,m;uniform float aA,aB,fA,fB,zA,zB,mx,tr,tm,hA,hB;
-vec3 room(sampler2D t,vec2 uv,float ia,float fl,float z){
-  float sa=res.x/res.y;vec2 vp=vec2(.5,.45);vec2 d=uv-vp;
-  float r=length(d*vec2(sa,1.));
-  float s=1.-z*(.2+.8*smoothstep(0.,.95,r));
-  vec2 p=vp+d*s;
-  float near=smoothstep(0.,.9,r);
-  p+=m*(.01+.045*near)*vec2(1.,.55);
-  vec2 c=p-.5;
+uniform sampler2D tA,dA,tB,dB;uniform vec2 res,m;uniform float aA,aB,fA,fB,zA,zB,mx,tr,tm,hA,hB;
+vec2 mapq(vec2 p,float ia,float fl){
+  float sa=res.x/res.y;vec2 c=p-.5;
   if(ia>sa)c.x*=sa/ia;else c.y*=ia/sa;
-  c*=.9;c.x*=fl;
-  vec2 q=c+.5;q=1.-abs(1.-mod(q,2.));
-  return texture2D(t,q).rgb;
+  c*=.88;c.x*=fl;
+  vec2 q=c+.5;return 1.-abs(1.-mod(q,2.));
 }
-vec3 samp(sampler2D t,vec2 uv,float ia,float fl,float z,float bl){
+vec3 room(sampler2D t,sampler2D dp,vec2 uv,float ia,float fl,float z){
+  vec2 vp=vec2(.5,.45);vec2 d=uv-vp;
+  float dep=texture2D(dp,mapq(uv,ia,fl)).r;
+  float s=1.-z*(.1+.9*dep);
+  vec2 p=vp+d*s;
+  p+=m*(.025+.085*dep)*vec2(1.,.55);
+  return texture2D(t,mapq(p,ia,fl)).rgb;
+}
+vec3 samp(sampler2D t,sampler2D dp,vec2 uv,float ia,float fl,float z,float bl){
   vec3 a=vec3(0.);vec2 d=(uv-vec2(.5,.45));
-  for(int i=0;i<8;i++){float k=float(i)/7.;a+=room(t,uv-d*bl*k,ia,fl,z);}
+  for(int i=0;i<8;i++){float k=float(i)/7.;a+=room(t,dp,uv-d*bl*k,ia,fl,z);}
   return a/8.;
 }
 float h(vec2 p){return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);}
 void main(){
   vec2 uv=gl_FragCoord.xy/res;uv.y=1.-uv.y;
   float bl=tr*.14;
-  vec3 col=samp(tA,uv,aA,fA,zA,bl);
-  if(hB>.5){vec3 b=samp(tB,uv,aB,fB,zB,bl);col=mix(col,b,smoothstep(.3,.7,mx));}
+  vec3 col=samp(tA,dA,uv,aA,fA,zA,bl);
+  if(hB>.5){vec3 b=samp(tB,dB,uv,aB,fB,zB,bl);col=mix(col,b,smoothstep(.3,.7,mx));}
   float gl_=pow(sin(3.14159*mx),2.)*tr;
   col=pow(col,vec3(1.45))*.7;
   col=mix(col*vec3(.74,.7,1.),col,.3);
@@ -180,9 +186,9 @@ void main(){
     } catch (e) { gl = null; rc.style.display = "none"; return; }
     const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
     const loc = gl.getAttribLocation(prog, "p"); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-    ["tA", "tB", "res", "m", "aA", "aB", "fA", "fB", "zA", "zB", "mx", "tr", "tm", "hA", "hB"].forEach(k => U2[k] = gl.getUniformLocation(prog, k));
-    gl.uniform1i(U2.tA, 0); gl.uniform1i(U2.tB, 1);
-    RN.forEach(n => { if (TA[n] && !TX[n]) mkTex(n); });
+    ["tA", "dA", "tB", "dB", "res", "m", "aA", "aB", "fA", "fB", "zA", "zB", "mx", "tr", "tm", "hA", "hB"].forEach(k => U2[k] = gl.getUniformLocation(prog, k));
+    gl.uniform1i(U2.tA, 0); gl.uniform1i(U2.dA, 1); gl.uniform1i(U2.tB, 2); gl.uniform1i(U2.dB, 3);
+    RN.forEach(n => { if (TA[n] && TD[n] && !TX[n]) mkTex(n); });
   }
   function roomSize() {
     if (!rc) return; const d = Math.min(devicePixelRatio || 1, W < 760 ? 1.25 : 1.6);
@@ -198,7 +204,7 @@ void main(){
     const A = $("jwbgA"), B = $("jwbgB"); if (!A) return; A.style.display = B.style.display = "block";
   }
   function roomDraw(t, dt) {
-    rmx += (mx - rmx) * (1 - Math.exp(-dt * 4)); rmy += (my - rmy) * (1 - Math.exp(-dt * 4));
+    const sw = RM ? 0 : .16; rmx += (mx + Math.sin(t * .00035) * sw - rmx) * (1 - Math.exp(-dt * 4)); rmy += (my + Math.cos(t * .00029) * sw * .6 - rmy) * (1 - Math.exp(-dt * 4));
     const n = WPS.length; if (!n) return; if (grp.length !== n) groups();
     const pp = clamp(P, 0, n - 1), i = Math.floor(pp), j = Math.min(n - 1, i + 1), u = pp - i;
     const ia = WPS[i].id, ib = WPS[j].id, same = rkey(ia) === rkey(ib), ga = grp[i], br = RM ? 0 : .012 * Math.sin(t * .0004);
@@ -206,8 +212,8 @@ void main(){
     const A = RS[ia], B = RS[ib];
     if (!gl) { const a = $("jwbgA"), b = $("jwbgB"); if (a && TA[A[0]]) { a.style.backgroundImage = "url(" + RD + A[0] + ".webp)"; a.style.transform = "scale(" + (1.06 + zA0 + (same ? 0 : u * .5)).toFixed(3) + ") scaleX(" + (A[1] ? -1 : 1) + ")"; a.style.opacity = same ? 1 : 1 - u; } if (b && TA[B[0]]) { b.style.backgroundImage = "url(" + RD + B[0] + ".webp)"; b.style.opacity = same ? 0 : u; b.style.transform = "scale(" + (1.06 + (1 - u) * -.05).toFixed(3) + ") scaleX(" + (B[1] ? -1 : 1) + ")"; } return; }
     const ta = TX[A[0]], tb = TX[B[0]]; if (!ta) return;
-    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, ta.t);
-    const hasB = !same && tb ? 1 : 0; if (hasB) { gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, tb.t); }
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, ta.t); gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, ta.d);
+    const hasB = !same && tb ? 1 : 0; if (hasB) { gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, tb.t); gl.activeTexture(gl.TEXTURE3); gl.bindTexture(gl.TEXTURE_2D, tb.d); }
     gl.uniform2f(U2.res, rc.width, rc.height); gl.uniform2f(U2.m, rmx, rmy);
     gl.uniform1f(U2.aA, ta.a); gl.uniform1f(U2.aB, hasB ? tb.a : 1); gl.uniform1f(U2.fA, A[1] ? -1 : 1); gl.uniform1f(U2.fB, B[1] ? -1 : 1);
     const ease = same ? 0 : u;
