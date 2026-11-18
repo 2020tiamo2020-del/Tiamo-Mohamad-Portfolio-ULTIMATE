@@ -1,0 +1,61 @@
+/* ABOUT · depth room. A glowing room corner (three light edges meeting far away) drawn on its own canvas behind the About block.
+   Light pulses travel out along the edges, the corner breathes, and the whole room shifts a little with the mouse so it reads as depth. */
+(() => {
+  "use strict";
+  const sec = document.getElementById("about");
+  if (!sec) return;
+  const host = sec.closest(".ab-pin-wrap") || sec.parentNode;
+  if (!host || host.querySelector(":scope > .ab-depth")) return;
+  const reduce = matchMedia("(prefers-reduced-motion:reduce)").matches;
+  const box = document.createElement("div");
+  box.className = "ab-depth"; box.setAttribute("aria-hidden", "true");
+  const cv = document.createElement("canvas"); box.appendChild(cv);
+  host.insertBefore(box, host.firstChild);
+  const g = cv.getContext("2d");
+  let W = 1, H = 1, vis = false, raf = 0, mx = 0, my = 0, tx = 0, ty = 0;
+  const t0 = performance.now();
+  const size = () => {
+    box.style.setProperty("--abw", document.documentElement.clientWidth + "px");
+    const r = box.getBoundingClientRect(), d = Math.min(devicePixelRatio || 1, 1.5);
+    W = Math.max(1, r.width); H = Math.max(1, r.height);
+    cv.width = Math.round(W * d); cv.height = Math.round(H * d); g.setTransform(d, 0, 0, d, 0, 0);
+  };
+  /* the three edges (up, floor-right, floor-left) as fractions of the box; T = seconds per pulse, o = phase */
+  const LN = [{ x: .33, y: -.06, T: 3.4, o: .1 }, { x: 1.05, y: .905, T: 4.6, o: .45 }, { x: -.05, y: .985, T: 5.6, o: .75 }];
+  function draw(now) {
+    const t = (now - t0) / 1000;
+    tx += (mx - tx) * .05; ty += (my - ty) * .05;
+    const vx = (.275 + tx * .018 + Math.sin(t * .35) * .004) * W, vy = (.605 + ty * .014 + Math.cos(t * .3) * .003) * H;
+    g.clearRect(0, 0, W, H); g.globalCompositeOperation = "lighter";
+    const hz = g.createRadialGradient(vx, vy, 0, vx, vy, Math.max(W, H) * .55);
+    hz.addColorStop(0, "rgba(110,160,255,.20)"); hz.addColorStop(.35, "rgba(90,100,255,.07)"); hz.addColorStop(1, "rgba(0,0,0,0)");
+    g.fillStyle = hz; g.fillRect(0, 0, W, H);
+    let flare = 0;
+    LN.forEach((l, i) => {
+      const ex = l.x * W - tx * (i - 1) * W * .012, ey = l.y * H, dx = ex - vx, dy = ey - vy, br = .78 + .22 * Math.sin(t * 1.1 + i * 2);
+      const gr = g.createLinearGradient(vx, vy, ex, ey);
+      gr.addColorStop(0, "rgba(255,255,255," + br.toFixed(2) + ")"); gr.addColorStop(.55, "rgba(190,215,255," + (br * .55).toFixed(2) + ")"); gr.addColorStop(1, "rgba(150,120,255," + (br * .3).toFixed(2) + ")");
+      g.lineCap = "round"; g.strokeStyle = gr;
+      [[14, .07], [5, .16], [1.4, .95]].forEach(([w, a]) => { g.globalAlpha = a; g.lineWidth = w; g.beginPath(); g.moveTo(vx, vy); g.lineTo(ex, ey); g.stroke(); });
+      g.globalAlpha = 1;
+      if (reduce) return;
+      const s = ((t / l.T) + l.o) % 1, c = Math.sin(Math.PI * s), len = .1 + .08 * s, a0 = Math.max(0, s - len), a1 = Math.min(1, s + len * .4);
+      const x0 = vx + dx * a0, y0 = vy + dy * a0, x1 = vx + dx * a1, y1 = vy + dy * a1, pg = g.createLinearGradient(x0, y0, x1, y1);
+      pg.addColorStop(0, "rgba(255,255,255,0)"); pg.addColorStop(.75, "rgba(255,255,255," + (.95 * c).toFixed(2) + ")"); pg.addColorStop(1, "rgba(255,255,255,0)");
+      g.strokeStyle = pg;
+      [[16, .18], [6, .4], [2.4, 1]].forEach(([w, a]) => { g.globalAlpha = a; g.lineWidth = w; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke(); });
+      g.globalAlpha = 1; flare += Math.exp(-s * 7) * .9;
+    });
+    const fr = 26 + flare * 46, cg = g.createRadialGradient(vx, vy, 0, vx, vy, fr * 2.2);
+    cg.addColorStop(0, "rgba(255,255,255," + (.5 + flare * .4).toFixed(2) + ")"); cg.addColorStop(.3, "rgba(150,190,255," + (.28 + flare * .2).toFixed(2) + ")"); cg.addColorStop(1, "rgba(0,0,0,0)");
+    g.fillStyle = cg; g.fillRect(vx - fr * 2.2, vy - fr * 2.2, fr * 4.4, fr * 4.4);
+    g.globalCompositeOperation = "source-over";
+  }
+  const loop = now => { draw(now); raf = vis && !document.hidden && !reduce ? requestAnimationFrame(loop) : 0; };
+  const go = () => { if (!raf) raf = requestAnimationFrame(loop); };
+  new IntersectionObserver(es => { vis = es[0].isIntersecting; box.style.setProperty("--abd", vis ? .75 : 0); if (vis) { size(); go(); if (reduce) draw(performance.now()); } }, { threshold: 0 }).observe(host);
+  if ("ResizeObserver" in window) new ResizeObserver(() => { size(); if (reduce || !raf) draw(performance.now()); }).observe(box); else addEventListener("resize", size);
+  addEventListener("mousemove", e => { mx = e.clientX / innerWidth - .5; my = e.clientY / innerHeight - .5; }, { passive: true });
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && vis) go(); });
+  size();
+})();
