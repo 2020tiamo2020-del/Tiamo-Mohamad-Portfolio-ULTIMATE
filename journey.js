@@ -1,15 +1,16 @@
-/* JOURNEY MODE v2: ONE continuous world. Scroll flies a camera through it (right, left, up, forward); everything is linked by hologram lines. */
+/* JOURNEY MODE v3: THE STUDIO. A glossy purple-white studio in five rooms (ceiling, desk, windows, wall screen, floor).
+   Each room is a photo + a depth map drawn with WebGL, so the camera can move and zoom through it with real parallax.
+   Your 11 sections live inside the rooms as hotspots; the hologram lines, nav, cards and project window sit on top. */
 (() => {
   const btn = document.getElementById("jBtn");
   if (!btn) return;
   const D = document, H = D.documentElement, RM = matchMedia("(prefers-reduced-motion:reduce)").matches;
   const ORDER = ["home", "about", "services", "work", "cinema", "creation", "beforeafter", "process", "findme", "brief", "contact"];
   const MAIN = ["home", "about", "services", "work", "contact"];
-  const POS = { home: [0, 0, 0], about: [1800, -100, 500], services: [1900, -1300, 1000], work: [300, -1500, 1500], cinema: [-1500, -1300, 3800], creation: [-1900, -100, 4300], beforeafter: [-1100, 1100, 4800], process: [500, 1300, 5300], findme: [2000, 1100, 5800], brief: [2300, -100, 6300], contact: [1000, -1000, 6900] };
-  const F = 900;
+  const BASE = ((D.currentScript && D.currentScript.src) || location.href).replace(/[?#].*$/, "").replace(/[^/]*$/, "") + "studio/";
   const U = {
-    en: { open: "Open in site", visit: "Visit ↗", exit: "Exit journey", more: "More", hint: "Scroll to fly  ·  arrows  ·  Esc to exit", close: "Close", before: "Before", after: "After", beforeS: "The original shot, untouched.", afterS: "The final result after retouching and compositing.", explore: "Explore my work", start: "Start a project", sector: "Sector", items: "Items", next: "Next", link: "Link", cr: ["Fantasy", "Supernatural", "Super Power", "Fashion Style"], overview: "Overview", includes: "Includes", section: "Section", kw: { about: ["AI", "Photoshop", "Compositing", "Colour", "Motion"], cinema: ["Cinematic", "Atmosphere", "Imagination"], creation: [["Realms", "Creatures", "Epic light"], ["Spirits", "Mystery", "Shadows"], ["Energy", "Heroes", "Impact"], ["Editorial", "Couture", "Glamour"]], beforeafter: [["Original", "Untouched"], ["Retouched", "Composited", "Colour graded"]], contact: ["WhatsApp", "Direct message"] } },
-    ar: { open: "افتح في الموقع", visit: "زيارة ↗", exit: "الخروج من الرحلة", more: "المزيد", hint: "مرّر للتحليق  ·  الأسهم  ·  Esc للخروج", close: "إغلاق", before: "قبل", after: "بعد", beforeS: "الصورة الأصلية كما هي.", afterS: "النتيجة النهائية بعد التعديل والدمج.", explore: "شاهد أعمالي", start: "ابدأ مشروعك", sector: "قطاع", items: "عناصر", next: "التالي", link: "رابط", cr: ["فانتازيا", "خوارق", "قوى خارقة", "أسلوب الأزياء"], overview: "نظرة عامة", includes: "يشمل", section: "القسم", kw: { about: ["ذكاء اصطناعي", "فوتوشوب", "دمج صور", "ألوان", "حركة"], cinema: ["سينمائي", "أجواء", "خيال"], creation: [["عوالم", "مخلوقات", "ضوء ملحمي"], ["أرواح", "غموض", "ظلال"], ["طاقة", "أبطال", "تأثير"], ["تحرير أزياء", "أناقة", "جاذبية"]], beforeafter: [["الأصل", "بدون تعديل"], ["تحسين", "دمج", "تدرج ألوان"]], contact: ["واتساب", "رسالة مباشرة"] } }
+    en: { open: "Open in site", visit: "Visit ↗", exit: "Exit journey", more: "More", hint: "Scroll or arrows to move through the studio  ·  Esc to exit", close: "Close", before: "Before", after: "After", beforeS: "The original shot, untouched.", afterS: "The final result after retouching and compositing.", explore: "Explore my work", start: "Start a project", sector: "Sector", items: "Items", next: "Next", link: "Link", cr: ["Fantasy", "Supernatural", "Super Power", "Fashion Style"], overview: "Overview", includes: "Includes", section: "Section", kw: { about: ["AI", "Photoshop", "Compositing", "Colour", "Motion"], cinema: ["Cinematic", "Atmosphere", "Imagination"], creation: [["Realms", "Creatures", "Epic light"], ["Spirits", "Mystery", "Shadows"], ["Energy", "Heroes", "Impact"], ["Editorial", "Couture", "Glamour"]], beforeafter: [["Original", "Untouched"], ["Retouched", "Composited", "Colour graded"]], contact: ["WhatsApp", "Direct message"] } },
+    ar: { open: "افتح في الموقع", visit: "زيارة ↗", exit: "الخروج من الرحلة", more: "المزيد", hint: "مرّر أو استخدم الأسهم للتنقل في الاستوديو  ·  Esc للخروج", close: "إغلاق", before: "قبل", after: "بعد", beforeS: "الصورة الأصلية كما هي.", afterS: "النتيجة النهائية بعد التعديل والدمج.", explore: "شاهد أعمالي", start: "ابدأ مشروعك", sector: "قطاع", items: "عناصر", next: "التالي", link: "رابط", cr: ["فانتازيا", "خوارق", "قوى خارقة", "أسلوب الأزياء"], overview: "نظرة عامة", includes: "يشمل", section: "القسم", kw: { about: ["ذكاء اصطناعي", "فوتوشوب", "دمج صور", "ألوان", "حركة"], cinema: ["سينمائي", "أجواء", "خيال"], creation: [["عوالم", "مخلوقات", "ضوء ملحمي"], ["أرواح", "غموض", "ظلال"], ["طاقة", "أبطال", "تأثير"], ["تحرير أزياء", "أناقة", "جاذبية"]], beforeafter: [["الأصل", "بدون تعديل"], ["تحسين", "دمج", "تدرج ألوان"]], contact: ["واتساب", "رسالة مباشرة"] } }
   };
   const L = () => U[H.lang === "ar" ? "ar" : "en"];
   const T = e => (e && e.textContent || "").replace(/\s+/g, " ").trim();
@@ -39,150 +40,6 @@
     else if (id === "contact") { const a = s.querySelector("a[href^=http]"); c = a ? [{ t: "WhatsApp", s: T(a).replace(/whatsapp/i, "").trim(), href: a.href }] : []; }
     return { t: T(h) || lab(id), p, c };
   }
-
-  /* DOM */
-  let jw, $, live = false, lastFocus = null, y0 = 0, inerted = [], cards = {};
-  function build() {
-    jw = D.createElement("div"); jw.id = "jw"; jw.setAttribute("role", "dialog"); jw.setAttribute("aria-modal", "true"); jw.setAttribute("aria-label", "Journey");
-    jw.innerHTML = '<div class="jw-grid" aria-hidden="true"></div><canvas id="jwfx" aria-hidden="true"></canvas><div class="jw-w" id="jwW2"></div>' +
-      '<header class="jw-nav"><div class="jw-in" id="jwIn"></div><div class="jw-pan" id="jwPan"><div class="jw-pin" id="jwPin"></div></div></header>' +
-      '<button class="jw-x" id="jwX" type="button"><svg viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19"/></svg></button><div class="jw-dots" id="jwD"></div><div class="jw-ro" id="jwRo" aria-hidden="true"></div><div class="jw-hint" id="jwH"></div><div class="jw-win" id="jwW"></div>';
-    D.body.appendChild(jw); $ = id => D.getElementById(id);
-    jw.addEventListener("click", onClick);
-    jw.addEventListener("wheel", e => { e.stopPropagation(); if (jw.classList.contains("win")) return; fly = null; dirS = Math.sign(e.deltaY) || dirS; tgt = Math.max(0, Math.min(WPS.length - 1, tgt + e.deltaY * .0016)); idle(); }, { passive: true });
-    let tx = 0, ty = 0, drag = false;
-    jw.addEventListener("touchstart", e => { tx = e.touches[0].clientX; ty = e.touches[0].clientY; drag = true; }, { passive: true });
-    jw.addEventListener("touchmove", e => { if (!drag || jw.classList.contains("win")) return; const x = e.touches[0].clientX, y = e.touches[0].clientY; fly = null; const dd = (ty - y) + (tx - x) * .6; dirS = Math.sign(dd) || dirS; tgt = Math.max(0, Math.min(WPS.length - 1, tgt + dd * .006)); tx = x; ty = y; idle(); }, { passive: true });
-    jw.addEventListener("touchend", () => { drag = false; });
-    jw.addEventListener("mousemove", e => { mx = (e.clientX / innerWidth - .5); my = (e.clientY / innerHeight - .5); });
-    new MutationObserver(() => { if (live) setTimeout(() => { render(); mark(); }, 80); }).observe(H, { attributes: true, attributeFilter: ["lang", "dir"] });
-  }
-  function render() {
-    const l = L(); cards = {};
-    $("jwIn").innerHTML = '<button class="jw-it jw-cur" type="button" data-jmore="1"><span id="jwCur"></span> ▾</button>' + MAIN.map(id => '<button class="jw-it" type="button" data-jgo="' + id + '">' + esc(lab(id)) + "</button>").join("") + '<button class="jw-it" type="button" data-jmore="1" id="jwMore">' + l.more + " ▾</button>";
-    $("jwPin").innerHTML = ORDER.map(id => '<button class="jw-it' + (MAIN.includes(id) ? " m-only" : "") + '" type="button" data-jgo="' + id + '">' + esc(lab(id)) + "<small>" + two(ORDER.indexOf(id) + 1) + "</small></button>").join("");
-    $("jwD").innerHTML = ORDER.map(id => '<button class="jw-dot" type="button" data-jgo="' + id + '" aria-label="' + esc(lab(id)) + '"></button>').join("");
-    $("jwH").textContent = l.hint; $("jwX").setAttribute("aria-label", l.exit);
-    layout();
-  }
-  let cur = "home";
-  function mark() {
-    const l = L(), inMore = !MAIN.includes(cur);
-    jw.querySelectorAll("[data-jgo]").forEach(b => { const on = b.dataset.jgo === cur; b.classList.toggle("is-on", on); on ? b.setAttribute("aria-current", "true") : b.removeAttribute("aria-current"); });
-    $("jwMore").classList.toggle("is-on", inMore); $("jwCur").textContent = lab(cur);
-    $("jwX").setAttribute("aria-label", jw.classList.contains("win") ? l.close : l.exit);
-  }
-  const pan = v => { $("jwPan").classList.toggle("is-open", v); };
-
-  /* THE WORLD: every item has a position in space; waypoints are where the camera stops */
-  let W = 0, H2 = 0, LY, els = [], WPS = [], ST = {}, P = 0, tgt = 0, fly = null, cam = { x: 0, y: 0, z: 0 }, mx = 0, my = 0, idleT = 0, dirS = 1, clouds = {}, stars = [];
-  function layout() {
-    const mob = W < 760;
-    LY = mob ? { hx: 0, hy: -H2 * .27, gx: 0, gy: H2 * .12, sx: 176, sy: 200, cw: 164, cols: 2, s0: 1, hw: Math.min(W - 40, 340) } : { hx: -430, hy: 40, gx: 330, gy: 0, sx: 340, sy: 300, cw: 300, cols: 3, s0: Math.min(1, W / 1560, H2 / 880), hw: 520 };
-    const root = $("jwW2"); root.innerHTML = ""; els = []; WPS = []; ST = {};
-    const add = (cls, html, x, y, z, st, extra) => { const isC = cls.slice(0, 2) === "jc", n = D.createElement(isC ? "button" : "div"); n.className = "je " + cls; if (isC) n.type = "button"; n.innerHTML = html; if (extra && extra.w) n.style.width = extra.w + "px"; root.appendChild(n); const o = Object.assign({ n, x, y, z, st, cls }, extra); els.push(o); return o; };
-    const l = L();
-    ORDER.forEach((id, si) => {
-      const d = info(id), [hx, hy, hz] = POS[id], C = { x: hx, y: hy, z: hz }, cs = d.c, n = cs.length; cards[id] = cs;
-      ST[id] = { C, wi: WPS.length, d };
-      WPS.push({ id, x: C.x, y: C.y, z: C.z });
-      add("jt", '<div class="jw-k">' + two(si + 1) + " / " + ORDER.length + " — " + esc(lab(id)) + "</div><h2>" + esc(d.t) + "</h2><p>" + esc(d.p) + "</p>", C.x + LY.hx, C.y + LY.hy, C.z, id, { w: LY.hw, wi: ST[id].wi });
-      const cols = id === "work" ? 1 : Math.min(LY.cols, Math.max(1, n)), rows = Math.ceil(n / cols);
-      cs.forEach((c, k) => {
-        let x, y, z = C.z + (k % 3) * 40;
-        if (id === "work") { const mb = W < 760; x = C.x + LY.gx + (k % 2 ? (mb ? 50 : 230) : (mb ? -50 : -200)) * (LY.cw / 300); y = C.y + (mb ? H2 * .2 : 0) + ((k % 3) - 1) * (mb ? 100 : 150); z = C.z + 380 * (k + .5); }
-        else { x = C.x + LY.gx + ((k % cols) - (cols - 1) / 2) * LY.sx; y = C.y + LY.gy + (Math.floor(k / cols) - (rows - 1) / 2) * LY.sy + (k % cols) * 14; }
-        const o = add("jc" + (c.txt ? " jc-txt" : ""), '<span class="jc-in">' + (c.img ? '<img src="' + esc(c.img) + '" alt="">' : "") + "<b>" + esc(c.t) + "</b>" + (c.s ? "<small>" + esc(c.s) + "</small>" : "") + "</span>", x, y, z, id, { w: id === "work" ? Math.round(LY.cw * 1.5) : LY.cw, id, k, wi: id === "work" ? WPS.length : ST[id].wi, work: id === "work" });
-        if (c.img) { const im = o.n.querySelector("img"); im.onload = () => { const r = im.naturalWidth / im.naturalHeight; o.n.style.width = Math.round(LY.cw * (id === "work" ? 1.5 : 1) * (r > 1.15 ? 1.25 : r < .85 ? .8 : 1)) + "px"; }; }
-        if (id === "work") WPS.push({ id, x: x, y: y, z: z - 30 });
-      });
-      const nx = ORDER[si + 1];
-      add("jl", esc(l.sector) + " " + two(si + 1) + "<br>" + esc(l.items) + " " + two(n), C.x + LY.hx, C.y + LY.hy - (W < 760 ? 70 : 150), C.z, id, { w: 200, ann: 1, wi: ST[id].wi });
-      if (nx) add("jl jl-r", esc(l.next) + " → " + esc(lab(nx)) + "<br>X " + POS[nx][0] + "  Y " + POS[nx][1], C.x + LY.gx + (W < 760 ? 0 : 330), C.y + (W < 760 ? 330 : 250), C.z, id, { w: 220, ann: 1, wi: ST[id].wi });
-    });
-    clouds = {}; stars = Array.from({ length: 650 }, () => ({ x: -3400 + Math.random() * 7400, y: -2800 + Math.random() * 5600, z: -300 + Math.random() * 7800, a: Math.random() }));
-  }
-  /* particles: they stream across the screen while you fly and settle into the shape of the station you reach */
-  let PT = [], pcache = {}, pt0 = 0;
-  const samp = draw => { const o = D.createElement("canvas"); o.width = W; o.height = H2; const c = o.getContext("2d"); draw(c); const d = c.getImageData(0, 0, W, H2).data, a = []; for (let y = 0; y < H2; y += 4) for (let x = 0; x < W; x += 4) if (d[(y * W + x) * 4 + 3] > 128) a.push([x, y]); return a; };
-  const word = t => samp(c => { c.fillStyle = "#fff"; c.textAlign = "center"; c.textBaseline = "middle"; const fs = Math.min(W * .9 / Math.max(t.length * .6, 3), H2 * .3, 280); c.font = "600 " + fs + "px Oswald,Impact,'Arial Narrow',sans-serif"; c.fillText(t, W / 2, H2 * .3); });
-  const bust = () => samp(c => { const x = W > 760 ? W * .5 : W * .5, r = Math.min(H2 * .11, W * .2); c.fillStyle = "#fff"; c.beginPath(); c.ellipse(x, H2 * .3, r * .82, r * 1.1, .1, 0, 7); c.fill(); c.fillRect(x - r * .3, H2 * .36, r * .6, H2 * .1); c.beginPath(); c.ellipse(x, H2 * .78, Math.min(W * .26, H2 * .34), H2 * .26, 0, 0, 7); c.fill(); });
-  const rects = list => samp(c => { c.strokeStyle = "#fff"; c.lineWidth = 5; list.forEach(r => c.strokeRect(W * r[0], H2 * r[1], W * r[2], H2 * r[3])); });
-  const fpts = id => pcache[id] || (pcache[id] = id === "home" ? word("TIAMO") : id === "about" ? bust() : /^(services|process)$/.test(id) ? rects([[.06, .16, .2, .1], [.1, .3, .2, .1], [.06, .44, .2, .1]]) : rects([[.08, .12, .22, .26], [.4, .08, .26, .3], [.72, .42, .2, .28], [.18, .56, .18, .22]]));
-  function morph(id) {
-    if (!PT.length) return; pt0 = performance.now(); PT.forEach(p => p.d = Math.random() * 300);
-    if (/^(contact|findme|brief)$/.test(id)) { const x = W / 2, gy = H2 * .6; PT.forEach((p, i) => { if (i % 3) { p.col = 1; p.tx = x + (Math.random() - .5) * Math.min(70, W * .12) * Math.random(); p.ty = Math.random() * gy; p.v = 1.5 + Math.random() * 3; } else { p.col = 0; const t = Math.pow(Math.random(), 1.5); p.tx = x + (Math.random() - .5) * W * 1.5 * t; p.ty = gy + t * (H2 - gy); } }); return; }
-    const a = fpts(id).slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0; [a[i], a[j]] = [a[j], a[i]]; }
-    PT.forEach((p, i) => { const q = a[i % a.length]; p.tx = q[0] + (Math.random() - .5) * 2; p.ty = q[1] + (Math.random() - .5) * 2; p.col = 0; });
-  }
-  const initPT = () => { PT = Array.from({ length: W < 760 ? 900 : 1500 }, (_, i) => ({ x: W / 2, y: H2 * .45, tx: 0, ty: 0, d: 0, sp: Math.random(), ph: Math.random() * 6, r: .7 + Math.random() * 1.1, c: COL[i % 3] + ".8)", col: 0, v: 0 })); };
-
-  /* camera path (Catmull-Rom through the waypoints) */
-  const cr = (a, b, c, d, t) => .5 * ((2 * b) + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t * t + (-a + 3 * b - 3 * c + d) * t * t * t);
-  function camAt(p) {
-    const n = WPS.length, i = Math.max(0, Math.min(n - 1, Math.floor(p))), u = Math.min(1, p - i), g = k => WPS[Math.max(0, Math.min(n - 1, k))];
-    const a = g(i - 1), b = g(i), c = g(i + 1), d = g(i + 2), e = u * u * (3 - 2 * u), o = {};
-    ["x", "y", "z"].forEach(k => o[k] = cr(a[k], b[k], c[k], d[k], e));
-    return o;
-  }
-  const proj = (x, y, z) => { const dz = z - cam.z; if (dz < -F * .72) return null; const s = F / (F + dz) * LY.s0; return { x: W / 2 + (x - cam.x) * s - mx * 18 * s, y: H2 / 2 + (y - cam.y) * s - my * 12 * s, s, dz }; };
-  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-  let fx, g, t0 = 0, lastT = 0, raf = 0, stopAt = 0, fr = 0;
-  const COL = ["rgba(150,205,255,", "rgba(185,125,255,", "rgba(22,216,255,", "rgba(190,230,255,"];
-
-  function frame(t) {
-    if (!live && t > stopAt) { raf = 0; return; }
-    const dt = Math.min(t - (lastT || t - 16), 120) / 1000; lastT = t; fr++;
-    if (fly) { const k = clamp((t - fly.t0) / fly.dur, 0, 1), e = k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2; P = fly.a + (fly.b - fly.a) * e; tgt = P; if (k >= 1) fly = null; }
-    else P += (tgt - P) * (RM ? 1 : 1 - Math.exp(-dt * 6));
-    cam = camAt(P);
-    const idx = Math.round(clamp(P, 0, WPS.length - 1)), id = WPS[idx].id; if (id !== cur) { cur = id; mark(); morph(id); }
-    g.clearRect(0, 0, W, H2);
-    /* stars (parallax) */
-    for (const s of stars) { const p = proj(s.x, s.y, s.z); if (!p || p.dz > 3600) continue; g.fillStyle = "rgba(190,200,255," + (clamp(1 - p.dz / 3600, 0, 1) * (.35 + s.a * .6)).toFixed(2) + ")"; const r = Math.max(.5, 1.7 * p.s); g.fillRect(p.x, p.y, r, r); }
-    /* hologram path through every waypoint, with flowing light */
-    const pts = WPS.map(w => proj(w.x, w.y, w.z)); g.lineWidth = 1.5; g.lineCap = "round";
-    for (let i = 0; i < pts.length - 1; i++) { const a = pts[i], b = pts[i + 1]; if (!a || !b || (a.dz > 3800 && b.dz > 3800)) continue; const al = clamp(1 - Math.min(a.dz, b.dz) / 3800, .12, 1);
-      g.setLineDash([]); g.strokeStyle = "rgba(139,53,255," + (al * .22).toFixed(2) + ")"; g.lineWidth = 6 * Math.min(a.s, 1.4); g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke();
-      g.setLineDash([12, 10]); g.lineDashOffset = -t * .05; g.strokeStyle = "rgba(22,216,255," + (al * .85).toFixed(2) + ")"; g.lineWidth = 1.6; g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke(); }
-    g.setLineDash([]);
-    /* stations: nodes, rotating rings, leader lines to every item and note, point clouds */
-    ORDER.forEach(id => {
-      const S = ST[id], h = proj(S.C.x, S.C.y, S.C.z); if (!h || h.dz > 2300) return; const al = clamp(1 - Math.max(0, h.dz) / 2300, 0, 1);
-      g.strokeStyle = "rgba(22,216,255," + (al * .9).toFixed(2) + ")"; g.lineWidth = 1.4; const r = 9 * h.s; g.beginPath(); g.moveTo(h.x, h.y - r); g.lineTo(h.x + r, h.y); g.lineTo(h.x, h.y + r); g.lineTo(h.x - r, h.y); g.closePath(); g.stroke();
-      g.setLineDash([20 * h.s, 12 * h.s]); g.lineDashOffset = -t * .02; g.strokeStyle = "rgba(139,53,255," + (al * .8).toFixed(2) + ")"; g.beginPath(); g.arc(h.x, h.y, 70 * h.s, 0, 6.283); g.stroke(); g.setLineDash([]);
-      g.strokeStyle = "rgba(160,170,255," + (al * .38).toFixed(2) + ")"; g.lineWidth = 1; g.fillStyle = "rgba(22,216,255," + (al * .9).toFixed(2) + ")";
-      els.forEach(e => { if (e.st !== id || e.cls === "jt") return; const q = proj(e.x, e.y, e.z); if (!q) return; g.beginPath(); g.moveTo(h.x, h.y); g.lineTo(q.x, q.y); g.stroke(); g.fillRect(q.x - 2, q.y - 2, 4, 4); });
-    });
-    const el = t - pt0; g.lineCap = "round"; g.globalAlpha = .8;
-    for (const p of PT) {
-      if (p.col) { p.ty += p.v * dt * 60; if (p.ty > H2 * .6) { p.ty = 0; p.y = 0; } }
-      const k = el > p.d ? 1 - Math.exp(-dt * (3 + p.sp * 4)) : 0, ox = p.x, oy = p.y;
-      p.x += (p.tx - p.x) * k + Math.sin(t * .0012 + p.ph) * .1; p.y += (p.ty - p.y) * k + Math.cos(t * .001 + p.ph) * .1;
-      g.strokeStyle = p.c; g.lineWidth = p.r; g.beginPath(); g.moveTo(ox, oy); g.lineTo(p.x + .01, p.y); g.stroke(); g.fillStyle = p.c; g.fillRect(p.x - .6, p.y - .6, 1.2 + p.r * .8, 1.2 + p.r * .8);
-    }
-    g.globalAlpha = 1;
-    /* DOM items follow the camera: scale, fade and soft focus by distance */
-    for (const e of els) {
-      const p = proj(e.x, e.y, e.z), n = e.n;
-      if (!p || p.dz > 3300) { if (e.vis) { n.style.visibility = "hidden"; e.vis = 0; } continue; }
-      const ip = e.work ? clamp((P - (e.wi - 1.3)) / .8, 0, 1) * clamp((e.wi + 1.1 - P) / .6, 0, 1) : clamp(1 - (Math.abs(P - e.wi) - .5) / .5, 0, 1);
-      const op = ip * clamp((p.dz + 400) / 250, 0, 1) * clamp(1 - (p.dz - 1150) / 950, 0, 1);
-      if (op < .02) { if (e.vis) { n.style.visibility = "hidden"; e.vis = 0; } continue; }
-      const bl = Math.max(0, (p.dz - 900) / 450, (-p.dz - 120) / 90, (1 - ip) * 4); e.vis = 1;
-      n.style.visibility = "visible"; n.style.opacity = op.toFixed(2); n.style.zIndex = 1000 - Math.round(p.dz / 10);
-      n.style.transform = "translate(" + p.x.toFixed(1) + "px," + p.y.toFixed(1) + "px) scale(" + Math.min(p.s, LY.s0 * 1.4).toFixed(3) + ") translate(-50%,-50%)";
-      n.style.filter = bl > .3 ? "blur(" + Math.min(bl, 6).toFixed(1) + "px)" : "";
-      if (e.cls[1] === "c") n.style.pointerEvents = p.dz > -240 && p.dz < 1300 && op > .55 ? "auto" : "none";
-    }
-    if (fr % 6 === 0) { const ro = $("jwRo"); ro.textContent = "X " + Math.round(cam.x) + "   Y " + Math.round(cam.y) + "   Z " + Math.round(cam.z); }
-    raf = requestAnimationFrame(frame);
-  }
-  const idle = () => { clearTimeout(idleT); idleT = setTimeout(() => { if (!fly) tgt = clamp(dirS > 0 ? Math.ceil(tgt - .15) : Math.floor(tgt + .15), 0, WPS.length - 1); }, 380); };
-  function flyTo(i) { i = clamp(i, 0, WPS.length - 1); const d = Math.abs(i - P); if (d < .01) return; fly = { a: P, b: i, t0: performance.now(), dur: RM ? 1 : 900 + Math.min(2400, d * 340) }; pan(false); }
-  const goId = id => ST[id] && flyTo(ST[id].wi);
-  const step = d => flyTo(Math.round(clamp(tgt, 0, WPS.length - 1)) + d);
-
   /* project / section window: it grows out of the card you pressed (video 2), the nav gives way to an X */
   const split = s => String(s || "").split(/,|،|;| and |\.|•|·/i).map(x => x.trim()).filter(x => x.length > 2 && x.length < 24).slice(0, 6).map(x => x[0].toUpperCase() + x.slice(1));
   function keywords(id, c, k, d, l) {
@@ -202,28 +59,196 @@
     jw.classList.add("win"); mark(); $("jwX").focus({ preventScroll: true });
   }
   const closeWin = () => { jw.classList.remove("win"); mark(); };
+
+  /* ---------- the studio: rooms, camera stops, hotspot anchors ---------- */
+  const ROOMS = ["ceiling", "desk", "windows", "screen", "floor"], IA = 1672 / 941, F0 = .4;
+  /* flight order: [section, room, focus x, focus y, zoom] */
+  const FL = [["home", 0, .5, .36, 1.2], ["creation", 0, .52, .5, 1.45], ["services", 1, .5, .58, 1.15], ["work", 1, .5, .46, 1.4], ["about", 2, .42, .52, 1.15], ["findme", 2, .72, .42, 1.5], ["cinema", 3, .58, .46, 1.25], ["beforeafter", 3, .42, .7, 1.5], ["process", 4, .45, .6, 1.15], ["brief", 4, .36, .55, 1.6], ["contact", 4, .5, .76, 1.75]];
+  const FID = FL.map(f => f[0]);
+  const AN = [
+    [[.5, .26], [.2, .33], [.82, .3], [.52, .62], [.18, .84], [.55, .88], [.85, .84], [.5, .46]],
+    [[.5, .43], [.34, .45], [.66, .45], [.19, .66], [.82, .66], [.5, .72], [.27, .2], [.72, .2], [.06, .42], [.95, .4], [.24, .5]],
+    [[.27, .32], [.6, .38], [.88, .5], [.22, .66], [.42, .64], [.8, .72], [.05, .4], [.95, .55], [.68, .22]],
+    [[.58, .45], [.3, .36], [.9, .3], [.25, .66], [.1, .56], [.95, .56], [.65, .8], [.05, .28]],
+    [[.2, .52], [.36, .56], [.76, .42], [.45, .74], [.76, .74], [.2, .76], [.62, .4], [.1, .35]]];
+  const AI = { home: [3, 0], creation: [1, 2, 3, 7], services: [3, 4, 5, 6, 7, 10], work: [1, 0, 2, 10, 3, 4], about: [0, 1, 4], findme: [1, 2, 5, 7, 8], cinema: [0], beforeafter: [3, 6], process: [0, 1, 2, 3, 4, 5], brief: [0, 1, 3, 5, 6, 7], contact: [3] };
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const S = i => ({ room: FL[i][1], fx: FL[i][2], fy: FL[i][3], Z: FL[i][4] });
+
+  /* ---------- DOM ---------- */
+  let jw, $, live = false, lastFocus = null, y0 = 0, inerted = [], cards = {}, ST = {}, cur = "home", idx = 0, W = 1, H2 = 1;
+  let cv, gl, loc = {}, ln, lg, fbc, fbg, tr = null, vis = null, MK = [], mx = 0, my = 0, smx = 0, smy = 0, SHx = 0, SHy = 0, raf = 0, stopAt = 0, lastT = 0, ht = 0, wacc = 0, wt = 0;
+  const room = [];
+  function build() {
+    jw = D.createElement("div"); jw.id = "jw"; jw.setAttribute("role", "dialog"); jw.setAttribute("aria-modal", "true"); jw.setAttribute("aria-label", "Journey");
+    jw.innerHTML = '<canvas id="jwgl" aria-hidden="true"></canvas><canvas id="jwln" aria-hidden="true"></canvas><div class="jw-vig" aria-hidden="true"></div><div class="jw-load" id="jwLd"></div>' +
+      '<div id="jwM" class="jw-m"></div><div class="jw-t" id="jwT"></div>' +
+      '<header class="jw-nav"><div class="jw-in" id="jwIn"></div><div class="jw-pan" id="jwPan"><div class="jw-pin" id="jwPin"></div></div></header>' +
+      '<button class="jw-x" id="jwX" type="button"><svg viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19"/></svg></button><div class="jw-dots" id="jwD"></div><div class="jw-hint" id="jwH"></div><div class="jw-win" id="jwW"></div>';
+    D.body.appendChild(jw); $ = id => D.getElementById(id);
+    cv = $("jwgl"); ln = $("jwln"); lg = ln.getContext("2d");
+    jw.addEventListener("click", onClick);
+    jw.addEventListener("wheel", e => { e.stopPropagation(); if (jw.classList.contains("win") || tr) return; wacc += e.deltaY; clearTimeout(wt); wt = setTimeout(() => wacc = 0, 220); if (Math.abs(wacc) > 50) { step(wacc > 0 ? 1 : -1); wacc = 0; } }, { passive: true });
+    let tx = 0, ty = 0;
+    jw.addEventListener("touchstart", e => { tx = e.touches[0].clientX; ty = e.touches[0].clientY; }, { passive: true });
+    jw.addEventListener("touchend", e => { if (jw.classList.contains("win") || tr) return; const dx = tx - e.changedTouches[0].clientX, dy = ty - e.changedTouches[0].clientY, d = Math.abs(dy) >= Math.abs(dx) ? dy : dx; if (Math.abs(d) > 60) step(d > 0 ? 1 : -1); });
+    jw.addEventListener("mousemove", e => { mx = e.clientX / innerWidth - .5; my = e.clientY / innerHeight - .5; });
+    new MutationObserver(() => { if (live) setTimeout(() => { render(); setHead(); buildMarkers(); mark(); }, 80); }).observe(H, { attributes: true, attributeFilter: ["lang", "dir"] });
+  }
+  function render() {
+    const l = L(); cards = {}; ST = {};
+    ORDER.forEach(id => { const d = info(id); ST[id] = { d }; cards[id] = d.c; });
+    $("jwIn").innerHTML = '<button class="jw-it jw-cur" type="button" data-jmore="1"><span id="jwCur"></span> ▾</button>' + MAIN.map(id => '<button class="jw-it" type="button" data-jgo="' + id + '">' + esc(lab(id)) + "</button>").join("") + '<button class="jw-it" type="button" data-jmore="1" id="jwMore">' + l.more + " ▾</button>";
+    $("jwPin").innerHTML = FID.map((id, i) => '<button class="jw-it' + (MAIN.includes(id) ? " m-only" : "") + '" type="button" data-jgo="' + id + '">' + esc(lab(id)) + "<small>" + two(i + 1) + "</small></button>").join("");
+    $("jwD").innerHTML = FID.map(id => '<button class="jw-dot" type="button" data-jgo="' + id + '" aria-label="' + esc(lab(id)) + '"></button>').join("");
+    $("jwH").textContent = l.hint; $("jwX").setAttribute("aria-label", l.exit);
+  }
+  function mark() {
+    const l = L(), inMore = !MAIN.includes(cur);
+    jw.querySelectorAll("[data-jgo]").forEach(b => { const on = b.dataset.jgo === cur; b.classList.toggle("is-on", on); on ? b.setAttribute("aria-current", "true") : b.removeAttribute("aria-current"); });
+    $("jwMore").classList.toggle("is-on", inMore); $("jwCur").textContent = lab(cur);
+    $("jwX").setAttribute("aria-label", jw.classList.contains("win") ? l.close : l.exit);
+  }
+  const pan = v => { $("jwPan").classList.toggle("is-open", v); };
+  function setHead() {
+    const d = ST[cur].d;
+    $("jwT").innerHTML = '<div class="jw-k">' + two(idx + 1) + " / " + FL.length + " — " + esc(lab(cur)) + "</div><h2>" + esc(d.t) + "</h2><p>" + esc(d.p) + "</p>";
+  }
+  function buildMarkers() {
+    const box = $("jwM"); box.classList.remove("show"); box.innerHTML = ""; MK = [];
+    const a = AN[FL[idx][1]], ids = AI[cur] || [0];
+    (cards[cur] || []).forEach((it, k) => {
+      const an = a[ids[k % ids.length]], b = D.createElement("button");
+      b.type = "button"; b.className = "jm"; b.dataset.id = cur; b.dataset.k = k; b.style.setProperty("--d", k * 80 + "ms");
+      b.innerHTML = "<i></i><span>" + esc(it.t) + "</span>"; box.appendChild(b); MK.push({ el: b, u: an[0], v: an[1], x: 0, y: 0 });
+    });
+    setTimeout(() => box.classList.add("show"), 40);
+  }
+
+  /* ---------- WebGL: a photo + its depth map, with a depth-aware zoom and parallax ---------- */
+  const VS = "attribute vec2 p;varying vec2 s;void main(){s=p*.5+.5;s.y=1.-s.y;gl_Position=vec4(p,0.,1.);}";
+  const FS = "precision mediump float;varying vec2 s;uniform sampler2D im,dp;uniform vec2 C,F,SH;uniform float Z,A;void main(){vec2 p=(s-.5)*C+.5;float d=texture2D(dp,p).r;float z=1.+(Z-1.)*(.55+.9*d);vec2 q=F+(p-F)/z+SH*(d-.4);gl_FragColor=vec4(texture2D(im,clamp(q,0.,1.)).rgb,A);}";
+  function initGL() {
+    try { gl = cv.getContext("webgl", { alpha: false, antialias: false, premultipliedAlpha: false }); } catch (e) { gl = null; }
+    if (!gl) return false;
+    const sh = (t, s) => { const o = gl.createShader(t); gl.shaderSource(o, s); gl.compileShader(o); return o; }, p = gl.createProgram();
+    gl.attachShader(p, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(p, sh(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(p);
+    if (!gl.getProgramParameter(p, gl.LINK_STATUS)) { gl = null; return false; }
+    gl.useProgram(p); gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer()); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+    const a = gl.getAttribLocation(p, "p"); gl.enableVertexAttribArray(a); gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 0, 0);
+    ["im", "dp", "C", "F", "SH", "Z", "A"].forEach(n => loc[n] = gl.getUniformLocation(p, n)); gl.uniform1i(loc.im, 0); gl.uniform1i(loc.dp, 1);
+    gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); return true;
+  }
+  const mkTex = im => { const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); [[gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE], [gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR]].forEach(([k, v]) => gl.texParameteri(gl.TEXTURE_2D, k, v)); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, im); return t; };
+  function loadRoom(r) {
+    if (room[r]) return; const m = room[r] = { ready: false, failed: false, dd: null }, a = new Image(), b = new Image(); let n = 0;
+    const done = () => {
+      if (++n < 2 || m.failed) return;
+      try { if (gl) { m.ti = mkTex(a); m.td = mkTex(b); } m.im = a; const c = D.createElement("canvas"); c.width = 128; c.height = 72; const x = c.getContext("2d"); x.drawImage(b, 0, 0, 128, 72); const px = x.getImageData(0, 0, 128, 72).data; m.dd = new Uint8Array(128 * 72); for (let i = 0; i < m.dd.length; i++) m.dd[i] = px[i * 4]; } catch (e) { /* depth lookup stays flat */ }
+      if (gl && !m.ti) { m.failed = true; return; }
+      m.ready = true;
+    };
+    a.crossOrigin = b.crossOrigin = "anonymous"; a.onload = b.onload = done; a.onerror = b.onerror = () => { m.failed = true; };
+    a.src = BASE + ROOMS[r] + ".webp"; b.src = BASE + ROOMS[r] + "-depth.webp";
+  }
+  const cover = () => { const sa = W / H2; return sa > IA ? [1, IA / sa] : [sa / IA, 1]; };
+  function dsamp(r, u, v) {
+    const m = room[r]; if (!m || !m.dd) return F0;
+    const x = clamp(u, 0, 1) * 127, y = clamp(v, 0, 1) * 71, x0 = x | 0, y0_ = y | 0, x1 = Math.min(127, x0 + 1), y1 = Math.min(71, y0_ + 1), fx = x - x0, fy = y - y0_, d = m.dd;
+    return ((d[y0_ * 128 + x0] * (1 - fx) + d[y0_ * 128 + x1] * fx) * (1 - fy) + (d[y1 * 128 + x0] * (1 - fx) + d[y1 * 128 + x1] * fx) * fy) / 255;
+  }
+  /* where does a point of the photo land on screen (same maths as the shader, solved by iteration) */
+  function scr(st, u, v) {
+    const C = cover(); let d = F0, px = u, py = v;
+    for (let n = 0; n < 3; n++) { const z = 1 + (st.Z - 1) * (.55 + .9 * d); px = st.fx + (u - st.fx - SHx * (d - F0)) * z; py = st.fy + (v - st.fy - SHy * (d - F0)) * z; d = dsamp(st.room, px, py); }
+    return [((px - .5) / C[0] + .5) * W, ((py - .5) / C[1] + .5) * H2];
+  }
+  function pass(r, Z, fx, fy, A) {
+    const m = room[r]; if (!m || !m.ready) return false; const C = cover();
+    if (gl) {
+      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, m.ti); gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, m.td);
+      gl.uniform2f(loc.C, C[0], C[1]); gl.uniform2f(loc.F, fx, fy); gl.uniform2f(loc.SH, SHx, SHy); gl.uniform1f(loc.Z, Z); gl.uniform1f(loc.A, A); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    } else if (fbg && m.im) {
+      const ze = 1 + (Z - 1) * .91, lo = (c, f) => f + (.5 - c / 2 - f) / ze, hi = (c, f) => f + (.5 + c / 2 - f) / ze, iw = m.im.naturalWidth, ih = m.im.naturalHeight;
+      const x0 = lo(C[0], fx), x1 = hi(C[0], fx), y0_ = lo(C[1], fy), y1 = hi(C[1], fy);
+      fbg.globalAlpha = A; fbg.drawImage(m.im, x0 * iw, y0_ * ih, (x1 - x0) * iw, (y1 - y0_) * ih, 0, 0, fbc.width, fbc.height); fbg.globalAlpha = 1;
+    }
+    return true;
+  }
+
+  /* ---------- camera ---------- */
+  function fly(i) {
+    i = clamp(i, 0, FL.length - 1); if (i === idx && !tr) return;
+    const from = vis || S(idx); idx = i; cur = FL[i][0]; loadRoom(FL[i][1]);
+    tr = { from: { room: from.room, Z: from.Z, fx: from.fx, fy: from.fy }, t0: performance.now(), dur: RM ? 1 : from.room === FL[i][1] ? 1300 : 1900 };
+    $("jwM").classList.remove("show"); const T = $("jwT"); T.classList.add("off"); clearTimeout(ht); ht = setTimeout(() => { setHead(); T.classList.remove("off"); }, RM ? 0 : 420);
+    mark(); pan(false);
+  }
+  const goId = id => { const i = FID.indexOf(id); if (i >= 0) fly(i); };
+  const step = d => { if (!tr) fly(idx + d); };
+  const ease = k => k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+  function frame(t) {
+    if (!live && t > stopAt) { raf = 0; return; }
+    lastT = t; smx += (mx - smx) * .06; smy += (my - smy) * .06;
+    SHx = -smx * .02 + Math.sin(t * .00035) * .003; SHy = -smy * .012 + Math.cos(t * .0003) * .002;
+    const tg = S(idx); let passes;
+    if (tr) {
+      if (!(room[tg.room] && room[tg.room].ready)) tr.t0 = t;
+      const k = clamp((t - tr.t0) / tr.dur, 0, 1), e = ease(k), f = tr.from;
+      if (f.room === tg.room) passes = [[tg.room, f.Z + (tg.Z - f.Z) * e, f.fx + (tg.fx - f.fx) * e, f.fy + (tg.fy - f.fy) * e, 1]];
+      else passes = [[f.room, f.Z * (1 + e * .7), f.fx, f.fy, 1], [tg.room, tg.Z * (1 + (1 - e) * .45), tg.fx, tg.fy, e]];
+      const L_ = passes[passes.length - 1]; vis = { room: L_[0], Z: L_[1], fx: L_[2], fy: L_[3] };
+      if (k >= 1) { tr = null; vis = null; buildMarkers(); }
+    } else passes = [[tg.room, tg.Z, tg.fx, tg.fy, 1]];
+    if (gl) { gl.viewport(0, 0, cv.width, cv.height); gl.clearColor(.04, .03, .08, 1); gl.clear(gl.COLOR_BUFFER_BIT); } else if (fbg) { fbg.fillStyle = "#0a0714"; fbg.fillRect(0, 0, fbc.width, fbc.height); }
+    let ok = false; passes.forEach(p => { if (pass(p[0], p[1], p[2], p[3], p[4])) ok = true; });
+    $("jwLd").classList.toggle("on", !ok);
+    drawLines(t, tg);
+    raf = requestAnimationFrame(frame);
+  }
+  /* hologram layer: a ring on the focus point, spokes to every hotspot, and a flowing path through them */
+  function drawLines(t, st) {
+    lg.clearRect(0, 0, W, H2); if (tr || !MK.length) return;
+    const F = scr(st, st.fx, st.fy), P = MK.map(m => { const p = scr(st, m.u, m.v); m.x = p[0]; m.y = p[1]; m.el.style.transform = "translate(" + p[0].toFixed(1) + "px," + p[1].toFixed(1) + "px) translate(-50%,-50%)"; m.el.classList.toggle("fl", H.dir === "rtl" ? p[0] < 230 : p[0] > W - 230); return p; });
+    lg.lineCap = "round"; lg.setLineDash([10, 8]); lg.lineDashOffset = -t * .03; lg.lineWidth = 1.6; lg.strokeStyle = "rgba(139,53,255,.95)"; lg.beginPath(); lg.arc(F[0], F[1], 46, 0, 6.283); lg.stroke();
+    lg.setLineDash([]); lg.lineWidth = 1; lg.strokeStyle = "rgba(22,216,255,.6)"; P.forEach(p => { lg.beginPath(); lg.moveTo(F[0], F[1]); lg.lineTo(p[0], p[1]); lg.stroke(); });
+    if (P.length > 1) {
+      const path = () => { lg.beginPath(); P.forEach((p, i) => i ? lg.lineTo(p[0], p[1]) : lg.moveTo(p[0], p[1])); lg.stroke(); };
+      lg.setLineDash([12, 9]); lg.lineDashOffset = -t * .05; lg.lineWidth = 5; lg.strokeStyle = "rgba(139,53,255,.25)"; path(); lg.lineWidth = 1.6; lg.strokeStyle = "rgba(22,216,255,.95)"; path();
+    }
+    lg.setLineDash([]); lg.strokeStyle = "rgba(22,216,255,.95)"; lg.lineWidth = 1.6; lg.beginPath(); lg.moveTo(F[0], F[1] - 8); lg.lineTo(F[0] + 8, F[1]); lg.lineTo(F[0], F[1] + 8); lg.lineTo(F[0] - 8, F[1]); lg.closePath(); lg.stroke();
+  }
+
   function onClick(e) {
-    const t = e.target, jc = t.closest(".jc"), g = t.closest("[data-jgo]"), m = t.closest("[data-jmore]"), s = t.closest("[data-jsite]");
+    const t = e.target, jm = t.closest(".jm"), g = t.closest("[data-jgo]"), m = t.closest("[data-jmore]"), s = t.closest("[data-jsite]");
     if (t.closest("#jwX")) return jw.classList.contains("win") ? closeWin() : exit();
     if (s) return exit(s.dataset.jsite);
-    if (jc) { const o = els.find(x => x.n === jc), c = cards[o.id][o.k]; return c.go ? goId(c.go) : openWin(o.id, o.k, jc); }
+    if (jm) { const c = cards[jm.dataset.id][+jm.dataset.k]; return c.go ? goId(c.go) : openWin(jm.dataset.id, +jm.dataset.k); }
     if (g) return goId(g.dataset.jgo);
     if (m) return pan(!$("jwPan").classList.contains("is-open"));
     if (t.id === "jwW") return closeWin();
     if (!t.closest(".jw-nav")) pan(false);
   }
 
-  /* open / exit */
-  function startId() { const a = D.querySelector("#nav a.is-active"), id = a ? a.getAttribute("href").slice(1) : "home"; return ORDER.includes(id) ? id : "home"; }
+  /* ---------- open / exit ---------- */
+  function startId() { const a = D.querySelector("#nav a.is-active"), id = a ? a.getAttribute("href").slice(1) : "home"; return FID.includes(id) ? id : "home"; }
   const inertAll = v => { if (v) [...D.body.children].forEach(e => { if (e !== jw && !e.inert) { e.inert = true; inerted.push(e); } }); else { inerted.forEach(e => e.inert = false); inerted = []; } };
-  function size() { pcache = {}; const d = Math.min(devicePixelRatio || 1, 2); W = innerWidth; H2 = innerHeight; fx.width = W * d; fx.height = H2 * d; g = fx.getContext("2d"); g.setTransform(d, 0, 0, d, 0, 0); }
+  function size() {
+    const d = Math.min(devicePixelRatio || 1, 1.5), d2 = Math.min(devicePixelRatio || 1, 2); W = innerWidth; H2 = innerHeight;
+    cv.width = Math.round(W * d); cv.height = Math.round(H2 * d); ln.width = Math.round(W * d2); ln.height = Math.round(H2 * d2); lg.setTransform(d2, 0, 0, d2, 0, 0);
+    if (fbc) { fbc.width = cv.width; fbc.height = cv.height; }
+  }
+  let glTried = false;
   function open() {
     if (live) return; if (!jw) build();
-    fx = $("jwfx"); size(); render();
+    size(); if (!glTried) { glTried = true; if (!initGL()) { fbc = D.createElement("canvas"); fbc.id = "jwgl"; cv.replaceWith(fbc); cv = fbc; fbg = fbc.getContext("2d"); size(); } }
+    render();
     const r = btn.getBoundingClientRect(); jw.style.setProperty("--bx", r.left + r.width / 2 + "px"); jw.style.setProperty("--by", r.top + r.height / 2 + "px");
     lastFocus = D.activeElement; y0 = scrollY; H.classList.add("jw-lock"); window.__lenis && __lenis.stop && __lenis.stop(); inertAll(true);
-    jw.classList.remove("win"); cur = startId(); P = tgt = ST[cur].wi; fly = null; mark(); initPT(); morph(cur);
-    live = true; jw.classList.add("on"); cancelAnimationFrame(raf); lastT = 0; raf = requestAnimationFrame(frame); $("jwX").focus({ preventScroll: true });
+    jw.classList.remove("win"); cur = startId(); idx = FID.indexOf(cur); const s = S(idx); loadRoom(s.room); ROOMS.forEach((_, i) => setTimeout(() => loadRoom(i), 500 + i * 350));
+    tr = { from: { room: s.room, Z: s.Z * 1.5, fx: s.fx, fy: s.fy }, t0: performance.now(), dur: RM ? 1 : 2000 }; vis = null;
+    $("jwM").innerHTML = ""; MK = []; setHead(); mark();
+    live = true; jw.classList.add("on"); cancelAnimationFrame(raf); raf = requestAnimationFrame(frame); $("jwX").focus({ preventScroll: true });
   }
   function exit(target) {
     if (!live) return; live = false; stopAt = performance.now() + 1000; jw.classList.remove("on", "win"); H.classList.remove("jw-lock"); inertAll(false);
@@ -240,7 +265,7 @@
     const rtl = H.dir === "rtl", k = e.key;
     if (k === "ArrowDown" || k === "PageDown" || k === (rtl ? "ArrowLeft" : "ArrowRight")) { e.preventDefault(); step(1); }
     else if (k === "ArrowUp" || k === "PageUp" || k === (rtl ? "ArrowRight" : "ArrowLeft")) { e.preventDefault(); step(-1); }
-    else if (k === "Home") flyTo(0); else if (k === "End") flyTo(WPS.length - 1);
+    else if (k === "Home") fly(0); else if (k === "End") fly(FL.length - 1);
   });
-  addEventListener("resize", () => { if (live) { size(); render(); } });
+  addEventListener("resize", () => { if (live) size(); });
 })();
