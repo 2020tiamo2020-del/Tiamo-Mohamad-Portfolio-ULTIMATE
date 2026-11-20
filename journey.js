@@ -61,7 +61,7 @@
   const closeWin = () => { jw.classList.remove("win"); mark(); };
 
   /* ---------- the studio: rooms, camera stops, hotspot anchors ---------- */
-  const ROOMS = ["ceiling", "desk", "windows", "screen", "floor"], IA = 1672 / 941, F0 = .4;
+  const ROOMS = ["ceiling", "desk", "windows", "screen", "floor"], IA = 1672 / 941, F0 = .5;
   /* flight order: [section, room, focus x, focus y, zoom] */
   const FL = [["home", 0, .5, .36, 1.2], ["creation", 0, .52, .5, 1.45], ["services", 1, .5, .58, 1.15], ["work", 1, .5, .46, 1.4], ["about", 2, .42, .52, 1.15], ["findme", 2, .72, .42, 1.5], ["cinema", 3, .58, .46, 1.25], ["beforeafter", 3, .42, .7, 1.5], ["process", 4, .45, .6, 1.15], ["brief", 4, .36, .55, 1.6], ["contact", 4, .5, .76, 1.75]];
   const FID = FL.map(f => f[0]);
@@ -127,7 +127,7 @@
 
   /* ---------- WebGL: a photo + its depth map, with a depth-aware zoom and parallax ---------- */
   const VS = "attribute vec2 p;varying vec2 s;void main(){s=p*.5+.5;s.y=1.-s.y;gl_Position=vec4(p,0.,1.);}";
-  const FS = "precision mediump float;varying vec2 s;uniform sampler2D im,dp;uniform vec2 C,F,SH;uniform float Z,A;void main(){vec2 p=(s-.5)*C+.5;float d=texture2D(dp,p).r;float z=1.+(Z-1.)*(.55+.9*d);vec2 q=F+(p-F)/z+SH*(d-.4);gl_FragColor=vec4(texture2D(im,clamp(q,0.,1.)).rgb,A);}";
+  const FS = "precision highp float;varying vec2 s;uniform sampler2D im,dp;uniform vec2 C,F,SH;uniform float Z,A;vec2 mp(vec2 p,vec2 q){float d=texture2D(dp,clamp(q,0.,1.)).r;float z=1.+(Z-1.)*(.84+.32*d);return F+(p-F)/z+SH*(d-.5);}void main(){vec2 p=(s-.5)*C+.5;vec2 q=mp(p,p);q=mp(p,q);q=mp(p,q);gl_FragColor=vec4(texture2D(im,clamp(q,0.,1.)).rgb,A);}";
   function initGL() {
     try { gl = cv.getContext("webgl", { alpha: false, antialias: false, premultipliedAlpha: false }); } catch (e) { gl = null; }
     if (!gl) return false;
@@ -159,8 +159,8 @@
   }
   /* where does a point of the photo land on screen (same maths as the shader, solved by iteration) */
   function scr(st, u, v) {
-    const C = cover(); let d = F0, px = u, py = v;
-    for (let n = 0; n < 3; n++) { const z = 1 + (st.Z - 1) * (.55 + .9 * d); px = st.fx + (u - st.fx - SHx * (d - F0)) * z; py = st.fy + (v - st.fy - SHy * (d - F0)) * z; d = dsamp(st.room, px, py); }
+    const C = cover(), d = dsamp(st.room, u, v), z = 1 + (st.Z - 1) * (.84 + .32 * d);
+    const px = st.fx + (u - st.fx - SHx * (d - F0)) * z, py = st.fy + (v - st.fy - SHy * (d - F0)) * z;
     return [((px - .5) / C[0] + .5) * W, ((py - .5) / C[1] + .5) * H2];
   }
   function pass(r, Z, fx, fy, A) {
@@ -169,7 +169,7 @@
       gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, m.ti); gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, m.td);
       gl.uniform2f(loc.C, C[0], C[1]); gl.uniform2f(loc.F, fx, fy); gl.uniform2f(loc.SH, SHx, SHy); gl.uniform1f(loc.Z, Z); gl.uniform1f(loc.A, A); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     } else if (fbg && m.im) {
-      const ze = 1 + (Z - 1) * .91, lo = (c, f) => f + (.5 - c / 2 - f) / ze, hi = (c, f) => f + (.5 + c / 2 - f) / ze, iw = m.im.naturalWidth, ih = m.im.naturalHeight;
+      const ze = 1 + (Z - 1) * .98, lo = (c, f) => f + (.5 - c / 2 - f) / ze, hi = (c, f) => f + (.5 + c / 2 - f) / ze, iw = m.im.naturalWidth, ih = m.im.naturalHeight;
       const x0 = lo(C[0], fx), x1 = hi(C[0], fx), y0_ = lo(C[1], fy), y1 = hi(C[1], fy);
       fbg.globalAlpha = A; fbg.drawImage(m.im, x0 * iw, y0_ * ih, (x1 - x0) * iw, (y1 - y0_) * ih, 0, 0, fbc.width, fbc.height); fbg.globalAlpha = 1;
     }
@@ -190,7 +190,7 @@
   function frame(t) {
     if (!live && t > stopAt) { raf = 0; return; }
     lastT = t; smx += (mx - smx) * .06; smy += (my - smy) * .06;
-    SHx = -smx * .02 + Math.sin(t * .00035) * .003; SHy = -smy * .012 + Math.cos(t * .0003) * .002;
+    SHx = -smx * .012 + Math.sin(t * .00035) * .002; SHy = -smy * .008 + Math.cos(t * .0003) * .0015;
     const tg = S(idx); let passes;
     if (tr) {
       if (!(room[tg.room] && room[tg.room].ready)) tr.t0 = t;
