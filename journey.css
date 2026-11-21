@@ -206,3 +206,20 @@ html.jw-lock #jw button,html.jw-lock #jw a{cursor:pointer !important}
 #jw.win #jwgl,#jw.win #jwln,#jw.win .jw-m,#jw.win .jw-t,#jw.win .jw-vig{opacity:.12;filter:blur(8px)}
 @media (max-width:760px){.jm span{display:none}.jw-t{padding:14px 16px;bottom:64px}.jw-t p{-webkit-line-clamp:2}}
 .jm.fl span{left:auto;right:34px}[dir=rtl] .jm.fl span{right:auto;left:34px}
+
+/* ===== frosted glass UI: tinted, blurred, picks up the colours of the room behind it (no black panels) ===== */
+#jw{--glass:linear-gradient(135deg,rgba(165,125,255,.36),rgba(66,36,148,.42));--blur:blur(22px) saturate(175%) brightness(.84);
+ --ring:polygon(evenodd,var(--c) 0,100% 0,100% calc(100% - var(--c)),calc(100% - var(--c)) 100%,0 100%,0 var(--c),calc(var(--c) + 1.4px) 1px,calc(100% - 1px) 1px,calc(100% - 1px) calc(100% - var(--c) - 1.4px),calc(100% - var(--c) - 1.4px) calc(100% - 1px),1px calc(100% - 1px),1px calc(var(--c) + 1.4px));
+ --ringc:linear-gradient(110deg,rgba(205,175,255,.95),rgba(22,216,255,.9))}
+[dir=rtl] #jw{--ring:polygon(evenodd,0 0,calc(100% - var(--c)) 0,100% var(--c),100% 100%,var(--c) 100%,0 calc(100% - var(--c)),1px 1px,calc(100% - var(--c) - 1.4px) 1px,calc(100% - 1px) calc(var(--c) + 1.4px),calc(100% - 1px) calc(100% - 1px),calc(var(--c) + 1.4px) calc(100% - 1px),1px calc(100% - var(--c) - 1.4px))}
+.jw-nav{filter:none}.jw-pan{filter:none}.jw-x{filter:none}
+.jw-nav::before,.jw-pan::before{display:none}
+.jw-nav::after,.jw-pan::after,.jw-x::before,.jw-t::after{content:"";position:absolute;inset:0;background:var(--ringc);clip-path:var(--ring);pointer-events:none;z-index:2}
+.jw-in,.jw-pin{margin:0;background:var(--glass);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);box-shadow:inset 0 1px 0 rgba(255,255,255,.35)}
+.jw-in{height:50px}
+.jw-x{background:var(--glass);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);clip-path:var(--poly);box-shadow:inset 0 1px 0 rgba(255,255,255,.35)}
+.jw-x::after{display:none}.jw-x:hover{background:linear-gradient(135deg,rgba(190,150,255,.5),rgba(90,55,190,.55))}
+.jw-t{background:var(--glass);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);box-shadow:inset 0 1px 0 rgba(255,255,255,.35)}
+.jw-t h2,.jw-t p,.jw-k{text-shadow:0 1px 10px rgba(30,10,80,.55)}.jw-t p{color:#e4dcff}
+.jm span{background:linear-gradient(135deg,rgba(165,125,255,.5),rgba(60,32,140,.58));-webkit-backdrop-filter:blur(12px) saturate(170%);backdrop-filter:blur(12px) saturate(170%);border-color:rgba(205,175,255,.75);text-shadow:0 1px 6px rgba(20,5,60,.6)}
+.jw-it{color:#efe9ff}.jw-it:hover,.jw-it:focus-visible{color:#fff}.jw-pin .jw-it small{color:#cdbfff}

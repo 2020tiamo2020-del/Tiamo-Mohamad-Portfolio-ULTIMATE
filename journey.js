@@ -126,18 +126,35 @@
   }
 
   /* ---------- WebGL: a photo + its depth map, with a depth-aware zoom and parallax ---------- */
+  /* the room is drawn twice: a flat zoomed photo underneath (never tears), and on top a mesh of triangles whose vertices
+     are pushed by the depth map (so near things move more than far things and the surface stretches instead of breaking) */
   const VS = "attribute vec2 p;varying vec2 s;void main(){s=p*.5+.5;s.y=1.-s.y;gl_Position=vec4(p,0.,1.);}";
-  const FS = "precision highp float;varying vec2 s;uniform sampler2D im,dp;uniform vec2 C,F,SH;uniform float Z,A;vec2 mp(vec2 p,vec2 q){float d=texture2D(dp,clamp(q,0.,1.)).r;float z=1.+(Z-1.)*(.84+.32*d);return F+(p-F)/z+SH*(d-.5);}void main(){vec2 p=(s-.5)*C+.5;vec2 q=mp(p,p);q=mp(p,q);q=mp(p,q);gl_FragColor=vec4(texture2D(im,clamp(q,0.,1.)).rgb,A);}";
+  const FSF = "precision highp float;varying vec2 s;uniform sampler2D im;uniform vec2 C,F;uniform float Z,A;void main(){vec2 p=(s-.5)*C+.5;gl_FragColor=vec4(texture2D(im,clamp(F+(p-F)/Z,0.,1.)).rgb,A);}";
+  const VSM = "attribute vec2 a;uniform sampler2D dp;uniform vec2 C,F,SH,PXY;uniform float Z,A,WP;varying vec2 uv;varying float k;void main(){float d=texture2D(dp,a).r;float z=1.+(Z-1.)*(.84+.32*d);vec2 p=F+(a-SH*(d-.5)-F)*z;vec2 s=(p-.5)/C+.5;gl_Position=vec4(s.x*2.-1.,1.-s.y*2.,(1.-d)*.9,1.);uv=a;float g=max(abs(texture2D(dp,a+vec2(PXY.x,0.)).r-texture2D(dp,a-vec2(PXY.x,0.)).r),abs(texture2D(dp,a+vec2(0.,PXY.y)).r-texture2D(dp,a-vec2(0.,PXY.y)).r));float e=g*((Z-1.)*.32*length(a-F)+length(SH))*WP;k=A*(1.-smoothstep(16.,44.,e));}";
+  const FSM = "precision highp float;varying vec2 uv;varying float k;uniform sampler2D im;void main(){gl_FragColor=vec4(texture2D(im,uv).rgb,k);}";
+  const NX = 320, NY = 180;
+  let pf, pm, lf = {}, lm = {}, qbuf, vbuf, ibuf, icount = 0, meshOK = false;
   function initGL() {
-    try { gl = cv.getContext("webgl", { alpha: false, antialias: false, premultipliedAlpha: false }); } catch (e) { gl = null; }
+    try { gl = cv.getContext("webgl", { alpha: false, depth: true, antialias: false, premultipliedAlpha: false }); } catch (e) { gl = null; }
     if (!gl) return false;
-    const sh = (t, s) => { const o = gl.createShader(t); gl.shaderSource(o, s); gl.compileShader(o); return o; }, p = gl.createProgram();
-    gl.attachShader(p, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(p, sh(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(p);
-    if (!gl.getProgramParameter(p, gl.LINK_STATUS)) { gl = null; return false; }
-    gl.useProgram(p); gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer()); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
-    const a = gl.getAttribLocation(p, "p"); gl.enableVertexAttribArray(a); gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 0, 0);
-    ["im", "dp", "C", "F", "SH", "Z", "A"].forEach(n => loc[n] = gl.getUniformLocation(p, n)); gl.uniform1i(loc.im, 0); gl.uniform1i(loc.dp, 1);
-    gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); return true;
+    const prog = (v, f, name) => {
+      const sh = (t, s) => { const o = gl.createShader(t); gl.shaderSource(o, s); gl.compileShader(o); return o; }, p = gl.createProgram();
+      gl.attachShader(p, sh(gl.VERTEX_SHADER, v)); gl.attachShader(p, sh(gl.FRAGMENT_SHADER, f)); gl.bindAttribLocation(p, 0, name); gl.linkProgram(p);
+      return gl.getProgramParameter(p, gl.LINK_STATUS) ? p : null;
+    };
+    pf = prog(VS, FSF, "p"); if (!pf) { gl = null; return false; }
+    ["im", "C", "F", "Z", "A"].forEach(n => lf[n] = gl.getUniformLocation(pf, n));
+    meshOK = gl.getParameter(gl.MAX_VERTEX_TEXTURE_IMAGE_UNITS) > 0; pm = meshOK ? prog(VSM, FSM, "a") : null; meshOK = !!pm;
+    qbuf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, qbuf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+    if (meshOK) {
+      ["im", "dp", "C", "F", "SH", "PXY", "Z", "A", "WP"].forEach(n => lm[n] = gl.getUniformLocation(pm, n));
+      const va = new Float32Array((NX + 1) * (NY + 1) * 2), ia = new Uint16Array(NX * NY * 6); let o = 0, q = 0;
+      for (let j = 0; j <= NY; j++) for (let i = 0; i <= NX; i++) { va[o++] = i / NX; va[o++] = j / NY; }
+      for (let j = 0; j < NY; j++) for (let i = 0; i < NX; i++) { const a0 = j * (NX + 1) + i, b0 = a0 + 1, c0 = a0 + NX + 1, d0 = c0 + 1; ia[q++] = a0; ia[q++] = b0; ia[q++] = c0; ia[q++] = b0; ia[q++] = d0; ia[q++] = c0; }
+      vbuf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, vbuf); gl.bufferData(gl.ARRAY_BUFFER, va, gl.STATIC_DRAW);
+      ibuf = gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibuf); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, ia, gl.STATIC_DRAW); icount = ia.length;
+    }
+    gl.enableVertexAttribArray(0); gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthFunc(gl.LEQUAL); return true;
   }
   const mkTex = im => { const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); [[gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE], [gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR]].forEach(([k, v]) => gl.texParameteri(gl.TEXTURE_2D, k, v)); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, im); return t; };
   function loadRoom(r) {
@@ -166,8 +183,16 @@
   function pass(r, Z, fx, fy, A) {
     const m = room[r]; if (!m || !m.ready) return false; const C = cover();
     if (gl) {
-      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, m.ti); gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, m.td);
-      gl.uniform2f(loc.C, C[0], C[1]); gl.uniform2f(loc.F, fx, fy); gl.uniform2f(loc.SH, SHx, SHy); gl.uniform1f(loc.Z, Z); gl.uniform1f(loc.A, A); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      gl.useProgram(pf); gl.bindBuffer(gl.ARRAY_BUFFER, qbuf); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, m.ti); gl.uniform1i(lf.im, 0);
+      gl.uniform2f(lf.C, C[0], C[1]); gl.uniform2f(lf.F, fx, fy); gl.uniform1f(lf.Z, Z); gl.uniform1f(lf.A, A); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      if (meshOK && m.td) {
+        gl.clear(gl.DEPTH_BUFFER_BIT); gl.enable(gl.DEPTH_TEST); gl.useProgram(pm);
+        gl.bindBuffer(gl.ARRAY_BUFFER, vbuf); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibuf);
+        gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, m.ti); gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, m.td); gl.uniform1i(lm.im, 0); gl.uniform1i(lm.dp, 1);
+        gl.uniform2f(lm.C, C[0], C[1]); gl.uniform2f(lm.F, fx, fy); gl.uniform2f(lm.SH, SHx, SHy); gl.uniform2f(lm.PXY, 2 / NX, 2 / NY); gl.uniform1f(lm.Z, Z); gl.uniform1f(lm.A, A); gl.uniform1f(lm.WP, W);
+        gl.drawElements(gl.TRIANGLES, icount, gl.UNSIGNED_SHORT, 0); gl.disable(gl.DEPTH_TEST);
+      }
     } else if (fbg && m.im) {
       const ze = 1 + (Z - 1) * .98, lo = (c, f) => f + (.5 - c / 2 - f) / ze, hi = (c, f) => f + (.5 + c / 2 - f) / ze, iw = m.im.naturalWidth, ih = m.im.naturalHeight;
       const x0 = lo(C[0], fx), x1 = hi(C[0], fx), y0_ = lo(C[1], fy), y1 = hi(C[1], fy);
@@ -190,7 +215,7 @@
   function frame(t) {
     if (!live && t > stopAt) { raf = 0; return; }
     lastT = t; smx += (mx - smx) * .06; smy += (my - smy) * .06;
-    SHx = -smx * .012 + Math.sin(t * .00035) * .002; SHy = -smy * .008 + Math.cos(t * .0003) * .0015;
+    SHx = -smx * .06 + Math.sin(t * .00035) * .006; SHy = -smy * .035 + Math.cos(t * .0003) * .004;
     const tg = S(idx); let passes;
     if (tr) {
       if (!(room[tg.room] && room[tg.room].ready)) tr.t0 = t;
@@ -200,7 +225,7 @@
       const L_ = passes[passes.length - 1]; vis = { room: L_[0], Z: L_[1], fx: L_[2], fy: L_[3] };
       if (k >= 1) { tr = null; vis = null; buildMarkers(); }
     } else passes = [[tg.room, tg.Z, tg.fx, tg.fy, 1]];
-    if (gl) { gl.viewport(0, 0, cv.width, cv.height); gl.clearColor(.04, .03, .08, 1); gl.clear(gl.COLOR_BUFFER_BIT); } else if (fbg) { fbg.fillStyle = "#0a0714"; fbg.fillRect(0, 0, fbc.width, fbc.height); }
+    if (gl) { gl.viewport(0, 0, cv.width, cv.height); gl.clearColor(.04, .03, .08, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); } else if (fbg) { fbg.fillStyle = "#0a0714"; fbg.fillRect(0, 0, fbc.width, fbc.height); }
     let ok = false; passes.forEach(p => { if (pass(p[0], p[1], p[2], p[3], p[4])) ok = true; });
     $("jwLd").classList.toggle("on", !ok);
     drawLines(t, tg);
