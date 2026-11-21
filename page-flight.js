@@ -38,10 +38,10 @@
   const SDF = "float sdr(vec2 q,vec2 h,float r){vec2 d=abs(q)-h+r;return length(max(d,0.))+min(max(d.x,d.y),0.)-r;}";
   const VS = "#version 300 es\nlayout(location=0) in vec2 p;uniform mat4 M;out vec2 uv;out float w;void main(){uv=p+.5;gl_Position=M*vec4(p,0.,1.);w=gl_Position.w;}";
   // page / element: mip-mapped texture, depth-of-field from the real depth, rounded corners, horizon fog
-  const FS_TILE = "#version 300 es\nprecision highp float;in vec2 uv;in float w;uniform sampler2D T;uniform vec4 uvr;uniform vec2 size,qoff,qhalf;uniform float rad,F,K,alpha,lift;uniform vec3 fogc;out vec4 o;" + SDF +
+  const FS_TILE = "#version 300 es\nprecision highp float;in vec2 uv;in float w;uniform sampler2D T;uniform vec4 uvr;uniform vec2 size,qoff,qhalf;uniform float rad,F,K,alpha,lift,keyT,lodF;uniform vec3 fogc;out vec4 o;" + SDF +
     "void main(){vec2 q=(uv-.5)*size+qoff;float d=sdr(q,qhalf,rad);float a=1.-smoothstep(-1.,1.,d);" +
-    "float lod=clamp(abs(w-F)/F*K,0.,5.5);vec3 c=textureLod(T,uvr.xy+uv*uvr.zw,lod).rgb;" +
-    "c*=1.+lift*.06;c=mix(c,fogc,smoothstep(F*1.5,F*3.8,w)*.92);o=vec4(c,a*alpha);}";
+    "float lod=lodF>=0.?lodF:clamp(abs(w-F)/F*K,0.,5.5);vec3 c=textureLod(T,uvr.xy+uv*uvr.zw,lod).rgb;" +
+    "float kk=mix(1.,smoothstep(.12,.36,max(max(c.r,c.g),c.b)),keyT);c*=1.+lift*.06;c=mix(c,fogc,smoothstep(F*1.5,F*3.8,w)*.92);o=vec4(c,a*alpha*kk);}";
   const FS_SHADOW = "#version 300 es\nprecision highp float;in vec2 uv;in float w;uniform vec2 size,half_;uniform float alpha,rad,blur,F;out vec4 o;" + SDF +
     "void main(){vec2 q=(uv-.5)*size;float d=sdr(q,half_,rad);float a=(1.-smoothstep(-blur,blur*1.5,d))*alpha*(1.-smoothstep(F*1.5,F*3.8,w)*.9);o=vec4(.015,.005,.05,a);}";
   const VS_FS = "#version 300 es\nvoid main(){vec2 p=vec2((gl_VertexID<<1)&2,gl_VertexID&2);gl_Position=vec4(p*2.-1.,0.,1.);}";
@@ -200,9 +200,9 @@
     const tt = mkTex(gl, titleCanvas(vw, vh, dpr, l1, l2), null);
     const logos = [["TM", "#8b35ff", "#16d8ff", -70, -70, 176], ["Ai", "#ff6a3d", "#ffb347", W - 130, -96, 170], ["Ps", "#1f6bff", "#16d8ff", -96, 470, 154], ["Ae", "#7a3cff", "#c04cff", W - 70, 420, 160]]
       .map(a => ({ t: mkTex(gl, logoTile(a[0], a[1], a[2]), null), x: a[3], y: a[4], s: a[5] }));
-    const secEls = SECTIONS.map(q => document.querySelector(q)), rtl = document.documentElement.dir === "rtl" || document.documentElement.lang === "ar";
-    const cards = secEls.map((e, i) => { let cv; try { cv = paintCard(sectionData(e, i), imgs[i], rtl); return mkTex(gl, cv, maxA); } catch (err) { cv = paintCard({ ...sectionData(e, i), imgs: [] }, imgs[i], rtl); return mkTex(gl, cv, maxA); } });
-    const els = []; m.frames.forEach((f, i) => f.rects.forEach((r, k) => els.push({ i, x: r[0], y: r[1], w: r[2], h: r[3], rad: Math.min(Math.max(r[4], 10), 28), dz: 22 + ((i * 37 + k * 53) % 19) })));
+    const cards = [];
+    const els = []; m.frames.forEach((f, i) => [...f.rects].sort((p, q) => p[1] - q[1]).forEach((r, k) => { const kind = r[5] === undefined ? 2 : r[5];
+      els.push({ i, x: r[0], y: r[1], w: r[2], h: r[3], kind, rad: kind === 0 ? 0 : Math.min(Math.max(r[4], 8), 28), dz: 18 + ((i * 37 + k * 53) % 17), delay: k * H * .05 }); }));
     document.body.appendChild(cv);
     const fov = 38 * Math.PI / 180, F = (vh / 2) / Math.tan(fov / 2);
     return { cv, gl, P, vao, tex, tt, logos, els, cards, vw, vh, W, H, N, F, fov, up, ya: 0, yb: 0, cur, tgt,
@@ -227,10 +227,10 @@
       gl.useProgram(P.shadow.p); const u = P.shadow.u; gl.uniformMatrix4fv(u.M, false, quad(rot, cx, cy, cz, w, h));
       gl.uniform2f(u.size, w, h); gl.uniform2f(u.half_, half[0], half[1]); gl.uniform1f(u.alpha, alpha); gl.uniform1f(u.rad, rad); gl.uniform1f(u.blur, blur); gl.uniform1f(u.F, F); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     };
-    const draw = (tex, cx, cy, cz, w, h, uvr, rad, qoff, qhalf, alpha, lift, rot) => {
+    const draw = (tex, cx, cy, cz, w, h, uvr, rad, qoff, qhalf, alpha, lift, rot, keyT, lodF) => {
       gl.useProgram(P.tile.p); const u = P.tile.u; gl.uniformMatrix4fv(u.M, false, quad(rot, cx, cy, cz, w, h));
       gl.uniform4fv(u.uvr, uvr); gl.uniform2f(u.size, w, h); gl.uniform2f(u.qoff, qoff[0], qoff[1]); gl.uniform2f(u.qhalf, qhalf[0], qhalf[1]);
-      gl.uniform1f(u.rad, rad); gl.uniform1f(u.F, F); gl.uniform1f(u.K, 3.2); gl.uniform1f(u.alpha, alpha); gl.uniform1f(u.lift, lift); gl.uniform3fv(u.fogc, S.fl1);
+      gl.uniform1f(u.rad, rad); gl.uniform1f(u.F, F); gl.uniform1f(u.K, 3.2); gl.uniform1f(u.alpha, alpha); gl.uniform1f(u.lift, lift); gl.uniform1f(u.keyT, keyT || 0); gl.uniform1f(u.lodF, lodF === undefined ? -1 : lodF); gl.uniform3fv(u.fogc, S.fl1);
       gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex); gl.uniform1i(u.T, 0); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     };
     // page shadow + page (one strip; only its outer corners are rounded)
@@ -241,21 +241,14 @@
       if (isT && kC > 0) sh(0, -(i * H + H / 2) - 14, -2, W + 360, H + 360, [W / 2, H / 2], 24, 60, .6 * kC);
       draw(S.tex[i], 0, -(i * H + H / 2), 0, W, H, [0, 0, 1, 1], 24, qo, qh, a, 0);
     }
-    // floating elements lift toward the camera as it passes
-    S.els.forEach(e => {
-      const cyp = e.i * H + e.y + e.h / 2, near = 1 - sstep(H * .5, H * 2.4, Math.abs(cyp - y)), z = e.dz * (.25 + .75 * near);
-      const cx = e.x + e.w / 2 - W / 2;
-      const ea = e.i === S.tgt ? 1 : fo; if (ea < .003) return;
-      sh(cx + 4, -cyp - 10, z * .3, e.w + 120, e.h + 120, [e.w / 2, e.h / 2], e.rad, 16 + z * .5, .55 * (.35 + .65 * near) * ea);
-      draw(S.tex[e.i], cx, -cyp, z, e.w, e.h, [e.x / W, 1 - (e.y + e.h) / H, e.w / W, e.h / H], e.rad, [0, 0], [e.w / 2, e.h / 2], ea, near);
-    });
-    // section cards: each one rises out of its section (from the bottom up), stands upright facing the camera, then folds back down
-    S.cards.map((ct, i) => ({ ct, i, d: Math.abs(i * H + H / 2 - y) })).sort((p, q) => q.d - p.d).forEach(({ ct, i, d }) => {
-      const yc = i * H + H / 2, e = sstep(H * 1.9, H * .3, d) * (1 - kR) * (i === S.tgt ? 1 - kC : 1); if (e < .01) return;
-      const k = eio(e), phi = th * k, cx = (i % 2 ? -1 : 1) * W * .06, anchor = yc + CARD_H * .5 / Math.max(Math.cos(th), .35), rise = (1 - k) * 60;
-      const rot = mul(rx(phi), tr(0, CARD_H / 2, 0));
-      sh(cx, -anchor - 6, 1, CARD_W * 1.25, 260, [CARD_W * .5, 40], 40, 50, .65 * k);                     // soft contact shadow on the page
-      draw(ct, cx, -anchor, 4 + rise, CARD_W, CARD_H, [0, 0, 1, 1], 32, [0, 0], [CARD_W / 2, CARD_H / 2], Math.min(1, e * 1.7), e, rot);
+    // the page's own elements (words, pictures, buttons, chips, cards) rise one by one out of the page, face the camera, and fold back down
+    S.els.map(e => ({ e, d: Math.abs(e.i * H + e.y + e.h / 2 - y) })).sort((p, q) => q.d - p.d).forEach(({ e, d }) => {
+      if (e.w > W * .56 && e.kind !== 0) return;
+      const en = sstep(H * 1.8, H * .28, d + e.delay) * (1 - kR) * (e.i === S.tgt ? 1 - kC : 1); if (en < .01) return;
+      const k = eio(en), phi = th * k * .92, cx = e.x + e.w / 2 - W / 2, bot = e.i * H + e.y + e.h, rot = mul(rx(phi), tr(0, e.h / 2, 0));
+      draw(S.tex[e.i], cx, -(bot - e.h / 2), .6, e.w + 6, e.h + 6, [e.x / W, 1 - (e.y + e.h) / H, e.w / W, e.h / H], e.rad, [0, 0], [(e.w + 6) / 2, (e.h + 6) / 2], Math.min(1, k * 1.3), 0, 0, 0, 7);   // the spot it left behind
+      sh(cx, -bot - 4, 1, e.w * 1.15 + 80, e.h * .5 + 80, [e.w * .5, e.h * .12], e.rad || 6, 18 + e.h * .05, .55 * k * (e.kind === 0 ? .5 : 1));
+      draw(S.tex[e.i], cx, -bot, 3 + e.dz * k, e.w, e.h, [e.x / W, 1 - (e.y + e.h) / H, e.w / W, e.h / H], e.rad, [0, 0], [e.w / 2, e.h / 2], Math.min(1, en * 2.2), k, rot, e.kind === 0 ? 1 : 0);
     });
     // four logo tiles: always around the hero; they also gather around the destination card for the final reveal
     const tiles = (fi, alpha) => S.logos.forEach((L, k) => {
