@@ -157,16 +157,33 @@
     gl.enableVertexAttribArray(0); gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthFunc(gl.LEQUAL); return true;
   }
   const mkTex = im => { const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); [[gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE], [gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR]].forEach(([k, v]) => gl.texParameteri(gl.TEXTURE_2D, k, v)); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, im); return t; };
-  function loadRoom(r) {
-    if (room[r]) return; const m = room[r] = { ready: false, failed: false, dd: null }, a = new Image(), b = new Image(); let n = 0;
+  function loadRoom(r, tries) {
+    if (room[r]) return; tries = tries || 0;
+    const m = room[r] = { ready: false, failed: false, dd: null, tries }, a = new Image(), b = new Image(); let n = 0, dead = false;
+    const bad = () => {                                                  // a missing / slow file: try again (3 attempts), then show the retry message
+      if (dead) return; dead = true;
+      if (tries < 2) setTimeout(() => { if (room[r] === m) { room[r] = null; loadRoom(r, tries + 1); } }, 800 * (tries + 1));
+      else m.failed = true;
+    };
     const done = () => {
-      if (++n < 2 || m.failed) return;
-      try { if (gl) { m.ti = mkTex(a); m.td = mkTex(b); } m.im = a; const c = D.createElement("canvas"); c.width = 128; c.height = 72; const x = c.getContext("2d"); x.drawImage(b, 0, 0, 128, 72); const px = x.getImageData(0, 0, 128, 72).data; m.dd = new Uint8Array(128 * 72); for (let i = 0; i < m.dd.length; i++) m.dd[i] = px[i * 4]; } catch (e) { /* depth lookup stays flat */ }
-      if (gl && !m.ti) { m.failed = true; return; }
+      if (dead || ++n < 2) return;
+      try { if (gl) { m.ti = mkTex(a); m.td = mkTex(b); } m.im = a; m.ai = a; m.bi = b; const c = D.createElement("canvas"); c.width = 128; c.height = 72; const x = c.getContext("2d"); x.drawImage(b, 0, 0, 128, 72); const px = x.getImageData(0, 0, 128, 72).data; m.dd = new Uint8Array(128 * 72); for (let i = 0; i < m.dd.length; i++) m.dd[i] = px[i * 4]; } catch (e) { /* depth lookup stays flat */ }
+      if (gl && !m.ti) { bad(); return; }
       m.ready = true;
     };
-    a.crossOrigin = b.crossOrigin = "anonymous"; a.onload = b.onload = done; a.onerror = b.onerror = () => { m.failed = true; };
-    a.src = BASE + ROOMS[r] + ".webp"; b.src = BASE + ROOMS[r] + "-depth.webp";
+    const q = tries ? "?r=" + tries : "";
+    a.crossOrigin = b.crossOrigin = "anonymous"; a.onload = b.onload = done; a.onerror = b.onerror = bad;
+    a.src = BASE + ROOMS[r] + ".webp" + q; b.src = BASE + ROOMS[r] + "-depth.webp" + q;
+  }
+  const retryRoom = r => { room[r] = null; loadRoom(r, 0); };
+  /* the GPU can drop the WebGL context (low memory, tab in background): stop drawing, then rebuild programs and textures when it comes back */
+  let glLost = false;
+  function bindLoss(c) {
+    c.addEventListener("webglcontextlost", e => { e.preventDefault(); glLost = true; });
+    c.addEventListener("webglcontextrestored", () => {
+      try { if (initGL()) room.forEach(m => { if (m && m.ready && m.ai) { m.ti = mkTex(m.ai); m.td = mkTex(m.bi); } }); } catch (e) { /* keeps the loading state */ }
+      glLost = false;
+    });
   }
   const cover = () => { const sa = W / H2; return sa > IA ? [1, IA / sa] : [sa / IA, 1]; };
   function dsamp(r, u, v) {
@@ -214,6 +231,7 @@
   const ease = k => k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
   function frame(t) {
     if (!live && t > stopAt) { raf = 0; return; }
+    if (glLost) { $("jwLd").classList.add("on"); raf = requestAnimationFrame(frame); return; }
     lastT = t; smx += (mx - smx) * .06; smy += (my - smy) * .06;
     SHx = -smx * .06 + Math.sin(t * .00035) * .006; SHy = -smy * .035 + Math.cos(t * .0003) * .004;
     const tg = S(idx); let passes;
@@ -227,7 +245,7 @@
     } else passes = [[tg.room, tg.Z, tg.fx, tg.fy, 1]];
     if (gl) { gl.viewport(0, 0, cv.width, cv.height); gl.clearColor(.04, .03, .08, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); } else if (fbg) { fbg.fillStyle = "#0a0714"; fbg.fillRect(0, 0, fbc.width, fbc.height); }
     let ok = false; passes.forEach(p => { if (pass(p[0], p[1], p[2], p[3], p[4])) ok = true; });
-    $("jwLd").classList.toggle("on", !ok);
+    const ld = $("jwLd"), rm = room[tg.room]; ld.classList.toggle("on", !ok); ld.classList.toggle("err", !ok && !!(rm && rm.failed));
     drawLines(t, tg);
     raf = requestAnimationFrame(frame);
   }
@@ -235,17 +253,25 @@
   function drawLines(t, st) {
     lg.clearRect(0, 0, W, H2); if (tr || !MK.length) return;
     const F = scr(st, st.fx, st.fy), P = MK.map(m => { const p = scr(st, m.u, m.v); m.x = p[0]; m.y = p[1]; m.el.style.transform = "translate(" + p[0].toFixed(1) + "px," + p[1].toFixed(1) + "px) translate(-50%,-50%)"; m.el.classList.toggle("fl", H.dir === "rtl" ? p[0] < 230 : p[0] > W - 230); return p; });
-    lg.lineCap = "round"; lg.setLineDash([10, 8]); lg.lineDashOffset = -t * .03; lg.lineWidth = 1.6; lg.strokeStyle = "rgba(139,53,255,.95)"; lg.beginPath(); lg.arc(F[0], F[1], 46, 0, 6.283); lg.stroke();
-    lg.setLineDash([]); lg.lineWidth = 1; lg.strokeStyle = "rgba(22,216,255,.6)"; P.forEach(p => { lg.beginPath(); lg.moveTo(F[0], F[1]); lg.lineTo(p[0], p[1]); lg.stroke(); });
+    const BLUE = "#0a7cff", BLUEG = "rgba(10,124,255,.55)", VIO = "#6a14ff", HALO = "rgba(255,255,255,.85)";
+    lg.lineCap = "round"; lg.lineJoin = "round";
+    /* focus ring: white halo underneath, deep violet on top (readable on the light studio) */
+    lg.setLineDash([]); lg.lineWidth = 5; lg.strokeStyle = HALO; lg.beginPath(); lg.arc(F[0], F[1], 46, 0, 6.283); lg.stroke();
+    lg.setLineDash([10, 8]); lg.lineDashOffset = -t * .03; lg.lineWidth = 2.8; lg.strokeStyle = VIO; lg.shadowColor = "rgba(106,20,255,.7)"; lg.shadowBlur = 10; lg.beginPath(); lg.arc(F[0], F[1], 46, 0, 6.283); lg.stroke(); lg.shadowBlur = 0;
+    /* spokes: laser blue with a soft glow */
+    lg.setLineDash([]); lg.lineWidth = 3.4; lg.strokeStyle = HALO; P.forEach(p => { lg.beginPath(); lg.moveTo(F[0], F[1]); lg.lineTo(p[0], p[1]); lg.stroke(); });
+    lg.lineWidth = 1.8; lg.strokeStyle = BLUE; lg.shadowColor = BLUEG; lg.shadowBlur = 8; P.forEach(p => { lg.beginPath(); lg.moveTo(F[0], F[1]); lg.lineTo(p[0], p[1]); lg.stroke(); }); lg.shadowBlur = 0;
     if (P.length > 1) {
       const path = () => { lg.beginPath(); P.forEach((p, i) => i ? lg.lineTo(p[0], p[1]) : lg.moveTo(p[0], p[1])); lg.stroke(); };
-      lg.setLineDash([12, 9]); lg.lineDashOffset = -t * .05; lg.lineWidth = 5; lg.strokeStyle = "rgba(139,53,255,.25)"; path(); lg.lineWidth = 1.6; lg.strokeStyle = "rgba(22,216,255,.95)"; path();
+      lg.setLineDash([12, 9]); lg.lineDashOffset = -t * .05; lg.lineWidth = 7; lg.strokeStyle = "rgba(255,255,255,.7)"; path(); lg.lineWidth = 3; lg.strokeStyle = BLUE; lg.shadowColor = BLUEG; lg.shadowBlur = 12; path(); lg.shadowBlur = 0;
     }
-    lg.setLineDash([]); lg.strokeStyle = "rgba(22,216,255,.95)"; lg.lineWidth = 1.6; lg.beginPath(); lg.moveTo(F[0], F[1] - 8); lg.lineTo(F[0] + 8, F[1]); lg.lineTo(F[0], F[1] + 8); lg.lineTo(F[0] - 8, F[1]); lg.closePath(); lg.stroke();
+    lg.setLineDash([]); lg.strokeStyle = HALO; lg.lineWidth = 5; const dia = () => { lg.beginPath(); lg.moveTo(F[0], F[1] - 9); lg.lineTo(F[0] + 9, F[1]); lg.lineTo(F[0], F[1] + 9); lg.lineTo(F[0] - 9, F[1]); lg.closePath(); lg.stroke(); }; dia();
+    lg.strokeStyle = VIO; lg.lineWidth = 2.6; dia();
   }
 
   function onClick(e) {
     const t = e.target, jm = t.closest(".jm"), g = t.closest("[data-jgo]"), m = t.closest("[data-jmore]"), s = t.closest("[data-jsite]");
+    if (t.closest(".jw-load.err")) return retryRoom(FL[idx][1]);
     if (t.closest("#jwX")) return jw.classList.contains("win") ? closeWin() : exit();
     if (s) return exit(s.dataset.jsite);
     if (jm) { const c = cards[jm.dataset.id][+jm.dataset.k]; return c.go ? goId(c.go) : openWin(jm.dataset.id, +jm.dataset.k); }
@@ -266,7 +292,7 @@
   let glTried = false;
   function open() {
     if (live) return; if (!jw) build();
-    size(); if (!glTried) { glTried = true; if (!initGL()) { fbc = D.createElement("canvas"); fbc.id = "jwgl"; cv.replaceWith(fbc); cv = fbc; fbg = fbc.getContext("2d"); size(); } }
+    size(); if (!glTried) { glTried = true; if (initGL()) bindLoss(cv); else { fbc = D.createElement("canvas"); fbc.id = "jwgl"; cv.replaceWith(fbc); cv = fbc; fbg = fbc.getContext("2d"); size(); } }
     render();
     const r = btn.getBoundingClientRect(); jw.style.setProperty("--bx", r.left + r.width / 2 + "px"); jw.style.setProperty("--by", r.top + r.height / 2 + "px");
     lastFocus = D.activeElement; y0 = scrollY; H.classList.add("jw-lock"); window.__lenis && __lenis.stop && __lenis.stop(); inertAll(true);

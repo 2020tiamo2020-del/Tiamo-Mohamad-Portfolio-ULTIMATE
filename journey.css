@@ -109,7 +109,7 @@ html.jw-lock #jw button,html.jw-lock #jw a{cursor:pointer !important}
 #jwln{pointer-events:none}
 .jw-vig{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 46%,transparent 52%,rgba(5,4,10,.5) 100%),linear-gradient(180deg,rgba(5,4,10,.5),transparent 22%,transparent 62%,rgba(5,4,10,.55))}
 .jw-load{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font:600 12px Inter,sans-serif;letter-spacing:.22em;text-transform:uppercase;color:#7fe9ff;opacity:0;transition:opacity .3s;pointer-events:none;z-index:2}
-.jw-load.on{opacity:1}.jw-load::after{content:"Loading the studio…"}[dir=rtl] .jw-load::after{content:"جارٍ تحميل الاستوديو…";letter-spacing:0}
+.jw-load.on{opacity:1}.jw-load.err{pointer-events:auto;text-align:center;line-height:1.8}html.jw-lock #jw .jw-load.err{cursor:pointer !important}.jw-load.err::after{content:"Couldn't load the studio — tap to retry"}[dir=rtl] .jw-load.err::after{content:"تعذّر تحميل الاستوديو — اضغط لإعادة المحاولة"}.jw-load::after{content:"Loading the studio…"}[dir=rtl] .jw-load::after{content:"جارٍ تحميل الاستوديو…";letter-spacing:0}
 .jw-m{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .5s;z-index:3}.jw-m.show{opacity:1}
 .jm{position:absolute;left:0;top:0;border:0;background:none;padding:0;color:#fff;pointer-events:auto;cursor:pointer;will-change:transform}
 .jm i{display:block;position:relative;width:26px;height:26px;border-radius:50%;border:2px solid #16d8ff;background:rgba(22,216,255,.2);box-shadow:0 0 0 0 rgba(22,216,255,.6),0 0 18px #16d8ff;animation:jping 2.2s infinite;animation-delay:var(--d,0ms)}
@@ -190,10 +190,10 @@ html.jw-lock #jw button,html.jw-lock #jw a{cursor:pointer !important}
 .jw-row p{margin:0}.jw-tags{display:flex;flex-wrap:wrap;gap:6px}
 .jw-tags span{padding:5px 10px;border:1px solid rgba(22,216,255,.45);background:rgba(22,216,255,.08);color:#d9f6ff;font:500 12px Inter,Cairo,sans-serif;clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px)}
 .jw-holo{position:absolute;inset:0;background:radial-gradient(circle at 50% 50%,rgba(139,53,255,.28),transparent 60%),repeating-linear-gradient(0deg,rgba(150,160,255,.05) 0 1px,transparent 1px 4px)}
-.jw-hl{position:absolute;inset:0;width:100%;height:100%}.jw-hl line{stroke:rgba(22,216,255,.6);stroke-width:1;stroke-dasharray:5 5;vector-effect:non-scaling-stroke;animation:jflow 1.6s linear infinite}
+.jw-hl{position:absolute;inset:0;width:100%;height:100%}.jw-hl line{stroke:#0a7cff;stroke-width:1;stroke-dasharray:5 5;vector-effect:non-scaling-stroke;animation:jflow 1.6s linear infinite}
 @keyframes jflow{to{stroke-dashoffset:-20}}
 .jw-hn{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font:600 clamp(150px,26vw,300px)/1 Oswald,Impact,sans-serif;color:transparent;-webkit-text-stroke:1px rgba(139,53,255,.4);pointer-events:none}
-.jw-hr{position:absolute;left:50%;top:50%;border:1px dashed rgba(22,216,255,.35);border-radius:50%;transform:translate(-50%,-50%);animation:jspin 40s linear infinite}
+.jw-hr{position:absolute;left:50%;top:50%;border:2px dashed rgba(106,20,255,.6);border-radius:50%;transform:translate(-50%,-50%);animation:jspin 40s linear infinite}
 .jw-hr.r1{width:64%;aspect-ratio:1}.jw-hr.r2{width:84%;aspect-ratio:1;border-color:rgba(139,53,255,.4);animation-direction:reverse;animation-duration:60s}
 .jw-ht{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:70%;text-align:center;font:600 clamp(24px,4vw,46px)/1.1 Oswald,Impact,sans-serif;letter-spacing:.08em;text-transform:uppercase;text-shadow:0 0 28px rgba(22,216,255,.55)}
 [dir=rtl] .jw-ht{font-family:Cairo,sans-serif;letter-spacing:0;text-transform:none;font-weight:800}

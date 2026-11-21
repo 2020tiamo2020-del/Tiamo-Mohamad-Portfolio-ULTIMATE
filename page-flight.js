@@ -1,7 +1,6 @@
 /* PAGE FLIGHT (WebGL2) — the round scroll arrow flies a 3D camera over YOUR real page, laid flat on a studio floor.
    Same sequence as the reference video: tilt in -> one continuous glide down the page (floating elements lift toward the camera
-   as it passes) -> rise overhead to see the whole page as one strip -> dive into the destination -> floating card + 4 logo tiles
-   + brand badge + closing headline -> the real page appears.
+   as it passes) -> rise overhead to see the whole page as one strip -> dive into the destination and land exactly where the real page is -> the real page takes over without a jump.
    The page pictures come from /flight/*.webp (real captures of your sections) + /flight/flight.json (positions of floating elements).
    Rebuild them with tools/capture-flight.py when you change the design. No library: raw WebGL2.
    If anything is missing (no WebGL2, files not loaded yet) the arrow keeps its normal smooth scroll. */
@@ -14,7 +13,7 @@
   const SECTIONS = [".hero", "#about", "#services", "#work", "#cinema", "#creation", "#beforeafter", "#process", "#findme", "#brief", "#contact"];
 
   /* ---------- timeline (ms) ---------- */
-  const T = { fadeIn: 250, tilt: 900, glide: 6200, riseA: 5400, riseB: 6600, diveA: 6820, diveB: 7500, cardB: 8500, titleA: 8000, titleB: 8700, jump: 10150, fadeA: 10200, end: 10600 };
+  const T = { fadeIn: 250, tilt: 900, glide: 6200, riseA: 5400, riseB: 6600, diveA: 6820, diveB: 7500, cardB: 8500, jump: 8900, fadeA: 8950, end: 9450 };
   const TILT = 58;
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
   const lerp = (a, b, k) => a + (b - a) * k;
@@ -31,6 +30,8 @@
   const tr = (x, y, z) => { const m = id(); m[12] = x; m[13] = y; m[14] = z; return m; };
   const sc = (x, y, z) => { const m = id(); m[0] = x; m[5] = y; m[10] = z; return m; };
   const ry = a => { const c = Math.cos(a), s = Math.sin(a), m = id(); m[0] = c; m[2] = -s; m[8] = s; m[10] = c; return m; };
+  const rz = a => { const c = Math.cos(a), s = Math.sin(a), m = id(); m[0] = c; m[1] = s; m[4] = -s; m[5] = c; return m; };
+  const eob = k => { const c1 = 1.4, c3 = c1 + 1; return 1 + c3 * Math.pow(k - 1, 3) + c1 * Math.pow(k - 1, 2); };
   const rx = a => { const c = Math.cos(a), s = Math.sin(a), m = id(); m[5] = c; m[6] = s; m[9] = -s; m[10] = c; return m; };
   const persp = (fov, asp, n, f) => { const t = 1 / Math.tan(fov / 2); return [t / asp, 0, 0, 0, 0, t, 0, 0, 0, 0, (f + n) / (n - f), -1, 0, 0, 2 * f * n / (n - f), 0]; };
 
@@ -38,10 +39,10 @@
   const SDF = "float sdr(vec2 q,vec2 h,float r){vec2 d=abs(q)-h+r;return length(max(d,0.))+min(max(d.x,d.y),0.)-r;}";
   const VS = "#version 300 es\nlayout(location=0) in vec2 p;uniform mat4 M;out vec2 uv;out float w;void main(){uv=p+.5;gl_Position=M*vec4(p,0.,1.);w=gl_Position.w;}";
   // page / element: mip-mapped texture, depth-of-field from the real depth, rounded corners, horizon fog
-  const FS_TILE = "#version 300 es\nprecision highp float;in vec2 uv;in float w;uniform sampler2D T;uniform vec4 uvr;uniform vec2 size,qoff,qhalf;uniform float rad,F,K,alpha,lift,keyT,lodF,shd;uniform vec3 fogc;out vec4 o;" + SDF +
+  const FS_TILE = "#version 300 es\nprecision highp float;in vec2 uv;in float w;uniform sampler2D T;uniform vec4 uvr;uniform vec2 size,qoff,qhalf;uniform float rad,F,K,alpha,lift,keyT,lodF,shd,wipe;uniform vec3 fogc;out vec4 o;" + SDF +
     "void main(){vec2 q=(uv-.5)*size+qoff;float d=sdr(q,qhalf,rad);float a=1.-smoothstep(-1.,1.,d);" +
     "float lod=lodF>=0.?lodF:clamp(abs(w-F)/F*K,0.,5.5);vec4 tx=textureLod(T,uvr.xy+uv*uvr.zw,lod);vec3 c=tx.rgb;" +
-    "float kk=mix(1.,smoothstep(.12,.36,max(max(c.r,c.g),c.b)),keyT);c*=(1.+lift*.06)*shd;c=mix(c,fogc,smoothstep(F*1.5,F*3.8,w)*.92);o=vec4(c,a*alpha*kk*tx.a);}";
+    "float kk=mix(1.,smoothstep(.12,.36,max(max(c.r,c.g),c.b)),keyT);c*=(1.+lift*.06)*shd;c=mix(c,fogc,smoothstep(F*1.5,F*3.8,w)*.92);float wp=1.-smoothstep(wipe-.18,wipe,uv.x);o=vec4(c,a*alpha*kk*tx.a*wp);}";
   const FS_SHADOW = "#version 300 es\nprecision highp float;in vec2 uv;in float w;uniform vec2 size,half_;uniform float alpha,rad,blur,F;out vec4 o;" + SDF +
     "void main(){vec2 q=(uv-.5)*size;float d=sdr(q,half_,rad);float a=(1.-smoothstep(-blur,blur*1.5,d))*alpha*(1.-smoothstep(F*1.5,F*3.8,w)*.9);o=vec4(.015,.005,.05,a);}";
   const VS_FS = "#version 300 es\nvoid main(){vec2 p=vec2((gl_VertexID<<1)&2,gl_VertexID&2);gl_Position=vec4(p*2.-1.,0.,1.);}";
@@ -67,40 +68,6 @@
   /* ---------- helpers: canvas textures ---------- */
   const rr = (c, x, y, w, h, r) => { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); };
   const SANS = '500 {s}px Geist, Inter, "Helvetica Neue", Arial, sans-serif', SERIF = 'italic 400 {s}px "Instrument Serif", Georgia, serif';
-  const logoTile = (label, g0, g1) => {
-    const cv = document.createElement("canvas"); cv.width = cv.height = 256; const c = cv.getContext("2d");
-    c.fillStyle = "rgba(0,0,0,0)"; c.clearRect(0, 0, 256, 256);
-    const g = c.createLinearGradient(0, 0, 256, 256); g.addColorStop(0, g0); g.addColorStop(1, g1);
-    rr(c, 6, 6, 244, 244, 56); c.fillStyle = g; c.fill(); c.strokeStyle = "rgba(255,255,255,.35)"; c.lineWidth = 4; c.stroke();
-    c.fillStyle = "#fff"; c.textAlign = "center"; c.textBaseline = "middle"; c.font = "800 " + (label.length > 2 ? 84 : 112) + "px Inter, sans-serif"; c.fillText(label, 128, 138);
-    return cv;
-  };
-  const titleCanvas = (vw, vh, dpr, line1, line2) => {
-    const W = Math.round(vw * dpr), H = Math.round(vh * .40 * dpr), cv = document.createElement("canvas"); cv.width = W; cv.height = H;
-    const c = cv.getContext("2d"); c.scale(dpr, dpr); const w = vw, h = vh * .40, f1 = Math.min(vw * .058, vh * .09), f2 = f1 * 1.18;
-    c.textAlign = "center"; c.textBaseline = "alphabetic";
-    // brand badge
-    c.font = '600 ' + Math.max(13, f1 * .27) + 'px Geist, Inter, sans-serif'; const label = "Tiamo Mohamad"; const bw = c.measureText(label).width + f1 * .62 + 24, bh = f1 * .52, bx = w / 2 - bw / 2, by = 4;
-    rr(c, bx, by, bw, bh, bh / 2); c.fillStyle = "rgba(28,20,52,.88)"; c.fill(); c.strokeStyle = "rgba(255,255,255,.22)"; c.lineWidth = 1.2; c.stroke();
-    const m = bh * .62, mg = c.createLinearGradient(bx, by, bx + m, by + m); mg.addColorStop(0, "#8b35ff"); mg.addColorStop(1, "#16d8ff");
-    rr(c, bx + 8, by + (bh - m) / 2, m, m, m * .28); c.fillStyle = mg; c.fill();
-    c.fillStyle = "#fff"; c.font = "800 " + m * .46 + "px Inter, sans-serif"; c.fillText("TM", bx + 8 + m / 2, by + bh / 2 + m * .17);
-    c.textAlign = "left"; c.fillStyle = "#f4f0ff"; c.font = '600 ' + Math.max(13, f1 * .27) + 'px Geist, Inter, sans-serif'; c.fillText(label, bx + 8 + m + 9, by + bh / 2 + f1 * .09);
-    c.textAlign = "center";
-    c.font = SANS.replace("{s}", f1); c.fillStyle = "#ffffff"; c.fillText(line1, w / 2, by + bh + f1 * 1.12);
-    c.font = SERIF.replace("{s}", f2); c.fillStyle = "#b99cff"; c.fillText(line2, w / 2, by + bh + f1 * 1.12 + f2 * .98);
-    return cv;
-  };
-  const titleText = up => {
-    const el = document.querySelector(up ? ".hero h1" : "#contact h2");
-    const dflt = up ? ["Turning ideas into", "visual stories."] : ["Have an idea?", "Let’s make it visual."];
-    if (!el) return dflt;
-    const em = el.querySelector("em"); const tail = em ? em.textContent.replace(/\s+/g, " ").trim() : "";
-    const all = el.textContent.replace(/\s+/g, " ").trim(); const head = tail ? all.replace(tail, "").trim() : all;
-    return [head || dflt[0], tail || dflt[1]];
-  };
-
-
   /* ---------- section cards: the cards that swing in from the left and right in every section ---------- */
   const clip = (x, n) => { x = (x || "").replace(/\s+/g, " ").trim(); return x.length > n ? x.slice(0, n - 1).trim() + "…" : x; };
   const navLabel = el => { const id = el.id || (el.classList.contains("hero") ? "home" : ""); const a = document.querySelector('#nav a[href="#' + id + '"]'); const l = a && (a.querySelector(".nav-home-label") || a); return l ? l.textContent.replace(/\s+/g, " ").trim() : id; };
@@ -189,7 +156,7 @@
   };
 
   const setup = (up, cur, tgt) => {
-    const vw = innerWidth, vh = innerHeight, dpr = Math.min(devicePixelRatio || 1, 1.75);
+    const vw = innerWidth, vh = innerHeight, lite = Math.min(vw, vh) < 700, dpr = Math.min(devicePixelRatio || 1, lite ? 1.25 : 1.75);
     const cv = document.createElement("canvas"); cv.className = "pf"; cv.width = Math.round(vw * dpr); cv.height = Math.round(vh * dpr);
     const gl = cv.getContext("webgl2", { antialias: true, alpha: false, premultipliedAlpha: false, powerPreference: "high-performance" }); if (!gl) return null;
     const { m, imgs } = assets, W = m.W, N = m.frames.length, FH = m.frames.map(f => f.h || m.H), OFF = [], HREF = 800; let TOT = 0; FH.forEach(h => { OFF.push(TOT); TOT += h; });
@@ -198,10 +165,6 @@
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-.5, -.5, .5, -.5, -.5, .5, .5, .5]), gl.STATIC_DRAW); gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
     const maxA = gl.getExtension("EXT_texture_filter_anisotropic");
     const tex = imgs.map(im => mkTex(gl, im, maxA));
-    const [l1, l2] = titleText(up);
-    const tt = mkTex(gl, titleCanvas(vw, vh, dpr, l1, l2), null);
-    const logos = [["TM", "#8b35ff", "#16d8ff", -70, -70, 176], ["Ai", "#ff6a3d", "#ffb347", W - 130, -96, 170], ["Ps", "#1f6bff", "#16d8ff", -96, 470, 154], ["Ae", "#7a3cff", "#c04cff", W - 70, 420, 160]]
-      .map(a => ({ t: mkTex(gl, logoTile(a[0], a[1], a[2]), null), x: a[3], y: a[4], s: a[5] }));
     const cards = [];
     const ringCache = {};
     const bgTex = (i, x, y, w, h) => {                                                       // average colour of the page just around a rect
@@ -212,12 +175,12 @@
       return mkTex(gl, one, null);
     };
     const els = []; m.frames.forEach((f, i) => [...f.rects].sort((p, q) => p[1] - q[1]).forEach((r, k) => { const kind = r[5] === undefined ? 2 : r[5];
-      els.push({ i, x: r[0], y: r[1], w: r[2], h: r[3], kind, rad: kind === 0 ? 0 : Math.min(Math.max(r[4], 8), 30), dz: 22 + ((i * 37 + k * 53) % 17), delay: k * HREF * .05, pt: bgTex(i, r[0], r[1], r[2], r[3]) }); }));
+      els.push({ i, x: r[0], y: r[1], w: r[2], h: r[3], kind, rad: kind === 0 ? 0 : Math.min(Math.max(r[4], 8), 30), dz: 22 + ((i * 37 + k * 53) % 17), delay: k * HREF * .05, vr: (i * 7 + k * 5 + kind * 3) % 12, pt: bgTex(i, r[0], r[1], r[2], r[3]) }); }));
     const sprites = assets.sprites.map((q, k) => ({ i: q.i, x: q.o.x, y: q.o.y, w: q.o.w, h: q.o.h, patch: null, tex: mkTex(gl, q.im, maxA), delay: HREF * .1 }));
     document.body.appendChild(cv);
     const fov = 38 * Math.PI / 180, F = (vh / 2) / Math.tan(fov / 2);
-    return { cv, gl, P, vao, tex, tt, logos, els, sprites, vw, vh, W, N, FH, OFF, TOT, HREF, F, fov, up, ya: 0, yb: 0, cur, tgt,
-      sCover: vw / W, sFly: .66 * Math.min(vw / W, 1.6), sFit: Math.min(.9 * vh / TOT, .9 * vw / W), sCard: Math.min(.46 * vh / FH[tgt], .6 * vw / W) };
+    return { cv, gl, P, vao, tex, els, sprites, lite, vw, vh, W, N, FH, OFF, TOT, HREF, F, fov, up, ya: 0, yb: 0, cur, tgt,
+      sCover: vw / W, sFly: .66 * Math.min(vw / W, 1.6), sFit: Math.min(.9 * vh / TOT, .9 * vw / W), sEnd: Math.max(vw / W, vh / FH[tgt]) };
   };
 
   const render = t => {
@@ -226,9 +189,11 @@
     // camera pose
     const kT = eio(seg(t, 0, T.tilt)), kR = eio(seg(t, T.riseA, T.riseB)), kD = eio(seg(t, T.diveA, T.diveB)), kC = eio(seg(t, T.diveB, T.cardB));
     const th = TILT * kT * (1 - kR) * Math.PI / 180;
-    let ls = lerp(Math.log(S.sCover), Math.log(S.sFly), kT); ls = lerp(ls, Math.log(S.sFit), kR); ls = lerp(ls, Math.log(S.sCover), kD); ls = lerp(ls, Math.log(S.sCard), kC);
+    let ls = lerp(Math.log(S.sCover), Math.log(S.sFly), kT); ls = lerp(ls, Math.log(S.sFit), kR); ls = lerp(ls, Math.log(S.sCover), kD); ls = lerp(ls, Math.log(S.sEnd), kC);
     const s = Math.exp(ls);
-    let y = lerp(S.ya, S.yg, glide(t / T.glide)); y = lerp(y, TOT / 2, kR); y = lerp(y, S.yb, kD); y -= (.2 * vh * kC) / s;
+    let y = lerp(S.ya, S.yg, glide(t / T.glide)); y = lerp(y, TOT / 2, kR); y = lerp(y, S.yb, kD);
+    // the end frame sits exactly where the real page will be (top of the hero / bottom of the contact section), so the hand-over is seamless
+    const yEnd = S.up ? OFF[S.tgt] + (vh / 2) / s : OFF[S.tgt] + FH[S.tgt] - (vh / 2) / s; y = lerp(y, yEnd, kC);
     const cam = mul(persp(fov, vw / vh, 10, 40000), mul(tr(0, 0, -F), mul(rx(-th), mul(sc(s, s, s), tr(0, y, 0)))));
     // floor
     gl.useProgram(P.floor.p); gl.uniform2f(P.floor.u.res, cv.width, cv.height); gl.uniform3fv(P.floor.u.c0, S.fl0); gl.uniform3fv(P.floor.u.c1, S.fl1); gl.uniform3fv(P.floor.u.c2, S.fl2); gl.drawArrays(gl.TRIANGLES, 0, 3);
@@ -238,10 +203,10 @@
       gl.useProgram(P.shadow.p); const u = P.shadow.u; gl.uniformMatrix4fv(u.M, false, quad(rot, cx, cy, cz, w, h));
       gl.uniform2f(u.size, w, h); gl.uniform2f(u.half_, half[0], half[1]); gl.uniform1f(u.alpha, alpha); gl.uniform1f(u.rad, rad); gl.uniform1f(u.blur, blur); gl.uniform1f(u.F, F); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     };
-    const draw = (tex, cx, cy, cz, w, h, uvr, rad, qoff, qhalf, alpha, lift, rot, keyT, lodF, shd) => {
+    const draw = (tex, cx, cy, cz, w, h, uvr, rad, qoff, qhalf, alpha, lift, rot, keyT, lodF, shd, wipe) => {
       gl.useProgram(P.tile.p); const u = P.tile.u; gl.uniformMatrix4fv(u.M, false, quad(rot, cx, cy, cz, w, h));
       gl.uniform4fv(u.uvr, uvr); gl.uniform2f(u.size, w, h); gl.uniform2f(u.qoff, qoff[0], qoff[1]); gl.uniform2f(u.qhalf, qhalf[0], qhalf[1]);
-      gl.uniform1f(u.rad, rad); gl.uniform1f(u.F, F); gl.uniform1f(u.K, 3.2); gl.uniform1f(u.alpha, alpha); gl.uniform1f(u.lift, lift); gl.uniform1f(u.keyT, keyT || 0); gl.uniform1f(u.lodF, lodF === undefined ? -1 : lodF); gl.uniform1f(u.shd, shd === undefined ? 1 : shd); gl.uniform3fv(u.fogc, S.fl1);
+      gl.uniform1f(u.rad, rad); gl.uniform1f(u.F, F); gl.uniform1f(u.K, 3.2); gl.uniform1f(u.alpha, alpha); gl.uniform1f(u.lift, lift); gl.uniform1f(u.keyT, keyT || 0); gl.uniform1f(u.lodF, lodF === undefined ? -1 : lodF); gl.uniform1f(u.shd, shd === undefined ? 1 : shd); gl.uniform1f(u.wipe, wipe === undefined ? 2 : wipe); gl.uniform3fv(u.fogc, S.fl1);
       gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex); gl.uniform1i(u.T, 0); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     };
     // page shadow + page (one strip; only its outer corners are rounded)
@@ -249,40 +214,40 @@
     for (let i = 0; i < N; i++) {
       const isT = i === S.tgt, a = isT ? 1 : fo; if (a < .003) continue; const hh = FH[i], cyp = OFF[i] + hh / 2;
       const qo = [0, (-cyp + SH / 2) * (isT ? 1 - kC : 1)], qh = isT ? [W / 2, lerp(SH / 2, hh / 2, kC)] : [W / 2, SH / 2];
-      if (isT && kC > 0) sh(0, -cyp - 14, -2, W + 360, hh + 360, [W / 2, hh / 2], 24, 60, .6 * kC);
-      draw(S.tex[i], 0, -cyp, 0, W, hh, [0, 0, 1, 1], 24, qo, qh, a, 0);
+      draw(S.tex[i], 0, -cyp, 0, W, hh, [0, 0, 1, 1], isT ? lerp(24, 0, kC) : 24, qo, qh, a, 0);
     }
     // everything that rises out of the page is built from stacked layers, so it has real thickness (3D)
     const LAYERS = { 0: [8, 2.6], 1: [5, 2.8], 2: [4, 3], 3: [4, 2.6], 4: [5, 2.8] };
-    const rise = (key, i, x, y0, w, h, delay, wide, tex, uvr, rad, kind, dz, pt) => {
+    // every element enters in its own way: lift, slide from the left or right, flip, pop with a bounce, or a tilted roll; text also writes itself in from the side
+    const pick = (kind, v) => kind === 0 ? [1, 2, 0][v % 3] : kind === 1 ? [3, 4, 5, 4][v % 4] : kind === 3 || kind === 4 ? [4, 5, 0][v % 3] : [0, 3, 4, 1, 2, 5][v % 6];
+    const rise = (key, i, x, y0, w, h, delay, wide, tex, uvr, rad, kind, dz, pt, vr) => {
       const cyp = OFF[i] + y0 + h / 2, d = Math.abs(cyp - y);
-      const en = sstep(HREF * 1.8, HREF * .28, d + delay) * (1 - kR) * (i === S.tgt ? 1 - kC : 1); if (en < .01) return;
-      const k = eio(en), phi = th * k * .8, cx = x + w / 2 - W / 2, bot = OFF[i] + y0 + h, rot = mul(rx(phi), tr(0, h / 2, 0));
-      if (pt) draw(pt, cx, -(OFF[i] + y0 + h / 2), .6, w + 6, h + 6, [0, 0, 1, 1], rad, [0, 0], [(w + 6) / 2, (h + 6) / 2], Math.min(1, k * 1.3), 0, 0, 0);   // the spot it left behind (flat page colour)
-      sh(cx, -bot - 4, 1, w * 1.15 + 80, h * .5 + 80, [w * .5, h * .12], rad || 6, 18 + h * .05, .55 * k * (kind === 0 ? .5 : 1));
-      const [L, st] = kind === 5 ? [7, 4.5] : LAYERS[kind] || [3, 3];
+      const en = sstep(HREF * 1.8, HREF * .28, d + delay) * (1 - kR) * (i === S.tgt ? 1 - kC : 1);
+      const cx0 = x + w / 2 - W / 2, bot = OFF[i] + y0 + h;
+      if (kind === 5) {                                    // the rider rests flat on the page and hands over to the lifted copy (one rider, never two)
+        const fa = (i === S.tgt ? 1 : fo) * (1 - Math.min(1, en * 2.2));
+        if (fa > .003) draw(tex, cx0, -(OFF[i] + y0 + h / 2), 3, w, h, [0, 0, 1, 1], 0, [0, 0], [w / 2, h / 2], fa, 0, 0, 0, undefined, 1);
+      }
+      if (en < .01) return;
+      const k = eio(en), phi = th * k * .8, vt = kind === 5 ? 0 : pick(kind, vr || 0), inv = 1 - k;
+      const ps = vt === 4 ? .55 + .45 * eob(k) : 1, ww = w * ps, hh = h * ps;
+      const cx = cx0 + (vt === 1 ? -1 : vt === 2 ? 1 : 0) * inv * 260;
+      const yaw = vt === 3 ? inv * 1.15 : 0, roll = vt === 5 ? inv * .38 * (vr % 2 ? 1 : -1) : 0;
+      const rot = mul(rx(phi), mul(tr(0, hh / 2, 0), mul(rz(roll), ry(yaw))));
+      const wp = kind === 0 ? clamp(k * 1.3, 0, 1.3) : 2;
+      if (pt) draw(pt, cx0, -(OFF[i] + y0 + h / 2), .6, w + 6, h + 6, [0, 0, 1, 1], rad, [0, 0], [(w + 6) / 2, (h + 6) / 2], Math.min(1, k * 1.3), 0, 0, 0);   // the spot it left behind (flat page colour)
+      sh(cx, -bot - 4, 1, ww * 1.15 + 80, hh * .5 + 80, [ww * .5, hh * .12], rad || 6, 18 + hh * .05, .55 * k * (kind === 0 ? .5 : 1));
+      let [L, st] = kind === 5 ? [7, 4.5] : LAYERS[kind] || [3, 3];
+      if (S.lite) L = Math.min(L, kind === 5 ? 3 : 2);     // phones: fewer stacked layers
       for (let l = 0; l < L; l++) {                                                                  // back to front: dark rim, bright face
         const front = l === L - 1, z = 3 + dz * k - (L - 1 - l) * st * k, shd = front ? 1 : .32 + .32 * l / L;
-        draw(tex, cx, -bot, z, w, h, uvr, rad, [0, 0], [w / 2, h / 2], front ? Math.min(1, en * 2.2) : Math.min(1, en * 2.2) * .95, k, rot, kind === 0 ? 1 : 0, undefined, shd);
+        draw(tex, cx, -bot, z, ww, hh, uvr, rad, [0, 0], [ww / 2, hh / 2], front ? Math.min(1, en * 2.2) : Math.min(1, en * 2.2) * .95, k, rot, kind === 0 ? 1 : 0, undefined, shd, wp);
       }
     };
     const list = [];
-    S.els.forEach(e => { if (e.w > W * .56 && e.kind !== 0) return; list.push({ d: Math.abs(OFF[e.i] + e.y + e.h / 2 - y), f: () => rise("e", e.i, e.x, e.y, e.w, e.h, e.delay, 0, S.tex[e.i], [e.x / W, 1 - (e.y + e.h) / FH[e.i], e.w / W, e.h / FH[e.i]], e.rad, e.kind, e.dz, e.pt) }); });
-    S.sprites.forEach(q => list.push({ d: Math.abs(OFF[q.i] + q.y + q.h / 2 - y), f: () => rise("s", q.i, q.x, q.y, q.w, q.h, q.delay, 0, q.tex, [0, 0, 1, 1], 0, 5, 46, null) }));
+    S.els.forEach(e => { if (e.w > W * .56 && e.kind !== 0) return; list.push({ d: Math.abs(OFF[e.i] + e.y + e.h / 2 - y), f: () => rise("e", e.i, e.x, e.y, e.w, e.h, e.delay, 0, S.tex[e.i], [e.x / W, 1 - (e.y + e.h) / FH[e.i], e.w / W, e.h / FH[e.i]], e.rad, e.kind, e.dz, e.pt, e.vr) }); });
+    S.sprites.forEach(q => list.push({ d: Math.abs(OFF[q.i] + q.y + q.h / 2 - y), f: () => rise("s", q.i, q.x, q.y, q.w, q.h, q.delay, 0, q.tex, [0, 0, 1, 1], 0, 5, 46, null, 0) }));
     list.sort((p, q) => q.d - p.d).forEach(o => o.f());
-    // four logo tiles: always around the hero; they also gather around the destination card for the final reveal
-    const tiles = (fi, alpha) => S.logos.forEach((L, k) => {
-      const z = 46 + 6 * Math.sin(t / 700 + k * 1.7), cx = L.x + L.s / 2 - W / 2, cy = OFF[fi] + L.y + L.s / 2;
-      sh(cx + 6, -cy - 14, 6, L.s + 120, L.s + 120, [L.s / 2, L.s / 2], 40, 26, .6 * alpha);
-      draw(L.t, cx, -cy, z, L.s, L.s, [0, 0, 1, 1], 1, [0, 0], [L.s, L.s], alpha, 0);
-    });
-    tiles(0, 1); if (S.tgt !== 0) tiles(S.tgt, kD);
-    // closing title (screen space)
-    const ta = eio(seg(t, T.titleA, T.titleB));
-    if (ta > .002) {
-      gl.useProgram(P.ov.p); const u = P.ov.u, th2 = .40, rise = (1 - ta) * .03;
-      gl.uniform4f(u.r, 0, 1 - th2 - .02 + rise - .04, 2, th2 * 2); gl.uniform1f(u.alpha, ta); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, S.tt); gl.uniform1i(u.T, 0); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-    }
     cv.style.opacity = (eio(seg(t, 0, T.fadeIn)) * (1 - eio(seg(t, T.fadeA, T.end)))).toFixed(3);
   };
 
@@ -300,11 +265,11 @@
   };
   const tick = now => {
     let t = now - t0; if (skipFrom >= 0) t = Math.max(t, skipFrom + (now - skipAt0));
-    if (!jumped && t >= T.jump) { jumped = true; doJump(target); }
+    if (!jumped && t >= T.jump) { jumped = true; doJump(S && S.up ? 0 : document.documentElement.scrollHeight); }
     if (t >= T.end) return finish();
     render(t); raf = requestAnimationFrame(tick);
   };
-  const skip = () => { if (!busy || skipFrom >= 0 || !S) return; const now = performance.now(); if (now - t0 >= T.titleB) return; skipFrom = T.titleB; skipAt0 = now; };
+  const skip = () => { if (!busy || skipFrom >= 0 || !S) return; const now = performance.now(); if (now - t0 >= T.cardB) return; skipFrom = T.cardB; skipAt0 = now; };
 
   const start = up => {
     if (busy || !assets) return false;
@@ -326,6 +291,12 @@
     render(0); t0 = performance.now(); raf = requestAnimationFrame(tick); return true;
   };
 
+  const onResize = () => {
+    if (!S) return; const { cv, W, FH, tgt } = S, vw = innerWidth, vh = innerHeight, dpr = Math.min(devicePixelRatio || 1, S.lite ? 1.25 : 1.75);
+    S.vw = vw; S.vh = vh; cv.width = Math.round(vw * dpr); cv.height = Math.round(vh * dpr);
+    S.F = (vh / 2) / Math.tan(S.fov / 2); S.sCover = vw / W; S.sFly = .66 * Math.min(vw / W, 1.6); S.sFit = Math.min(.9 * vh / S.TOT, .9 * vw / W); S.sEnd = Math.max(vw / W, vh / FH[tgt]);
+  };
+  addEventListener("resize", onResize); addEventListener("orientationchange", () => setTimeout(onResize, 120));
   document.addEventListener("keydown", e => { if (busy && (e.key === "Escape" || e.key === " " || e.key === "Enter")) { e.preventDefault(); skip(); } }, true);
   document.addEventListener("click", e => {
     const b = e.target.closest && e.target.closest("#scrollOrbit"); if (!b) return;
