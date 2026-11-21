@@ -54,10 +54,10 @@
 
   /* ---------- preload the captures ---------- */
   let assets = null, loading = false;
-  const loadImg = u => new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = no; im.src = BASE + u; });
+  const VER = "?v=9", loadImg = u => new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = no; im.src = BASE + u + VER; });
   const preload = () => {
     if (loading || assets) return; loading = true;
-    fetch(BASE + "flight/flight.json").then(r => r.json()).then(m => {
+    fetch(BASE + "flight/flight.json" + VER).then(r => r.json()).then(m => {
       const sp = []; m.frames.forEach((f, i) => (f.sprites || []).forEach(o => sp.push({ i, o })));
       return Promise.all([Promise.all(m.frames.map(f => loadImg(f.file))), Promise.all(sp.map(q => loadImg(q.o.file)))]).then(([imgs, simgs]) => { assets = { m, imgs, sprites: sp.map((q, k) => ({ i: q.i, o: q.o, im: simgs[k] })) }; });
     }).catch(() => { loading = false; });
@@ -174,13 +174,24 @@
       const one = document.createElement("canvas"); one.width = one.height = 2; const o = one.getContext("2d"); o.fillStyle = "rgb(" + Math.round(r / 8) + "," + Math.round(g2 / 8) + "," + Math.round(b / 8) + ")"; o.fillRect(0, 0, 2, 2);
       return mkTex(gl, one, null);
     };
-    const els = []; m.frames.forEach((f, i) => [...f.rects].sort((p, q) => p[1] - q[1]).forEach((r, k) => { const kind = r[5] === undefined ? 2 : r[5];
-      els.push({ i, x: r[0], y: r[1], w: r[2], h: r[3], kind, rad: kind === 0 ? 0 : Math.min(Math.max(r[4], 8), 30), dz: 22 + ((i * 37 + k * 53) % 17), delay: k * HREF * .05, vr: (i * 7 + k * 5 + kind * 3) % 12, pt: bgTex(i, r[0], r[1], r[2], r[3]) }); }));
+    const els = [];
+    m.frames.forEach((f, i) => {
+      const rs = [...f.rects].sort((a, b) => a[1] - b[1]), G = 26, par = rs.map((_, k) => k), fd = k => par[k] === k ? k : (par[k] = fd(par[k]));
+      for (let a = 0; a < rs.length; a++) for (let b = a + 1; b < rs.length; b++) {            // rects that touch or overlap become one group, so small text never rides over big text
+        const A = rs[a], B = rs[b]; if (A[0] < B[0] + B[2] + G && B[0] < A[0] + A[2] + G && A[1] < B[1] + B[3] + G && B[1] < A[1] + A[3] + G) par[fd(b)] = fd(a);
+      }
+      const gid = {}, gs = {}; rs.forEach((r, k) => { const g = fd(k); (gs[g] = gs[g] || []).push(k); });
+      Object.keys(gs).forEach((g, gi) => {
+        const mem = gs[g], cy = mem.reduce((s, k) => s + OFF[i] + rs[k][1] + rs[k][3] / 2, 0) / mem.length, dz = 22 + ((i * 37 + gi * 53) % 17), delay = gi * HREF * .05, vr = (i * 7 + gi * 5) % 12;
+        mem.forEach(k => { const r = rs[k], kind = r[5] === undefined ? 2 : r[5];
+          els.push({ i, x: r[0], y: r[1], w: r[2], h: r[3], kind, rad: kind === 0 || kind === 6 ? 0 : Math.min(Math.max(r[4], 8), 30), dz, delay, vr, multi: mem.length > 1, cy, pt: bgTex(i, r[0], r[1], r[2], r[3]) }); });
+      });
+    });
     const sprites = assets.sprites.map((q, k) => ({ i: q.i, x: q.o.x, y: q.o.y, w: q.o.w, h: q.o.h, patch: null, tex: mkTex(gl, q.im, maxA), delay: HREF * .1 }));
     document.body.appendChild(cv);
     const fov = 38 * Math.PI / 180, F = (vh / 2) / Math.tan(fov / 2);
     return { cv, gl, P, vao, tex, els, sprites, lite, vw, vh, W, N, FH, OFF, TOT, HREF, F, fov, up, ya: 0, yb: 0, cur, tgt,
-      sCover: vw / W, sFly: .66 * Math.min(vw / W, 1.6), sFit: Math.min(.9 * vh / TOT, .9 * vw / W), sEnd: Math.max(vw / W, vh / FH[tgt]) };
+      sCover: vw / W, sFly: .66 * Math.min(vw / W, 1.6), sFit: Math.min(.9 * vh / TOT, .9 * vw / W), sEnd: vw / W };
   };
 
   const render = t => {
@@ -192,8 +203,8 @@
     let ls = lerp(Math.log(S.sCover), Math.log(S.sFly), kT); ls = lerp(ls, Math.log(S.sFit), kR); ls = lerp(ls, Math.log(S.sCover), kD); ls = lerp(ls, Math.log(S.sEnd), kC);
     const s = Math.exp(ls);
     let y = lerp(S.ya, S.yg, glide(t / T.glide)); y = lerp(y, TOT / 2, kR); y = lerp(y, S.yb, kD);
-    // the end frame sits exactly where the real page will be (top of the hero / bottom of the contact section), so the hand-over is seamless
-    const yEnd = S.up ? OFF[S.tgt] + (vh / 2) / s : OFF[S.tgt] + FH[S.tgt] - (vh / 2) / s; y = lerp(y, yEnd, kC);
+    // the end frame is laid exactly over the real section (measured from the page itself), so the hand-over is seamless
+    const yEnd = OFF[S.tgt] + FH[S.tgt] / 2 - (S.eC - vh / 2) / s; y = lerp(y, yEnd, kC);
     const cam = mul(persp(fov, vw / vh, 10, 40000), mul(tr(0, 0, -F), mul(rx(-th), mul(sc(s, s, s), tr(0, y, 0)))));
     // floor
     gl.useProgram(P.floor.p); gl.uniform2f(P.floor.u.res, cv.width, cv.height); gl.uniform3fv(P.floor.u.c0, S.fl0); gl.uniform3fv(P.floor.u.c1, S.fl1); gl.uniform3fv(P.floor.u.c2, S.fl2); gl.drawArrays(gl.TRIANGLES, 0, 3);
@@ -210,29 +221,24 @@
       gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex); gl.uniform1i(u.T, 0); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     };
     // page shadow + page (one strip; only its outer corners are rounded)
-    const SH = TOT, fo = 1 - kC; sh(0, -SH / 2 - 26, -3, W + 520, SH + 520, [W / 2, SH / 2], 24, 90, .62 * fo);
+    const SH = TOT, fo = 1; sh(0, -SH / 2 - 26, -3, W + 520, SH + 520, [W / 2, SH / 2], 24, 90, .62 * (1 - kC));
     for (let i = 0; i < N; i++) {
-      const isT = i === S.tgt, a = isT ? 1 : fo; if (a < .003) continue; const hh = FH[i], cyp = OFF[i] + hh / 2;
-      const qo = [0, (-cyp + SH / 2) * (isT ? 1 - kC : 1)], qh = isT ? [W / 2, lerp(SH / 2, hh / 2, kC)] : [W / 2, SH / 2];
-      draw(S.tex[i], 0, -cyp, 0, W, hh, [0, 0, 1, 1], isT ? lerp(24, 0, kC) : 24, qo, qh, a, 0);
+      const hh = FH[i], cyp = OFF[i] + hh / 2, qo = [0, -cyp + SH / 2], qh = [W / 2, SH / 2];
+      draw(S.tex[i], 0, -cyp, 0, W, hh, [0, 0, 1, 1], lerp(24, 0, kC), qo, qh, 1, 0);
     }
     // everything that rises out of the page is built from stacked layers, so it has real thickness (3D)
-    const LAYERS = { 0: [8, 2.6], 1: [5, 2.8], 2: [4, 3], 3: [4, 2.6], 4: [5, 2.8] };
+    const LAYERS = { 0: [8, 2.6], 1: [5, 2.8], 2: [4, 3], 3: [4, 2.6], 4: [5, 2.8], 6: [7, 3.4] };
     // every element enters in its own way: lift, slide from the left or right, flip, pop with a bounce, or a tilted roll; text also writes itself in from the side
-    const pick = (kind, v) => kind === 0 ? [1, 2, 0][v % 3] : kind === 1 ? [3, 4, 5, 4][v % 4] : kind === 3 || kind === 4 ? [4, 5, 0][v % 3] : [0, 3, 4, 1, 2, 5][v % 6];
-    const rise = (key, i, x, y0, w, h, delay, wide, tex, uvr, rad, kind, dz, pt, vr) => {
+    const pick = (kind, v) => kind === 6 ? [0, 4][v % 2] : kind === 0 ? [1, 2, 0][v % 3] : kind === 1 ? [3, 4, 5, 4][v % 4] : kind === 3 || kind === 4 ? [4, 5, 0][v % 3] : [0, 3, 4, 1, 2, 5][v % 6];
+    const rise = (key, i, x, y0, w, h, delay, wide, tex, uvr, rad, kind, dz, pt, vr, multi) => {
       const cyp = OFF[i] + y0 + h / 2, d = Math.abs(cyp - y);
-      const en = sstep(HREF * 1.8, HREF * .28, d + delay) * (1 - kR) * (i === S.tgt ? 1 - kC : 1);
+      const en = sstep(HREF * 1.8, HREF * .28, d + delay) * (1 - kR) * (1 - kC);
       const cx0 = x + w / 2 - W / 2, bot = OFF[i] + y0 + h;
-      if (kind === 5) {                                    // the rider rests flat on the page and hands over to the lifted copy (one rider, never two)
-        const fa = (i === S.tgt ? 1 : fo) * (1 - Math.min(1, en * 2.2));
-        if (fa > .003) draw(tex, cx0, -(OFF[i] + y0 + h / 2), 3, w, h, [0, 0, 1, 1], 0, [0, 0], [w / 2, h / 2], fa, 0, 0, 0, undefined, 1);
-      }
       if (en < .01) return;
-      const k = eio(en), phi = th * k * .8, vt = kind === 5 ? 0 : pick(kind, vr || 0), inv = 1 - k;
+      const k = eio(en), phi = th * k * .8, vt = kind === 5 ? 0 : multi ? [0, 1, 2, 0][(vr || 0) % 4] : pick(kind, vr || 0), inv = 1 - k;
       const ps = vt === 4 ? .55 + .45 * eob(k) : 1, ww = w * ps, hh = h * ps;
-      const cx = cx0 + (vt === 1 ? -1 : vt === 2 ? 1 : 0) * inv * 260;
-      const yaw = vt === 3 ? inv * 1.15 : 0, roll = vt === 5 ? inv * .38 * (vr % 2 ? 1 : -1) : 0;
+      const cx = cx0 + (vt === 1 ? -1 : vt === 2 ? 1 : 0) * inv * 70;
+      const yaw = vt === 3 ? inv * 1.15 : 0, roll = vt === 5 ? inv * Math.min(.3, 70 / Math.max(w, h)) * (vr % 2 ? 1 : -1) : 0;
       const rot = mul(rx(phi), mul(tr(0, hh / 2, 0), mul(rz(roll), ry(yaw))));
       const wp = kind === 0 ? clamp(k * 1.3, 0, 1.3) : 2;
       if (pt) draw(pt, cx0, -(OFF[i] + y0 + h / 2), .6, w + 6, h + 6, [0, 0, 1, 1], rad, [0, 0], [(w + 6) / 2, (h + 6) / 2], Math.min(1, k * 1.3), 0, 0, 0);   // the spot it left behind (flat page colour)
@@ -241,11 +247,11 @@
       if (S.lite) L = Math.min(L, kind === 5 ? 3 : 2);     // phones: fewer stacked layers
       for (let l = 0; l < L; l++) {                                                                  // back to front: dark rim, bright face
         const front = l === L - 1, z = 3 + dz * k - (L - 1 - l) * st * k, shd = front ? 1 : .32 + .32 * l / L;
-        draw(tex, cx, -bot, z, ww, hh, uvr, rad, [0, 0], [ww / 2, hh / 2], front ? Math.min(1, en * 2.2) : Math.min(1, en * 2.2) * .95, k, rot, kind === 0 ? 1 : 0, undefined, shd, wp);
+        draw(tex, cx, -bot, z, ww, hh, uvr, rad, [0, 0], [ww / 2, hh / 2], front ? Math.min(1, en * 2.2) : Math.min(1, en * 2.2) * .95, k, rot, kind === 0 || kind === 6 ? 1 : 0, undefined, shd, wp);
       }
     };
     const list = [];
-    S.els.forEach(e => { if (e.w > W * .56 && e.kind !== 0) return; list.push({ d: Math.abs(OFF[e.i] + e.y + e.h / 2 - y), f: () => rise("e", e.i, e.x, e.y, e.w, e.h, e.delay, 0, S.tex[e.i], [e.x / W, 1 - (e.y + e.h) / FH[e.i], e.w / W, e.h / FH[e.i]], e.rad, e.kind, e.dz, e.pt, e.vr) }); });
+    S.els.forEach(e => { if (e.w > W * .56 && e.kind !== 0) return; list.push({ d: Math.abs(e.cy - y) + e.w * e.h * 1e-4, f: () => rise("e", e.i, e.x, e.y, e.w, e.h, e.delay, 0, S.tex[e.i], [e.x / W, 1 - (e.y + e.h) / FH[e.i], e.w / W, e.h / FH[e.i]], e.rad, e.kind, e.dz, e.pt, e.vr, e.multi) }); });
     S.sprites.forEach(q => list.push({ d: Math.abs(OFF[q.i] + q.y + q.h / 2 - y), f: () => rise("s", q.i, q.x, q.y, q.w, q.h, q.delay, 0, q.tex, [0, 0, 1, 1], 0, 5, 46, null, 0) }));
     list.sort((p, q) => q.d - p.d).forEach(o => o.f());
     cv.style.opacity = (eio(seg(t, 0, T.fadeIn)) * (1 - eio(seg(t, T.fadeA, T.end)))).toFixed(3);
@@ -278,8 +284,10 @@
     const tgt = up ? 0 : els.length - 1;
     try { S = setup(up, cur, tgt); } catch (e) { console.warn("page-flight:", e); try { S && S.cv.remove(); } catch (_) {} S = null; return false; }
     if (!S) return false;
-    const H = S.HREF; S.ya = S.OFF[cur] + S.FH[cur] / 2; S.yb = S.OFF[tgt] + S.FH[tgt] / 2;
-    if (Math.abs(S.yb - S.ya) < H * 3) S.ya = clamp(S.yb + (up ? 1 : -1) * H * 3, H / 2, S.TOT - H / 2);   // always give the camera a stretch of page to glide over
+    const H = S.HREF, cr = els[cur].getBoundingClientRect(), s0 = S.sCover;
+    S.ya = S.OFF[cur] + S.FH[cur] / 2 - (cr.top + cr.height / 2 - S.vh / 2) / s0;      // the first frame lies exactly over what is on screen now
+    S.eC = endCenter(tgt, S.vh); S.yb = S.OFF[tgt] + S.FH[tgt] / 2;
+    if (Math.abs(S.yb - S.ya) < H * 3 && cur === tgt) S.ya = clamp(S.yb + (up ? 1 : -1) * H * 3, H / 2, S.TOT - H / 2);   // always give the camera a stretch of page to glide over
     S.yg = lerp(S.ya, S.yb, .94);
     const light = document.body.classList.contains("light");
     S.fl0 = hex(light ? "#f4ecff" : "#1f1638"); S.fl1 = hex(light ? "#f1ebfa" : "#0b0814"); S.fl2 = hex(light ? "#e8e0f5" : "#05040a");
@@ -291,10 +299,16 @@
     render(0); t0 = performance.now(); raf = requestAnimationFrame(tick); return true;
   };
 
+  // where the real section's centre sits on screen once the page has jumped to its destination (top of the page, or the very bottom incl. footer)
+  const endCenter = (tgt, vh) => {
+    const el = document.querySelector(SECTIONS[tgt]); if (!el) return vh / 2;
+    const r = el.getBoundingClientRect(), top = r.top + scrollY, ts = tgt === 0 ? 0 : Math.max(0, document.documentElement.scrollHeight - vh);
+    return top - ts + r.height / 2;
+  };
   const onResize = () => {
     if (!S) return; const { cv, W, FH, tgt } = S, vw = innerWidth, vh = innerHeight, dpr = Math.min(devicePixelRatio || 1, S.lite ? 1.25 : 1.75);
     S.vw = vw; S.vh = vh; cv.width = Math.round(vw * dpr); cv.height = Math.round(vh * dpr);
-    S.F = (vh / 2) / Math.tan(S.fov / 2); S.sCover = vw / W; S.sFly = .66 * Math.min(vw / W, 1.6); S.sFit = Math.min(.9 * vh / S.TOT, .9 * vw / W); S.sEnd = Math.max(vw / W, vh / FH[tgt]);
+    S.F = (vh / 2) / Math.tan(S.fov / 2); S.sCover = vw / W; S.sFly = .66 * Math.min(vw / W, 1.6); S.sFit = Math.min(.9 * vh / S.TOT, .9 * vw / W); S.sEnd = vw / W; S.eC = endCenter(tgt, vh);
   };
   addEventListener("resize", onResize); addEventListener("orientationchange", () => setTimeout(onResize, 120));
   document.addEventListener("keydown", e => { if (busy && (e.key === "Escape" || e.key === " " || e.key === "Enter")) { e.preventDefault(); skip(); } }, true);

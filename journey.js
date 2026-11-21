@@ -253,20 +253,41 @@
   function drawLines(t, st) {
     lg.clearRect(0, 0, W, H2); if (tr || !MK.length) return;
     const F = scr(st, st.fx, st.fy), P = MK.map(m => { const p = scr(st, m.u, m.v); m.x = p[0]; m.y = p[1]; m.el.style.transform = "translate(" + p[0].toFixed(1) + "px," + p[1].toFixed(1) + "px) translate(-50%,-50%)"; m.el.classList.toggle("fl", H.dir === "rtl" ? p[0] < 230 : p[0] > W - 230); return p; });
-    const BLUE = "#0a7cff", BLUEG = "rgba(10,124,255,.55)", VIO = "#6a14ff", HALO = "rgba(255,255,255,.85)";
-    lg.lineCap = "round"; lg.lineJoin = "round";
-    /* focus ring: white halo underneath, deep violet on top (readable on the light studio) */
-    lg.setLineDash([]); lg.lineWidth = 5; lg.strokeStyle = HALO; lg.beginPath(); lg.arc(F[0], F[1], 46, 0, 6.283); lg.stroke();
-    lg.setLineDash([10, 8]); lg.lineDashOffset = -t * .03; lg.lineWidth = 2.8; lg.strokeStyle = VIO; lg.shadowColor = "rgba(106,20,255,.7)"; lg.shadowBlur = 10; lg.beginPath(); lg.arc(F[0], F[1], 46, 0, 6.283); lg.stroke(); lg.shadowBlur = 0;
-    /* spokes: laser blue with a soft glow */
-    lg.setLineDash([]); lg.lineWidth = 3.4; lg.strokeStyle = HALO; P.forEach(p => { lg.beginPath(); lg.moveTo(F[0], F[1]); lg.lineTo(p[0], p[1]); lg.stroke(); });
-    lg.lineWidth = 1.8; lg.strokeStyle = BLUE; lg.shadowColor = BLUEG; lg.shadowBlur = 8; P.forEach(p => { lg.beginPath(); lg.moveTo(F[0], F[1]); lg.lineTo(p[0], p[1]); lg.stroke(); }); lg.shadowBlur = 0;
+    /* holographic overlay: every stroke is an ink underlay (contrast on the light studio) + coloured neon body + white-hot core */
+    const CY = "#18e4ff", VI = "#8b5cff", WH = "#ffffff", INK = "rgba(26,12,120,.38)", k = ln.width / W;
+    const neon = (draw, w, col, glow, dash, off) => {
+      lg.lineCap = "round"; lg.lineJoin = "round"; lg.setLineDash(dash || []); lg.lineDashOffset = off || 0;
+      lg.shadowBlur = 0; lg.strokeStyle = INK; lg.lineWidth = w + 3.2; draw();
+      lg.strokeStyle = col; lg.lineWidth = w; lg.shadowColor = glow; lg.shadowBlur = 14 * k; draw(); lg.shadowBlur = 0;
+      lg.strokeStyle = WH; lg.lineWidth = Math.max(.8, w * .36); draw(); lg.setLineDash([]);
+    };
+    const ctl = (p, i) => { const dx = p[0] - F[0], dy = p[1] - F[1], L = Math.hypot(dx, dy) || 1, o = L * .13 * (i % 2 ? 1 : -1) * (1 + .12 * Math.sin(t * .0012 + i)); return [(F[0] + p[0]) / 2 - dy / L * o, (F[1] + p[1]) / 2 + dx / L * o]; };
+    const C = P.map(ctl);
+    /* energy lines from the focus to every marker */
+    P.forEach((p, i) => {
+      const g = lg.createLinearGradient(F[0], F[1], p[0], p[1]); g.addColorStop(0, VI); g.addColorStop(1, CY);
+      const path = () => { lg.beginPath(); lg.moveTo(F[0], F[1]); lg.quadraticCurveTo(C[i][0], C[i][1], p[0], p[1]); lg.stroke(); };
+      neon(path, 2, g, "rgba(24,228,255,.9)");
+      lg.setLineDash([2, 16]); lg.lineDashOffset = -t * .04; lg.strokeStyle = WH; lg.lineWidth = 3.4; lg.shadowColor = CY; lg.shadowBlur = 10 * k; path(); lg.shadowBlur = 0; lg.setLineDash([]);
+      const u = ((t * .00042 + i * .23) % 1), a = (1 - u) * (1 - u), b = 2 * (1 - u) * u, c = u * u, px = a * F[0] + b * C[i][0] + c * p[0], py = a * F[1] + b * C[i][1] + c * p[1];
+      lg.fillStyle = WH; lg.shadowColor = CY; lg.shadowBlur = 18 * k; lg.beginPath(); lg.arc(px, py, 3.6, 0, 6.283); lg.fill(); lg.shadowBlur = 0;
+    });
+    /* chain between the markers */
     if (P.length > 1) {
-      const path = () => { lg.beginPath(); P.forEach((p, i) => i ? lg.lineTo(p[0], p[1]) : lg.moveTo(p[0], p[1])); lg.stroke(); };
-      lg.setLineDash([12, 9]); lg.lineDashOffset = -t * .05; lg.lineWidth = 7; lg.strokeStyle = "rgba(255,255,255,.7)"; path(); lg.lineWidth = 3; lg.strokeStyle = BLUE; lg.shadowColor = BLUEG; lg.shadowBlur = 12; path(); lg.shadowBlur = 0;
+      const g2 = lg.createLinearGradient(P[0][0], P[0][1], P[P.length - 1][0], P[P.length - 1][1]); g2.addColorStop(0, CY); g2.addColorStop(1, VI);
+      const chain = () => { lg.beginPath(); lg.moveTo(P[0][0], P[0][1]); for (let i = 1; i < P.length - 1; i++) lg.quadraticCurveTo(P[i][0], P[i][1], (P[i][0] + P[i + 1][0]) / 2, (P[i][1] + P[i + 1][1]) / 2); lg.lineTo(P[P.length - 1][0], P[P.length - 1][1]); lg.stroke(); };
+      neon(chain, 2.2, g2, "rgba(139,92,255,.9)", [14, 9], -t * .05);
     }
-    lg.setLineDash([]); lg.strokeStyle = HALO; lg.lineWidth = 5; const dia = () => { lg.beginPath(); lg.moveTo(F[0], F[1] - 9); lg.lineTo(F[0] + 9, F[1]); lg.lineTo(F[0], F[1] + 9); lg.lineTo(F[0] - 9, F[1]); lg.closePath(); lg.stroke(); }; dia();
-    lg.strokeStyle = VIO; lg.lineWidth = 2.6; dia();
+    /* the focus: a rotating holographic target */
+    lg.save(); lg.translate(F[0], F[1]); const rot = t * .0007;
+    neon(() => { lg.beginPath(); for (let n = 0; n < 48; n++) { const a = n / 48 * 6.2832 - rot * .5, l = n % 6 ? 4 : 10; lg.moveTo(Math.cos(a) * 74, Math.sin(a) * 74); lg.lineTo(Math.cos(a) * (74 + l), Math.sin(a) * (74 + l)); } lg.stroke(); }, 1.3, CY, "rgba(24,228,255,.8)");
+    neon(() => { lg.beginPath(); for (let n = 0; n < 3; n++) { const a = rot + n * 2.0944; lg.moveTo(Math.cos(a) * 56, Math.sin(a) * 56); lg.arc(0, 0, 56, a, a + 1.2); } lg.stroke(); }, 3, VI, "rgba(139,92,255,.95)");
+    neon(() => { lg.beginPath(); lg.arc(0, 0, 38, 0, 6.2832); lg.stroke(); }, 1.6, CY, "rgba(24,228,255,.9)", [3, 7], rot * 120);
+    neon(() => { lg.beginPath(); for (let n = 0; n < 2; n++) { const a = -rot * 1.6 + n * 3.1416; lg.moveTo(Math.cos(a) * 26, Math.sin(a) * 26); lg.arc(0, 0, 26, a, a + 1.5); } lg.stroke(); }, 2, WH, "rgba(255,255,255,.9)");
+    neon(() => { lg.beginPath(); [[1, 1], [-1, 1], [1, -1], [-1, -1]].forEach(q => { lg.moveTo(q[0] * 92, q[1] * 76); lg.lineTo(q[0] * 92, q[1] * 92); lg.lineTo(q[0] * 76, q[1] * 92); }); lg.stroke(); }, 1.8, CY, "rgba(24,228,255,.8)");
+    const pu = (t % 2400) / 2400; lg.strokeStyle = "rgba(24,228,255," + (.85 * (1 - pu)).toFixed(3) + ")"; lg.lineWidth = 2; lg.shadowColor = CY; lg.shadowBlur = 10 * k; lg.beginPath(); lg.arc(0, 0, 22 + pu * 62, 0, 6.2832); lg.stroke(); lg.shadowBlur = 0;
+    neon(() => { lg.beginPath(); lg.moveTo(0, -9); lg.lineTo(9, 0); lg.lineTo(0, 9); lg.lineTo(-9, 0); lg.closePath(); lg.stroke(); }, 2.4, VI, "rgba(139,92,255,1)");
+    lg.fillStyle = WH; lg.shadowColor = VI; lg.shadowBlur = 12 * k; lg.beginPath(); lg.arc(0, 0, 2.6, 0, 6.2832); lg.fill(); lg.shadowBlur = 0; lg.restore();
   }
 
   function onClick(e) {

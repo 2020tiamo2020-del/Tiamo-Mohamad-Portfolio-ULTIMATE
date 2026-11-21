@@ -223,3 +223,8 @@ html.jw-lock #jw button,html.jw-lock #jw a{cursor:pointer !important}
 .jw-t h2,.jw-t p,.jw-k{text-shadow:0 1px 10px rgba(30,10,80,.55)}.jw-t p{color:#e4dcff}
 .jm span{background:linear-gradient(135deg,rgba(165,125,255,.5),rgba(60,32,140,.58));-webkit-backdrop-filter:blur(12px) saturate(170%);backdrop-filter:blur(12px) saturate(170%);border-color:rgba(205,175,255,.75);text-shadow:0 1px 6px rgba(20,5,60,.6)}
 .jw-it{color:#efe9ff}.jw-it:hover,.jw-it:focus-visible{color:#fff}.jw-pin .jw-it small{color:#cdbfff}
+
+/* holographic markers */
+.jm i{border-color:#bff7ff;background:radial-gradient(circle,rgba(255,255,255,.75) 0 22%,rgba(24,228,255,.45) 45%,rgba(139,92,255,.35) 100%);box-shadow:0 0 0 1px rgba(26,12,120,.45),0 0 16px #18e4ff,0 0 34px rgba(139,92,255,.75)}
+.jm i::before{content:"";position:absolute;inset:-10px;border-radius:50%;border:1.5px dashed rgba(255,255,255,.95);filter:drop-shadow(0 0 4px #18e4ff);animation:jspin 7s linear infinite}
+.jm span{border-color:rgba(190,247,255,.95);background-image:repeating-linear-gradient(0deg,rgba(255,255,255,.08) 0 1px,transparent 1px 3px),linear-gradient(135deg,rgba(150,110,255,.62),rgba(40,22,120,.7));text-shadow:0 0 8px rgba(24,228,255,.9)}
