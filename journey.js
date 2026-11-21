@@ -317,7 +317,7 @@
     render();
     const r = btn.getBoundingClientRect(); jw.style.setProperty("--bx", r.left + r.width / 2 + "px"); jw.style.setProperty("--by", r.top + r.height / 2 + "px");
     lastFocus = D.activeElement; y0 = scrollY; H.classList.add("jw-lock"); window.__lenis && __lenis.stop && __lenis.stop(); inertAll(true);
-    jw.classList.remove("win"); cur = startId(); idx = FID.indexOf(cur); const s = S(idx); loadRoom(s.room); ROOMS.forEach((_, i) => setTimeout(() => loadRoom(i), 500 + i * 350));
+    jw.classList.remove("win"); cur = "home"; idx = 0;   /* the studio always opens at Home, wherever you were on the page */ const s = S(idx); loadRoom(s.room); ROOMS.forEach((_, i) => setTimeout(() => loadRoom(i), 500 + i * 350));
     tr = { from: { room: s.room, Z: s.Z * 1.5, fx: s.fx, fy: s.fy }, t0: performance.now(), dur: RM ? 1 : 2000 }; vis = null;
     $("jwM").innerHTML = ""; MK = []; setHead(); mark();
     live = true; jw.classList.add("on"); cancelAnimationFrame(raf); raf = requestAnimationFrame(frame); $("jwX").focus({ preventScroll: true });
@@ -326,7 +326,7 @@
     if (!live) return; live = false; stopAt = performance.now() + 1000; jw.classList.remove("on", "win"); H.classList.remove("jw-lock"); inertAll(false);
     window.__lenis && __lenis.start && __lenis.start();
     const a = target && D.querySelector('#nav a[href="#' + target + '"]');
-    if (a) a.click(); else scrollTo(0, y0);
+    if (a) a.click(); else { const back = () => { if (window.__lenis && __lenis.scrollTo) __lenis.scrollTo(y0, { immediate: true, force: true }); else scrollTo({ top: y0, left: 0, behavior: "instant" }); }; back(); requestAnimationFrame(back); }   /* closing returns you to exactly where you were */
     lastFocus && lastFocus.focus && lastFocus.focus({ preventScroll: true });
   }
   btn.addEventListener("click", open);
