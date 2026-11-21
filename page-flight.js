@@ -38,10 +38,10 @@
   const SDF = "float sdr(vec2 q,vec2 h,float r){vec2 d=abs(q)-h+r;return length(max(d,0.))+min(max(d.x,d.y),0.)-r;}";
   const VS = "#version 300 es\nlayout(location=0) in vec2 p;uniform mat4 M;out vec2 uv;out float w;void main(){uv=p+.5;gl_Position=M*vec4(p,0.,1.);w=gl_Position.w;}";
   // page / element: mip-mapped texture, depth-of-field from the real depth, rounded corners, horizon fog
-  const FS_TILE = "#version 300 es\nprecision highp float;in vec2 uv;in float w;uniform sampler2D T;uniform vec4 uvr;uniform vec2 size,qoff,qhalf;uniform float rad,F,K,alpha,lift,keyT,lodF;uniform vec3 fogc;out vec4 o;" + SDF +
+  const FS_TILE = "#version 300 es\nprecision highp float;in vec2 uv;in float w;uniform sampler2D T;uniform vec4 uvr;uniform vec2 size,qoff,qhalf;uniform float rad,F,K,alpha,lift,keyT,lodF,shd;uniform vec3 fogc;out vec4 o;" + SDF +
     "void main(){vec2 q=(uv-.5)*size+qoff;float d=sdr(q,qhalf,rad);float a=1.-smoothstep(-1.,1.,d);" +
-    "float lod=lodF>=0.?lodF:clamp(abs(w-F)/F*K,0.,5.5);vec3 c=textureLod(T,uvr.xy+uv*uvr.zw,lod).rgb;" +
-    "float kk=mix(1.,smoothstep(.12,.36,max(max(c.r,c.g),c.b)),keyT);c*=1.+lift*.06;c=mix(c,fogc,smoothstep(F*1.5,F*3.8,w)*.92);o=vec4(c,a*alpha*kk);}";
+    "float lod=lodF>=0.?lodF:clamp(abs(w-F)/F*K,0.,5.5);vec4 tx=textureLod(T,uvr.xy+uv*uvr.zw,lod);vec3 c=tx.rgb;" +
+    "float kk=mix(1.,smoothstep(.12,.36,max(max(c.r,c.g),c.b)),keyT);c*=(1.+lift*.06)*shd;c=mix(c,fogc,smoothstep(F*1.5,F*3.8,w)*.92);o=vec4(c,a*alpha*kk*tx.a);}";
   const FS_SHADOW = "#version 300 es\nprecision highp float;in vec2 uv;in float w;uniform vec2 size,half_;uniform float alpha,rad,blur,F;out vec4 o;" + SDF +
     "void main(){vec2 q=(uv-.5)*size;float d=sdr(q,half_,rad);float a=(1.-smoothstep(-blur,blur*1.5,d))*alpha*(1.-smoothstep(F*1.5,F*3.8,w)*.9);o=vec4(.015,.005,.05,a);}";
   const VS_FS = "#version 300 es\nvoid main(){vec2 p=vec2((gl_VertexID<<1)&2,gl_VertexID&2);gl_Position=vec4(p*2.-1.,0.,1.);}";
@@ -53,11 +53,13 @@
 
   /* ---------- preload the captures ---------- */
   let assets = null, loading = false;
+  const loadImg = u => new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = no; im.src = BASE + u; });
   const preload = () => {
     if (loading || assets) return; loading = true;
-    fetch(BASE + "flight/flight.json").then(r => r.json()).then(m =>
-      Promise.all(m.frames.map(f => new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = no; im.src = BASE + f.file; }))).then(imgs => { assets = { m, imgs }; })
-    ).catch(() => { loading = false; });
+    fetch(BASE + "flight/flight.json").then(r => r.json()).then(m => {
+      const sp = []; m.frames.forEach((f, i) => (f.sprites || []).forEach(o => sp.push({ i, o })));
+      return Promise.all([Promise.all(m.frames.map(f => loadImg(f.file))), Promise.all(sp.map(q => loadImg(q.o.file)))]).then(([imgs, simgs]) => { assets = { m, imgs, sprites: sp.map((q, k) => ({ i: q.i, o: q.o, im: simgs[k] })) }; });
+    }).catch(() => { loading = false; });
   };
   addEventListener("load", () => setTimeout(preload, 3500));
   orb.addEventListener("pointerenter", preload, { passive: true });
@@ -190,7 +192,7 @@
     const vw = innerWidth, vh = innerHeight, dpr = Math.min(devicePixelRatio || 1, 1.75);
     const cv = document.createElement("canvas"); cv.className = "pf"; cv.width = Math.round(vw * dpr); cv.height = Math.round(vh * dpr);
     const gl = cv.getContext("webgl2", { antialias: true, alpha: false, premultipliedAlpha: false, powerPreference: "high-performance" }); if (!gl) return null;
-    const { m, imgs } = assets, W = m.W, H = m.H, N = m.frames.length;
+    const { m, imgs } = assets, W = m.W, N = m.frames.length, FH = m.frames.map(f => f.h || m.H), OFF = [], HREF = 800; let TOT = 0; FH.forEach(h => { OFF.push(TOT); TOT += h; });
     const P = { tile: compile(gl, VS, FS_TILE), shadow: compile(gl, VS, FS_SHADOW), floor: compile(gl, VS_FS, FS_FLOOR), ov: compile(gl, VS_OV, FS_OV) };
     const vao = gl.createVertexArray(); gl.bindVertexArray(vao); const vb = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, vb);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-.5, -.5, .5, -.5, -.5, .5, .5, .5]), gl.STATIC_DRAW); gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
@@ -201,23 +203,32 @@
     const logos = [["TM", "#8b35ff", "#16d8ff", -70, -70, 176], ["Ai", "#ff6a3d", "#ffb347", W - 130, -96, 170], ["Ps", "#1f6bff", "#16d8ff", -96, 470, 154], ["Ae", "#7a3cff", "#c04cff", W - 70, 420, 160]]
       .map(a => ({ t: mkTex(gl, logoTile(a[0], a[1], a[2]), null), x: a[3], y: a[4], s: a[5] }));
     const cards = [];
+    const ringCache = {};
+    const bgTex = (i, x, y, w, h) => {                                                       // average colour of the page just around a rect
+      let c = ringCache[i]; if (!c) { const cv2 = document.createElement("canvas"); cv2.width = Math.round(W / 4); cv2.height = Math.round(FH[i] / 4); const g = cv2.getContext("2d", { willReadFrequently: true }); g.drawImage(imgs[i], 0, 0, cv2.width, cv2.height); c = ringCache[i] = { g, w: cv2.width, h: cv2.height }; }
+      const q = v => Math.round(v / 4), X0 = clamp(q(x) - 3, 0, c.w - 1), Y0 = clamp(q(y) - 3, 0, c.h - 1), X1 = clamp(q(x + w) + 2, 0, c.w - 1), Y1 = clamp(q(y + h) + 2, 0, c.h - 1), pts = [[X0, Y0], [X1, Y0], [X0, Y1], [X1, Y1], [(X0 + X1) >> 1, Y0], [(X0 + X1) >> 1, Y1], [X0, (Y0 + Y1) >> 1], [X1, (Y0 + Y1) >> 1]];
+      let r = 0, g2 = 0, b = 0; pts.forEach(pt => { const d = c.g.getImageData(pt[0], pt[1], 1, 1).data; r += d[0]; g2 += d[1]; b += d[2]; });
+      const one = document.createElement("canvas"); one.width = one.height = 2; const o = one.getContext("2d"); o.fillStyle = "rgb(" + Math.round(r / 8) + "," + Math.round(g2 / 8) + "," + Math.round(b / 8) + ")"; o.fillRect(0, 0, 2, 2);
+      return mkTex(gl, one, null);
+    };
     const els = []; m.frames.forEach((f, i) => [...f.rects].sort((p, q) => p[1] - q[1]).forEach((r, k) => { const kind = r[5] === undefined ? 2 : r[5];
-      els.push({ i, x: r[0], y: r[1], w: r[2], h: r[3], kind, rad: kind === 0 ? 0 : Math.min(Math.max(r[4], 8), 28), dz: 18 + ((i * 37 + k * 53) % 17), delay: k * H * .05 }); }));
+      els.push({ i, x: r[0], y: r[1], w: r[2], h: r[3], kind, rad: kind === 0 ? 0 : Math.min(Math.max(r[4], 8), 30), dz: 22 + ((i * 37 + k * 53) % 17), delay: k * HREF * .05, pt: bgTex(i, r[0], r[1], r[2], r[3]) }); }));
+    const sprites = assets.sprites.map((q, k) => ({ i: q.i, x: q.o.x, y: q.o.y, w: q.o.w, h: q.o.h, patch: null, tex: mkTex(gl, q.im, maxA), delay: HREF * .1 }));
     document.body.appendChild(cv);
     const fov = 38 * Math.PI / 180, F = (vh / 2) / Math.tan(fov / 2);
-    return { cv, gl, P, vao, tex, tt, logos, els, cards, vw, vh, W, H, N, F, fov, up, ya: 0, yb: 0, cur, tgt,
-      sCover: Math.max(vw / W, vh / H), sFly: .9 * Math.min(vw / W, 1.6), sFit: Math.min(.9 * vh / (N * H), .9 * vw / W), sCard: Math.min(.46 * vh / H, .6 * vw / W) };
+    return { cv, gl, P, vao, tex, tt, logos, els, sprites, vw, vh, W, N, FH, OFF, TOT, HREF, F, fov, up, ya: 0, yb: 0, cur, tgt,
+      sCover: vw / W, sFly: .66 * Math.min(vw / W, 1.6), sFit: Math.min(.9 * vh / TOT, .9 * vw / W), sCard: Math.min(.46 * vh / FH[tgt], .6 * vw / W) };
   };
 
   const render = t => {
-    if (!S) return; const { gl, P, cv, vw, vh, W, H, N, F, fov } = S;
+    if (!S) return; const { gl, P, cv, vw, vh, W, N, F, fov, FH, OFF, TOT, HREF } = S;
     gl.viewport(0, 0, cv.width, cv.height); gl.disable(gl.DEPTH_TEST); gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.bindVertexArray(S.vao);
     // camera pose
     const kT = eio(seg(t, 0, T.tilt)), kR = eio(seg(t, T.riseA, T.riseB)), kD = eio(seg(t, T.diveA, T.diveB)), kC = eio(seg(t, T.diveB, T.cardB));
     const th = TILT * kT * (1 - kR) * Math.PI / 180;
     let ls = lerp(Math.log(S.sCover), Math.log(S.sFly), kT); ls = lerp(ls, Math.log(S.sFit), kR); ls = lerp(ls, Math.log(S.sCover), kD); ls = lerp(ls, Math.log(S.sCard), kC);
     const s = Math.exp(ls);
-    let y = lerp(S.ya, S.yg, glide(t / T.glide)); y = lerp(y, N * H / 2, kR); y = lerp(y, S.yb, kD); y -= (.2 * vh * kC) / s;
+    let y = lerp(S.ya, S.yg, glide(t / T.glide)); y = lerp(y, TOT / 2, kR); y = lerp(y, S.yb, kD); y -= (.2 * vh * kC) / s;
     const cam = mul(persp(fov, vw / vh, 10, 40000), mul(tr(0, 0, -F), mul(rx(-th), mul(sc(s, s, s), tr(0, y, 0)))));
     // floor
     gl.useProgram(P.floor.p); gl.uniform2f(P.floor.u.res, cv.width, cv.height); gl.uniform3fv(P.floor.u.c0, S.fl0); gl.uniform3fv(P.floor.u.c1, S.fl1); gl.uniform3fv(P.floor.u.c2, S.fl2); gl.drawArrays(gl.TRIANGLES, 0, 3);
@@ -227,32 +238,41 @@
       gl.useProgram(P.shadow.p); const u = P.shadow.u; gl.uniformMatrix4fv(u.M, false, quad(rot, cx, cy, cz, w, h));
       gl.uniform2f(u.size, w, h); gl.uniform2f(u.half_, half[0], half[1]); gl.uniform1f(u.alpha, alpha); gl.uniform1f(u.rad, rad); gl.uniform1f(u.blur, blur); gl.uniform1f(u.F, F); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     };
-    const draw = (tex, cx, cy, cz, w, h, uvr, rad, qoff, qhalf, alpha, lift, rot, keyT, lodF) => {
+    const draw = (tex, cx, cy, cz, w, h, uvr, rad, qoff, qhalf, alpha, lift, rot, keyT, lodF, shd) => {
       gl.useProgram(P.tile.p); const u = P.tile.u; gl.uniformMatrix4fv(u.M, false, quad(rot, cx, cy, cz, w, h));
       gl.uniform4fv(u.uvr, uvr); gl.uniform2f(u.size, w, h); gl.uniform2f(u.qoff, qoff[0], qoff[1]); gl.uniform2f(u.qhalf, qhalf[0], qhalf[1]);
-      gl.uniform1f(u.rad, rad); gl.uniform1f(u.F, F); gl.uniform1f(u.K, 3.2); gl.uniform1f(u.alpha, alpha); gl.uniform1f(u.lift, lift); gl.uniform1f(u.keyT, keyT || 0); gl.uniform1f(u.lodF, lodF === undefined ? -1 : lodF); gl.uniform3fv(u.fogc, S.fl1);
+      gl.uniform1f(u.rad, rad); gl.uniform1f(u.F, F); gl.uniform1f(u.K, 3.2); gl.uniform1f(u.alpha, alpha); gl.uniform1f(u.lift, lift); gl.uniform1f(u.keyT, keyT || 0); gl.uniform1f(u.lodF, lodF === undefined ? -1 : lodF); gl.uniform1f(u.shd, shd === undefined ? 1 : shd); gl.uniform3fv(u.fogc, S.fl1);
       gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex); gl.uniform1i(u.T, 0); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     };
     // page shadow + page (one strip; only its outer corners are rounded)
-    const SH = N * H, fo = 1 - kC; sh(0, -SH / 2 - 26, -3, W + 520, SH + 520, [W / 2, SH / 2], 24, 90, .62 * fo);
+    const SH = TOT, fo = 1 - kC; sh(0, -SH / 2 - 26, -3, W + 520, SH + 520, [W / 2, SH / 2], 24, 90, .62 * fo);
     for (let i = 0; i < N; i++) {
-      const isT = i === S.tgt, a = isT ? 1 : fo; if (a < .003) continue;
-      const qo = [0, (-(i * H + H / 2) + SH / 2) * (isT ? 1 - kC : 1)], qh = isT ? [lerp(W / 2, W / 2, kC), lerp(SH / 2, H / 2, kC)] : [W / 2, SH / 2];
-      if (isT && kC > 0) sh(0, -(i * H + H / 2) - 14, -2, W + 360, H + 360, [W / 2, H / 2], 24, 60, .6 * kC);
-      draw(S.tex[i], 0, -(i * H + H / 2), 0, W, H, [0, 0, 1, 1], 24, qo, qh, a, 0);
+      const isT = i === S.tgt, a = isT ? 1 : fo; if (a < .003) continue; const hh = FH[i], cyp = OFF[i] + hh / 2;
+      const qo = [0, (-cyp + SH / 2) * (isT ? 1 - kC : 1)], qh = isT ? [W / 2, lerp(SH / 2, hh / 2, kC)] : [W / 2, SH / 2];
+      if (isT && kC > 0) sh(0, -cyp - 14, -2, W + 360, hh + 360, [W / 2, hh / 2], 24, 60, .6 * kC);
+      draw(S.tex[i], 0, -cyp, 0, W, hh, [0, 0, 1, 1], 24, qo, qh, a, 0);
     }
-    // the page's own elements (words, pictures, buttons, chips, cards) rise one by one out of the page, face the camera, and fold back down
-    S.els.map(e => ({ e, d: Math.abs(e.i * H + e.y + e.h / 2 - y) })).sort((p, q) => q.d - p.d).forEach(({ e, d }) => {
-      if (e.w > W * .56 && e.kind !== 0) return;
-      const en = sstep(H * 1.8, H * .28, d + e.delay) * (1 - kR) * (e.i === S.tgt ? 1 - kC : 1); if (en < .01) return;
-      const k = eio(en), phi = th * k * .92, cx = e.x + e.w / 2 - W / 2, bot = e.i * H + e.y + e.h, rot = mul(rx(phi), tr(0, e.h / 2, 0));
-      draw(S.tex[e.i], cx, -(bot - e.h / 2), .6, e.w + 6, e.h + 6, [e.x / W, 1 - (e.y + e.h) / H, e.w / W, e.h / H], e.rad, [0, 0], [(e.w + 6) / 2, (e.h + 6) / 2], Math.min(1, k * 1.3), 0, 0, 0, 7);   // the spot it left behind
-      sh(cx, -bot - 4, 1, e.w * 1.15 + 80, e.h * .5 + 80, [e.w * .5, e.h * .12], e.rad || 6, 18 + e.h * .05, .55 * k * (e.kind === 0 ? .5 : 1));
-      draw(S.tex[e.i], cx, -bot, 3 + e.dz * k, e.w, e.h, [e.x / W, 1 - (e.y + e.h) / H, e.w / W, e.h / H], e.rad, [0, 0], [e.w / 2, e.h / 2], Math.min(1, en * 2.2), k, rot, e.kind === 0 ? 1 : 0);
-    });
+    // everything that rises out of the page is built from stacked layers, so it has real thickness (3D)
+    const LAYERS = { 0: [8, 2.6], 1: [5, 2.8], 2: [4, 3], 3: [4, 2.6], 4: [5, 2.8] };
+    const rise = (key, i, x, y0, w, h, delay, wide, tex, uvr, rad, kind, dz, pt) => {
+      const cyp = OFF[i] + y0 + h / 2, d = Math.abs(cyp - y);
+      const en = sstep(HREF * 1.8, HREF * .28, d + delay) * (1 - kR) * (i === S.tgt ? 1 - kC : 1); if (en < .01) return;
+      const k = eio(en), phi = th * k * .8, cx = x + w / 2 - W / 2, bot = OFF[i] + y0 + h, rot = mul(rx(phi), tr(0, h / 2, 0));
+      if (pt) draw(pt, cx, -(OFF[i] + y0 + h / 2), .6, w + 6, h + 6, [0, 0, 1, 1], rad, [0, 0], [(w + 6) / 2, (h + 6) / 2], Math.min(1, k * 1.3), 0, 0, 0);   // the spot it left behind (flat page colour)
+      sh(cx, -bot - 4, 1, w * 1.15 + 80, h * .5 + 80, [w * .5, h * .12], rad || 6, 18 + h * .05, .55 * k * (kind === 0 ? .5 : 1));
+      const [L, st] = kind === 5 ? [7, 4.5] : LAYERS[kind] || [3, 3];
+      for (let l = 0; l < L; l++) {                                                                  // back to front: dark rim, bright face
+        const front = l === L - 1, z = 3 + dz * k - (L - 1 - l) * st * k, shd = front ? 1 : .32 + .32 * l / L;
+        draw(tex, cx, -bot, z, w, h, uvr, rad, [0, 0], [w / 2, h / 2], front ? Math.min(1, en * 2.2) : Math.min(1, en * 2.2) * .95, k, rot, kind === 0 ? 1 : 0, undefined, shd);
+      }
+    };
+    const list = [];
+    S.els.forEach(e => { if (e.w > W * .56 && e.kind !== 0) return; list.push({ d: Math.abs(OFF[e.i] + e.y + e.h / 2 - y), f: () => rise("e", e.i, e.x, e.y, e.w, e.h, e.delay, 0, S.tex[e.i], [e.x / W, 1 - (e.y + e.h) / FH[e.i], e.w / W, e.h / FH[e.i]], e.rad, e.kind, e.dz, e.pt) }); });
+    S.sprites.forEach(q => list.push({ d: Math.abs(OFF[q.i] + q.y + q.h / 2 - y), f: () => rise("s", q.i, q.x, q.y, q.w, q.h, q.delay, 0, q.tex, [0, 0, 1, 1], 0, 5, 46, null) }));
+    list.sort((p, q) => q.d - p.d).forEach(o => o.f());
     // four logo tiles: always around the hero; they also gather around the destination card for the final reveal
     const tiles = (fi, alpha) => S.logos.forEach((L, k) => {
-      const z = 46 + 6 * Math.sin(t / 700 + k * 1.7), cx = L.x + L.s / 2 - W / 2, cy = fi * H + L.y + L.s / 2;
+      const z = 46 + 6 * Math.sin(t / 700 + k * 1.7), cx = L.x + L.s / 2 - W / 2, cy = OFF[fi] + L.y + L.s / 2;
       sh(cx + 6, -cy - 14, 6, L.s + 120, L.s + 120, [L.s / 2, L.s / 2], 40, 26, .6 * alpha);
       draw(L.t, cx, -cy, z, L.s, L.s, [0, 0, 1, 1], 1, [0, 0], [L.s, L.s], alpha, 0);
     });
@@ -293,8 +313,8 @@
     const tgt = up ? 0 : els.length - 1;
     try { S = setup(up, cur, tgt); } catch (e) { console.warn("page-flight:", e); try { S && S.cv.remove(); } catch (_) {} S = null; return false; }
     if (!S) return false;
-    const H = S.H; S.ya = cur * H + H / 2; S.yb = tgt * H + H / 2;
-    if (Math.abs(S.yb - S.ya) < H * 3) S.ya = clamp(S.yb + (up ? 1 : -1) * H * 3, H / 2, S.N * H - H / 2);   // always give the camera a stretch of page to glide over
+    const H = S.HREF; S.ya = S.OFF[cur] + S.FH[cur] / 2; S.yb = S.OFF[tgt] + S.FH[tgt] / 2;
+    if (Math.abs(S.yb - S.ya) < H * 3) S.ya = clamp(S.yb + (up ? 1 : -1) * H * 3, H / 2, S.TOT - H / 2);   // always give the camera a stretch of page to glide over
     S.yg = lerp(S.ya, S.yb, .94);
     const light = document.body.classList.contains("light");
     S.fl0 = hex(light ? "#f4ecff" : "#1f1638"); S.fl1 = hex(light ? "#f1ebfa" : "#0b0814"); S.fl2 = hex(light ? "#e8e0f5" : "#05040a");
