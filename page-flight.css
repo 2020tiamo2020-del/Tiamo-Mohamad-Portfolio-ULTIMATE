@@ -1,5 +1,0 @@
-/* PAGE FLIGHT (WebGL2) — full-screen canvas drawn above the page while the camera flies through the section cards */
-.pf{position:fixed;inset:0;width:100vw;height:100vh;height:100dvh;z-index:99990;display:block;opacity:0;visibility:hidden;pointer-events:none;background:#05040a;touch-action:none;overscroll-behavior:contain}
-.pf.is-on{visibility:visible;pointer-events:auto;cursor:progress}
-body.pf-lock{overflow:hidden !important}
-@media (prefers-reduced-motion:reduce){.pf{display:none !important}}
