@@ -60,7 +60,12 @@
     fetch(BASE + "flight/flight.json" + VER).then(r => r.json()).then(m => {
       const sp = []; m.frames.forEach((f, i) => (f.sprites || []).forEach(o => sp.push({ i, o })));
       return Promise.all([Promise.all(m.frames.map(f => loadImg(f.file))), Promise.all(sp.map(q => loadImg(q.o.file)))]).then(([imgs, simgs]) => { assets = { m, imgs, sprites: sp.map((q, k) => ({ i: q.i, o: q.o, im: simgs[k] })) }; });
-    }).catch(() => { loading = false; });
+    }).then(() => fetch(BASE + "flight/ar/flight.json" + VER).then(r => r.ok ? r.json() : null).then(a => a && Promise.all(a.frames.map(f => loadImg(f.file))).then(ims => {   // optional Arabic captures: the RTL layout mirrors the art, so those frames are captured separately
+      const ar = { byName: {}, imgs: {} }; a.frames.forEach((f, k) => { ar.byName[f.name] = f; ar.imgs[f.name] = ims[k]; }); assets.ar = ar; })).catch(() => {})).catch(() => { loading = false; });
+  };
+  const frameSet = () => {                                              // English captures, with the Arabic ones swapped in when the page is RTL
+    const ar = document.documentElement.dir === "rtl" && assets.ar, fr = assets.m.frames;
+    return { m: ar ? Object.assign({}, assets.m, { frames: fr.map(f => ar.byName[f.name] ? Object.assign({}, f, ar.byName[f.name]) : f) }) : assets.m, imgs: assets.imgs.map((im, i) => (ar && ar.imgs[fr[i].name]) || im) };
   };
   addEventListener("load", () => setTimeout(preload, 3500));
   orb.addEventListener("pointerenter", preload, { passive: true });
@@ -159,7 +164,7 @@
     const vw = innerWidth, vh = innerHeight, lite = Math.min(vw, vh) < 700, dpr = Math.min(devicePixelRatio || 1, lite ? 1.25 : 1.75);
     const cv = document.createElement("canvas"); cv.className = "pf"; cv.width = Math.round(vw * dpr); cv.height = Math.round(vh * dpr);
     const gl = cv.getContext("webgl2", { antialias: true, alpha: false, premultipliedAlpha: false, powerPreference: "high-performance" }); if (!gl) return null;
-    const { m, imgs } = assets, W = m.W, N = m.frames.length, FH = m.frames.map(f => f.h || m.H), OFF = [], HREF = 800; let TOT = 0; FH.forEach(h => { OFF.push(TOT); TOT += h; });
+    const { m, imgs } = frameSet(), W = m.W, N = m.frames.length, FH = m.frames.map(f => f.h || m.H), OFF = [], HREF = 800; let TOT = 0; FH.forEach(h => { OFF.push(TOT); TOT += h; });
     const P = { tile: compile(gl, VS, FS_TILE), shadow: compile(gl, VS, FS_SHADOW), floor: compile(gl, VS_FS, FS_FLOOR), ov: compile(gl, VS_OV, FS_OV) };
     const vao = gl.createVertexArray(); gl.bindVertexArray(vao); const vb = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, vb);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-.5, -.5, .5, -.5, -.5, .5, .5, .5]), gl.STATIC_DRAW); gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);

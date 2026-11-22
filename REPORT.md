@@ -45,3 +45,10 @@
 
 # نسخة العربي في الفلايت: مش متنفذة لسه
 الكورة (TM) والدايرة البنفسجية في صور الفلايت ملتقطة بتركيب الإنجليزي (يمين)، والعربي بيحطهم شمال. الحل الصحيح التقاط نسخة عربية من الأقسام (flight/ar). ملفات الموقع الكاملة (style.min.css وغيرها) مش في الـ zip فمقدرش أرسم الصفحة هنا.
+
+
+---
+# تحديث: دعم التقاط عربي للفلايت (جاهز، ينتظر الصور)
+- page-flight.js بقى يدعم مجلد اختياري flight/ar/ (flight.json + صور الأقسام العربية). لو الصفحة RTL والملفات موجودة، بتتبدّل الإطارات المقابلة تلقائيًا، وإلا يستخدم الإنجليزي. اختبرت التحميل في متصفح حقيقي بإطار تجريبي معكوس (لم يُشحن).
+- index.html: page-flight.js?v=10.
+- لتوليد الإطارات العربية الحقيقية (Home و Contact) محتاج هذه الملفات من فولدر images: home-bg.webp, intro-logo-bg.webp, intro-albedo.jpg, intro-cavity.png, intro-height.jpg, intro-laser.png, intro-normal.jpg, tm-laser.webp, tm-ring-b.webp, tm-ring-c.webp, contact-bg.webp (أو .jpg), main-logo.webp.
