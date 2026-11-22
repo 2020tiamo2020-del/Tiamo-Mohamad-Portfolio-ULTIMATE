@@ -209,7 +209,9 @@
     const s = Math.exp(ls);
     let y = lerp(S.ya, S.yg, glide(t / T.glide)); y = lerp(y, TOT / 2, kR); y = lerp(y, S.yb, kD);
     // the end frame is laid exactly over the real section (measured from the page itself), so the hand-over is seamless
-    const yEnd = OFF[S.tgt] + FH[S.tgt] / 2 - (S.eC - vh / 2) / s; y = lerp(y, yEnd, kC);
+    let yEnd = OFF[S.tgt] + FH[S.tgt] / 2 - (S.eC - vh / 2) / s;
+    const half = (vh / 2) / s, lo = OFF[S.tgt] + half, hi = OFF[S.tgt] + FH[S.tgt] - half;   // never show beyond the captured section (no empty floor at the end)
+    yEnd = lo <= hi ? clamp(yEnd, lo, hi) : OFF[S.tgt] + FH[S.tgt] / 2; y = lerp(y, yEnd, kC);
     const cam = mul(persp(fov, vw / vh, 10, 40000), mul(tr(0, 0, -F), mul(rx(-th), mul(sc(s, s, s), tr(0, y, 0)))));
     // floor
     gl.useProgram(P.floor.p); gl.uniform2f(P.floor.u.res, cv.width, cv.height); gl.uniform3fv(P.floor.u.c0, S.fl0); gl.uniform3fv(P.floor.u.c1, S.fl1); gl.uniform3fv(P.floor.u.c2, S.fl2); gl.drawArrays(gl.TRIANGLES, 0, 3);
