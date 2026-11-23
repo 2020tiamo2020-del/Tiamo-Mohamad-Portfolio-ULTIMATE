@@ -160,3 +160,34 @@
   };
   document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", boot) : boot();
 })();
+
+/* LIGHTBOX GUARD — while the image viewer is open: wheel / trackpad changes the picture, the page behind can't scroll at all
+   (wheel, touch, keys, or another script), and the heavy blur is dropped so nothing freezes. */
+(() => {
+  const lb = document.getElementById("mediaLightbox");
+  if (!lb || lb.__lbGuard) return; lb.__lbGuard = 1;
+  const root = document.documentElement, isOpen = () => lb.classList.contains("open");
+  let lockY = 0, locked = false, last = 0, lastNav = 0, acc = 0;
+  const sync = () => {
+    if (isOpen() && !locked) { locked = true; lockY = scrollY; root.classList.add("lb-lock"); console.info("[lightbox] scroll locked, wheel = next/prev"); }
+    else if (!isOpen() && locked) { locked = false; root.classList.remove("lb-lock"); }
+  };
+  new MutationObserver(sync).observe(lb, { attributes: true, attributeFilter: ["class"] }); sync();
+  addEventListener("scroll", () => { if (locked && Math.abs(scrollY - lockY) > 1) scrollTo({ top: lockY, behavior: "instant" }); }, { passive: true });
+  addEventListener("wheel", e => {
+    if (!isOpen()) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    const now = performance.now();
+    let d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+    if (e.deltaMode === 1) d *= 32;
+    if (now - last > 180) acc = 0;
+    last = now;
+    if (Math.abs(d) < 4) return;
+    acc += d;
+    if (Math.abs(acc) >= 40 && now - lastNav > 450) {
+      lastNav = now; const b = lb.querySelector(acc > 0 ? ".lightbox-next" : ".lightbox-prev"); acc = 0; b && b.click();
+    }
+  }, { passive: false, capture: true });
+  lb.addEventListener("touchmove", e => e.preventDefault(), { passive: false });
+  document.addEventListener("keydown", e => { if (isOpen() && [" ", "PageDown", "PageUp", "Home", "End", "ArrowDown", "ArrowUp"].includes(e.key)) e.preventDefault(); }, true);
+})();
