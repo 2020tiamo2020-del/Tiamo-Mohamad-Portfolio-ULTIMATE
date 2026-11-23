@@ -46,3 +46,28 @@
   .tmd-tip.on{opacity:1;transform:translate(-50%,0)}
 }
 @media (prefers-reduced-motion:reduce){.tmd *{transition-duration:.01s !important}}
+
+/* ===== HEADER: same layout in Arabic and English (logo on the left; language, journey, WhatsApp on the right) ===== */
+html .site-header,html .site-header .header-actions{direction:ltr}
+html .site-header .header-actions .j-txt,html .site-header .header-actions .mini-wa{direction:rtl;unicode-bidi:plaintext}
+html[lang=en] .site-header .header-actions .j-txt,html[lang=en] .site-header .header-actions .mini-wa{direction:ltr}
+.lang.lm-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding-inline:14px;min-width:96px;border-radius:16px;font-weight:700;letter-spacing:.2px;direction:ltr}
+.lang.lm-btn .lm-chev{transition:transform .3s ease;flex:none}
+.lang.lm-btn.is-open .lm-chev{transform:rotate(180deg)}
+.lm-menu{position:fixed;z-index:70;padding:6px;border-radius:18px;direction:ltr;display:flex;flex-direction:column;gap:4px;
+  background:linear-gradient(145deg,rgba(60,28,110,.92),rgba(18,10,40,.94));border:1px solid rgba(214,196,255,.38);
+  -webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);box-shadow:0 18px 50px rgba(0,0,0,.45),0 0 28px rgba(139,53,255,.25)}
+.lm-menu[hidden]{display:none}
+.lm-menu button{appearance:none;border:0;background:transparent;color:#cdbfe8;font:700 14px/1 Inter,Cairo,system-ui,sans-serif;text-align:center;padding:12px 18px;border-radius:12px;cursor:pointer;transition:background .2s,color .2s}
+.lm-menu button:hover,.lm-menu button:focus-visible{background:rgba(255,255,255,.1);color:#fff;outline:0}
+.lm-menu button.is-on{background:rgba(255,255,255,.16);color:#fff}
+@media (min-width:901px){
+  /* the opened dock never grows over the logo or the buttons: it takes the free space between them, and scrolls inside if that is short */
+  .tmd.is-open .tmd-items{max-width:min(620px,calc(100vw - 940px));overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+  .tmd.is-open .tmd-items::-webkit-scrollbar{display:none}
+}
+@media (min-width:901px) and (max-width:1300px){
+  .tmd-items{gap:4px}
+  .tmd-it{width:34px;height:34px}
+  .tmd-it svg{width:19px;height:19px}
+}
