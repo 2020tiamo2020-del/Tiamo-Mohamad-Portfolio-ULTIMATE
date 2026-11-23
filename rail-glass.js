@@ -1,3 +1,35 @@
+console.info("[rail-glass v8] loaded");
+/* LIGHTBOX GUARD — while the image viewer is open: wheel / trackpad changes the picture, the page behind can't scroll at all
+   (wheel, touch, keys, or another script), and the heavy blur is dropped so nothing freezes. */
+(() => {
+  const lb = document.getElementById("mediaLightbox");
+  if (!lb || lb.__lbGuard) return; lb.__lbGuard = 1;
+  const root = document.documentElement, isOpen = () => lb.classList.contains("open");
+  let lockY = 0, locked = false, last = 0, lastNav = 0, acc = 0;
+  const sync = () => {
+    if (isOpen() && !locked) { locked = true; lockY = scrollY; root.classList.add("lb-lock"); console.info("[rail-glass v8] lightbox open: page locked, wheel = next/prev"); }
+    else if (!isOpen() && locked) { locked = false; root.classList.remove("lb-lock"); }
+  };
+  new MutationObserver(sync).observe(lb, { attributes: true, attributeFilter: ["class"] }); sync();
+  addEventListener("scroll", () => { if (locked && Math.abs(scrollY - lockY) > 1) scrollTo({ top: lockY, behavior: "instant" }); }, { passive: true });
+  addEventListener("wheel", e => {
+    if (!isOpen()) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    const now = performance.now();
+    let d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+    if (e.deltaMode === 1) d *= 32;
+    if (now - last > 180) acc = 0;
+    last = now;
+    if (Math.abs(d) < 4) return;
+    acc += d;
+    if (Math.abs(acc) >= 40 && now - lastNav > 450) {
+      lastNav = now; const b = lb.querySelector(acc > 0 ? ".lightbox-next" : ".lightbox-prev"); acc = 0; b && b.click();
+    }
+  }, { passive: false, capture: true });
+  lb.addEventListener("touchmove", e => e.preventDefault(), { passive: false });
+  document.addEventListener("keydown", e => { if (isOpen() && [" ", "PageDown", "PageUp", "Home", "End", "ArrowDown", "ArrowUp"].includes(e.key)) e.preventDefault(); }, true);
+})();
+
 /* LIQUID GLASS RAIL v2 — decorates the existing .st-rail (navigation/scroll-spy/language stay story.js's). */
 (() => {
   const $ = (s, r = document) => r.querySelector(s);
@@ -50,7 +82,7 @@
   const boot = () => {
     const rail = $(".st-rail");
     if (!rail || !rail.querySelector("li a")) { if (tries++ < 100) setTimeout(boot, 150); return; }
-    if (!rail.classList.contains("rg")) build(rail);
+    if (!rail.classList.contains("rg")) { try { build(rail); } catch (err) { console.error("[rail-glass] build failed", err); } }
   };
   const build = rail => {
     rail.classList.add("rg");
@@ -71,9 +103,9 @@
     const sync = () => {
       const on = items.find(o => o.a.classList.contains("on")); if (!on) return;
       if (on !== cur) { act.classList.remove("mv"); void act.offsetWidth; if (cur) act.classList.add("mv"); }
-      cur = on; put(act, on.a, 5); act.classList.toggle("beyond", on.id === "cinema");
+      cur = on; put(act, on.a, 5); const by = on.id === "cinema"; if (act.classList.contains("beyond") !== by) act.classList.toggle("beyond", by);
     };
-    new MutationObserver(sync).observe(ol, { attributes: true, attributeFilter: ["class"], subtree: true });
+    new MutationObserver(ms => { if (ms.some(m => m.target !== act && m.target !== pill)) sync(); }).observe(ol, { attributes: true, attributeFilter: ["class"], subtree: true });
     addEventListener("resize", sync); setTimeout(sync, 80); setTimeout(sync, 900);
 
     /* profile card + proxied actions */
@@ -161,33 +193,3 @@
   document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", boot) : boot();
 })();
 
-/* LIGHTBOX GUARD — while the image viewer is open: wheel / trackpad changes the picture, the page behind can't scroll at all
-   (wheel, touch, keys, or another script), and the heavy blur is dropped so nothing freezes. */
-(() => {
-  const lb = document.getElementById("mediaLightbox");
-  if (!lb || lb.__lbGuard) return; lb.__lbGuard = 1;
-  const root = document.documentElement, isOpen = () => lb.classList.contains("open");
-  let lockY = 0, locked = false, last = 0, lastNav = 0, acc = 0;
-  const sync = () => {
-    if (isOpen() && !locked) { locked = true; lockY = scrollY; root.classList.add("lb-lock"); console.info("[lightbox] scroll locked, wheel = next/prev"); }
-    else if (!isOpen() && locked) { locked = false; root.classList.remove("lb-lock"); }
-  };
-  new MutationObserver(sync).observe(lb, { attributes: true, attributeFilter: ["class"] }); sync();
-  addEventListener("scroll", () => { if (locked && Math.abs(scrollY - lockY) > 1) scrollTo({ top: lockY, behavior: "instant" }); }, { passive: true });
-  addEventListener("wheel", e => {
-    if (!isOpen()) return;
-    e.preventDefault(); e.stopImmediatePropagation();
-    const now = performance.now();
-    let d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
-    if (e.deltaMode === 1) d *= 32;
-    if (now - last > 180) acc = 0;
-    last = now;
-    if (Math.abs(d) < 4) return;
-    acc += d;
-    if (Math.abs(acc) >= 40 && now - lastNav > 450) {
-      lastNav = now; const b = lb.querySelector(acc > 0 ? ".lightbox-next" : ".lightbox-prev"); acc = 0; b && b.click();
-    }
-  }, { passive: false, capture: true });
-  lb.addEventListener("touchmove", e => e.preventDefault(), { passive: false });
-  document.addEventListener("keydown", e => { if (isOpen() && [" ", "PageDown", "PageUp", "Home", "End", "ArrowDown", "ArrowUp"].includes(e.key)) e.preventDefault(); }, true);
-})();
