@@ -147,7 +147,7 @@
           hov = o; fill(o);
           const r = o.a.getBoundingClientRect(), rr = rail.getBoundingClientRect(), h = card.offsetHeight || 215;
           card.style.top = Math.max(12, Math.min(innerHeight - h - 12, r.top + r.height / 2 - h / 2)) + "px";
-          card.style.insetInlineStart = (ar() ? innerWidth - rr.right : rr.left) + 214 + 12 + "px"; card.classList.add("on");
+          card.style.insetInlineStart = (ar() ? innerWidth - rr.right : rr.left) + 186 + 12 + "px"; card.classList.add("on");
         }, 90);
       };
       o.a.addEventListener("pointerenter", show); o.a.addEventListener("focus", show);
