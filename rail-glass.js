@@ -5,7 +5,7 @@
   const I = {
     home: '<path d="M3 11.5 12 4l9 7.5M5.5 10v9.5h13V10M10 19.5v-5h4v5"/>',
     about: '<circle cx="12" cy="8" r="3.6"/><path d="M5 20c0-3.6 3-6 7-6s7 2.4 7 6"/>',
-    services: '<path d="M12 3 3 8l9 5 9-5-9-5Z"/><path d="m3 12 9 5 9-5"/><path d="m3 16 9 5 9-5"/>',
+    services: '<path d="M12 3a9 9 0 1 0 0 18c1.4 0 2-.9 2-1.8 0-1.2-1-1.5-1-2.7 0-1 .8-1.8 1.9-1.8H17a4 4 0 0 0 4-4C21 6.600 17 3 12 3Z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7.2" r="1"/><circle cx="14.5" cy="7.2" r="1"/>',
     work: '<rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="1.6"/><path d="m21 16-5-5-8 9"/>',
     cinema: '<path d="m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8Z"/><path d="m19 16 .8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8Z"/>',
     creation: '<rect x="6" y="6" width="12" height="12" rx="2"/><rect x="10" y="10" width="4" height="4"/><path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3"/>',
@@ -65,7 +65,8 @@
     const pill = document.createElement("i"), act = document.createElement("i");
     pill.className = "rg-pill"; act.className = "rg-act"; ol.append(pill, act);
     const top = el => el.getBoundingClientRect().top - ol.getBoundingClientRect().top;
-    const put = (el, a, z) => { el.style.transform = "translateY(" + (a.offsetTop + a.parentNode.offsetTop) + "px) translateZ(" + z + "px)"; el.style.height = a.offsetHeight + "px"; };
+    const wOf = a => rail.classList.contains("rg-open") ? 8 + 19 + 12 + $(".st-lbl", a).offsetWidth + 12 : 36;
+    const put = (el, a, z) => { el.style.width = wOf(a) + "px"; el.style.transform = "translateY(" + (a.offsetTop + a.parentNode.offsetTop) + "px) translateZ(" + z + "px)"; el.style.height = a.offsetHeight + "px"; };
     let cur = null;
     const sync = () => {
       const on = items.find(o => o.a.classList.contains("on")); if (!on) return;
@@ -76,12 +77,12 @@
     addEventListener("resize", sync); setTimeout(sync, 80); setTimeout(sync, 900);
 
     /* profile card + proxied actions */
-    const logo = $(".logo-img"), foot = document.createElement("div"); foot.className = "rg-foot";
-    foot.innerHTML = '<div class="rg-me"><span class="rg-av">' + (logo && logo.currentSrc ? '<img alt="" src="' + logo.currentSrc + '">' : "TM") + '</span><span class="rg-who"><b>Tiamo Mohamad</b><small></small></span></div>' +
+    const foot = document.createElement("div"); foot.className = "rg-foot";
+    foot.innerHTML = '<div class="rg-me"><span class="rg-av"><span class="rg-lg"><img class="e e4" alt="" src="tm-logo.png"><img class="e e3" alt="" src="tm-logo.png"><img class="e e2" alt="" src="tm-logo.png"><img class="e e1" alt="" src="tm-logo.png"><img class="fr" alt="TM" src="tm-logo.png"></span></span><span class="rg-who"><b>Tiamo Mohamad</b><small></small></span></div>' +
       '<div class="rg-act-row"><button class="rg-b" type="button" data-k="lang"></button><button class="rg-b" type="button" data-k="j" aria-label="Journey 3D"><svg viewBox="0 0 24 24"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg></button>' +
       '<button class="rg-b wa" type="button" data-k="wa" aria-label="WhatsApp"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 1-13.4 7.8L3 21l1.3-4.4A9 9 0 1 1 21 12Z"/><path d="M9 9.5c.4 2.4 2.6 4.6 5 5l1.2-1.2-2-1-.8.8c-.8-.4-1.6-1.2-2-2l.8-.8-1-2L9 9.5Z"/></svg></button></div>';
     rail.appendChild(foot);
-    const fl = () => { $(".rg-who small", foot).textContent = ar() ? "فنان AI · متاح لمشاريع" : "AI Art Director · Available"; $("[data-k=lang]", foot).textContent = ar() ? "EN" : "AR"; if (hov) fill(hov, true); };
+    const fl = () => { $(".rg-who small", foot).textContent = ar() ? "فنان AI · متاح لمشاريع" : "AI Art Director · Available"; $("[data-k=lang]", foot).textContent = ar() ? "EN" : "AR"; if (hov) fill(hov, true); sync(); };
     foot.addEventListener("click", e => {
       const b = e.target.closest("[data-k]"); if (!b) return;
       if (b.dataset.k === "lang") $("#langBtn") && $("#langBtn").click();
@@ -103,7 +104,7 @@
     fl(); new MutationObserver(fl).observe(document.documentElement, { attributes: true, attributeFilter: ["lang", "dir"] });
     card.addEventListener("pointermove", e => { const r = ci.getBoundingClientRect(); card.style.setProperty("--mx", ((e.clientX - r.left) / r.width).toFixed(3)); card.style.setProperty("--my", ((e.clientY - r.top) / r.height).toFixed(3)); });
     card.addEventListener("pointerleave", () => { card.style.setProperty("--mx", .5); card.style.setProperty("--my", .5); });
-    card.addEventListener("click", () => hov && hov.a.click());
+    card.addEventListener("click", () => { if (!hov) return; const o = hov; lock = performance.now() + 1100; clearTimeout(ct); o.a.click(); hide(); rail.classList.remove("rg-open"); st.px = st.py = null; kick(); sync(); });
     card.addEventListener("pointerenter", () => open(true));
     card.addEventListener("pointerleave", () => open(false));
 
@@ -111,7 +112,8 @@
     let ct = 0, pt = 0, raf = 0;
     const st = { px: null, py: null, rx: 0, ry: 0, ang: 0 };
     const hide = () => { pill.classList.remove("on"); card.classList.remove("on"); clearTimeout(pt); hov = null; };
-    const open = v => { clearTimeout(ct); if (v) rail.classList.add("rg-open"); else ct = setTimeout(() => { rail.classList.remove("rg-open"); hide(); }, 260); };
+    let lock = 0;
+    const open = v => { clearTimeout(ct); if (v) { if (performance.now() < lock) return; rail.classList.add("rg-open"); sync(); } else ct = setTimeout(() => { rail.classList.remove("rg-open"); hide(); sync(); }, 260); };
     const kick = () => { if (!raf) raf = requestAnimationFrame(loop); };
     const loop = () => {
       raf = 0; let mv = false;
@@ -142,6 +144,7 @@
     ol.addEventListener("pointerleave", () => pill.classList.remove("on"));
     items.forEach(o => {
       const show = () => {
+        if (performance.now() < lock) return;
         put(pill, o.a, 3); pill.classList.add("on"); clearTimeout(pt);
         pt = setTimeout(() => {
           hov = o; fill(o);
@@ -150,6 +153,7 @@
           card.style.insetInlineStart = (ar() ? innerWidth - rr.right : rr.left) + 186 + 12 + "px"; card.classList.add("on");
         }, 90);
       };
+      o.a.addEventListener("click", () => { card.classList.remove("on"); hov = null; lock = performance.now() + 700; });
       o.a.addEventListener("pointerenter", show); o.a.addEventListener("focus", show);
       o.a.addEventListener("pointerdown", e => { const r = o.a.getBoundingClientRect(), p = document.createElement("i"); p.className = "rg-rip"; p.style.left = e.clientX - r.left + "px"; p.style.top = e.clientY - r.top + "px"; o.a.appendChild(p); setTimeout(() => p.remove(), 650); });
     });

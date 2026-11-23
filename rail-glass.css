@@ -27,15 +27,15 @@ html .st-rail.rg li a:hover,html .st-rail.rg li a.on{color:#fff}
 html .st-rail.rg li a[href="#cinema"]{color:#7CFF5B;text-shadow:none}
 .rg a:focus-visible{outline:2px solid #16d8ff;outline-offset:-2px}
 .rg-ic{flex:none;width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 calc(var(--z,0px)*.3) calc(var(--z,0px)*.35) rgba(0,0,0,.55))}
-html .st-rail.rg .st-lbl{max-width:none!important;padding:0!important;opacity:0!important;translate:calc(var(--d)*-8px) 0;transition:opacity .25s,translate .45s var(--ease,ease);font-size:12.5px;letter-spacing:.2px}
+html .st-rail.rg .st-lbl{max-width:none!important;padding:0!important;opacity:0!important;translate:calc(var(--d)*-8px) 0;transition:opacity .25s,translate .45s var(--ease,ease);font-size:12.5px;letter-spacing:.2px;flex:none}
 html .st-rail.rg.rg-open .st-lbl{opacity:1!important;translate:0 0;transition-delay:.14s}
 .rg-grp{height:9px;position:relative;pointer-events:none}
 .rg-grp::before{content:"";position:absolute;inset-inline:12px;top:4px;height:1px;background:rgba(255,255,255,.12)}
 .rg-grp:first-child{display:none}
-.rg-pill,.rg-act{position:absolute;inset-inline:0;top:0;height:36px;border-radius:18px;pointer-events:none;z-index:1;transition:transform .6s cubic-bezier(.34,1.4,.5,1),height .4s,opacity .25s,background .4s}
+.rg-pill,.rg-act{position:absolute;inset-inline-start:0;top:0;width:36px;height:36px;border-radius:18px;pointer-events:none;z-index:1;transition:transform .6s cubic-bezier(.34,1.4,.5,1),width .5s cubic-bezier(.22,1,.36,1),height .4s,opacity .25s,background .4s}
 .rg-pill{background:rgba(255,255,255,.11);box-shadow:inset 0 1px 0 rgba(255,255,255,.3),inset 0 0 0 1px rgba(255,255,255,.14),0 6px 18px rgba(139,53,255,.3);opacity:0}
 .rg-pill.on{opacity:1}
-.rg-act{inset-inline-end:-4px;background:linear-gradient(135deg,rgba(160,80,255,.8),rgba(22,216,255,.38));
+.rg-act{background:linear-gradient(135deg,rgba(160,80,255,.8),rgba(22,216,255,.38));
   box-shadow:0 0 22px rgba(139,53,255,.6),0 8px 16px rgba(0,0,0,.35),inset 0 1.5px 0 rgba(255,255,255,.55),inset 0 -6px 12px rgba(22,216,255,.18),inset 0 0 0 1px rgba(255,255,255,.22);overflow:hidden}
 .rg-act::after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.4) 50%,transparent 65%);translate:-120% 0;animation:rgsh 4.5s ease-in-out infinite}
 @keyframes rgsh{0%,55%{translate:-120% 0}100%{translate:120% 0}}
@@ -45,10 +45,8 @@ html .st-rail.rg.rg-open .st-lbl{opacity:1!important;translate:0 0;transition-de
 .rg-rip{position:absolute;width:10px;height:10px;margin:-5px;border-radius:50%;background:rgba(255,255,255,.55);pointer-events:none;animation:rgrp .6s ease-out forwards}
 @keyframes rgrp{to{scale:16;opacity:0}}
 .rg-foot{margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,.1);position:relative;z-index:2}
-.rg-me{display:flex;align-items:center;gap:8px;padding:0 1px;height:34px;white-space:nowrap;overflow:hidden}
-.rg-av{position:relative;flex:none;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font:800 11px Inter,sans-serif;color:#fff;background:linear-gradient(145deg,#8b35ff,#16d8ff);box-shadow:0 0 14px rgba(139,53,255,.55)}
-.rg-av img{width:100%;height:100%;object-fit:cover;border-radius:50%}
-.rg-av::after{content:"";position:absolute;right:0;bottom:0;width:9px;height:9px;border-radius:50%;background:#7CFF5B;border:2px solid #120d1f;box-shadow:0 0 8px #7CFF5B}
+.rg-me{display:flex;align-items:center;gap:8px;padding:0 1px;height:34px;white-space:nowrap;overflow:visible}
+.rg-av{position:relative;flex:none;width:36px;height:36px;perspective:260px;display:grid;place-items:center}
 .rg-who{min-width:0;opacity:0;translate:calc(var(--d)*-8px) 0;transition:opacity .25s,translate .45s}
 .rg-open .rg-who{opacity:1;translate:0 0;transition-delay:.16s}
 .rg-who b{display:block;font:700 12px/1.25 Inter,Cairo,sans-serif;color:#fff}
@@ -117,4 +115,22 @@ body.light .rg li a{color:#5a5170!important}body.light .rg li a.on,body.light .r
 .rg-b[data-k=j]:hover,.rg-b[data-k=j]:focus-visible{color:#fff;border-color:rgba(22,216,255,.9);background:linear-gradient(135deg,rgba(139,53,255,.5),rgba(22,216,255,.38));box-shadow:0 0 22px rgba(139,53,255,.55),0 0 30px rgba(22,216,255,.4)}
 .rg-b[data-k=j]:hover svg,.rg-b[data-k=j]:focus-visible svg{transform:rotate(180deg) scale(1.15)}
 @keyframes rgjp{0%,100%{transform:scale(.85);opacity:.65}50%{transform:scale(1.35);opacity:1}}
+}
+
+/* TM logo — layered extrusion, tilts with the pointer, glass sweep */
+@media (min-width:1280px){
+.rg-lg{position:relative;width:34px;height:34px;transform-style:preserve-3d;transform:rotateY(calc(var(--ry,0deg)*-2.4)) rotateX(calc(var(--rx,0deg)*-1.6));animation:rgsw 5.5s ease-in-out infinite alternate;transition:scale .35s cubic-bezier(.34,1.56,.64,1)}
+.rg-me:hover .rg-lg{scale:1.12}
+@keyframes rgsw{from{rotate:y -16deg}to{rotate:y 16deg}}
+.rg-lg img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none}
+.rg-lg .e{filter:brightness(1.1) sepia(1) hue-rotate(215deg) saturate(3)}
+.rg-lg .e1{transform:translateZ(-2px)}.rg-lg .e2{transform:translateZ(-4px);opacity:.85}.rg-lg .e3{transform:translateZ(-6px);opacity:.7}.rg-lg .e4{transform:translateZ(-8px);opacity:.5}
+.rg-lg .fr{transform:translateZ(1px);animation:rgsl 3.6s ease-in-out infinite;filter:brightness(2.3) contrast(1.15) drop-shadow(0 0 1px rgba(255,255,255,.9)) drop-shadow(0 0 7px rgba(139,53,255,.85)) drop-shadow(0 0 14px rgba(22,216,255,.35))}
+.rg-av::after{content:"";position:absolute;right:1px;bottom:2px;width:8px;height:8px;border-radius:50%;background:#7CFF5B;border:2px solid #120d1f;box-shadow:0 0 8px #7CFF5B;transform:translateZ(12px)}
+}
+
+@media (min-width:1280px){
+@keyframes rgsl{0%,55%,100%{filter:brightness(2.3) contrast(1.15) drop-shadow(0 0 1px rgba(255,255,255,.9)) drop-shadow(0 0 7px rgba(139,53,255,.85)) drop-shadow(0 0 14px rgba(22,216,255,.35))}
+ 75%{filter:brightness(3.3) contrast(1.1) drop-shadow(0 0 2px #fff) drop-shadow(0 0 10px rgba(22,216,255,.95)) drop-shadow(0 0 20px rgba(139,53,255,.8))}}
+.rg-av::after{right:-1px;bottom:0;width:7px;height:7px;border-width:1.5px}
 }
