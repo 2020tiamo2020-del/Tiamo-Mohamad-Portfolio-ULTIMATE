@@ -134,7 +134,3 @@ body.light .rg li a{color:#5a5170!important}body.light .rg li a.on,body.light .r
  75%{filter:brightness(3.3) contrast(1.1) drop-shadow(0 0 2px #fff) drop-shadow(0 0 10px rgba(22,216,255,.95)) drop-shadow(0 0 20px rgba(139,53,255,.8))}}
 .rg-av::after{right:-1px;bottom:0;width:7px;height:7px;border-width:1.5px}
 }
-
-/* Image viewer open: page behind is locked (no layout shift) and the costly blur is dropped */
-html.lb-lock{overflow:hidden!important;scrollbar-gutter:stable;overscroll-behavior:none}
-body.lightbox-open .media-lightbox{-webkit-backdrop-filter:none!important;backdrop-filter:none!important;background:rgba(2,1,6,.97)!important;overscroll-behavior:contain}
