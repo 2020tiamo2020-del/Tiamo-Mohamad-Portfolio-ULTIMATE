@@ -530,18 +530,31 @@
   });
 
   /* ---------- full view (photos) ---------- */
+  let fk = 0, lockY = 0, wl = 0, wa = 0, wn = 0;
   function openFull() {
     const it = curItem(); if (!it || it.t !== "i") return;
-    sfx(); fullImg.src = it.src; full.classList.add("on"); window.__lenis && window.__lenis.stop && window.__lenis.stop(); fx.focus();
+    lockY = scrollY; fk = cur().at; sfx(); fullImg.src = it.src; full.classList.add("on"); window.__lenis && window.__lenis.stop && window.__lenis.stop(); fx.focus();
   }
   function closeFull() { full.classList.remove("on"); window.__lenis && window.__lenis.start && window.__lenis.start(); frame.focus({ preventScroll: true }); }
   function fullStep(d) {
-    const ch = cur(); let k = ch.at;
+    const ch = cur(); let k = fk;
     do { k += d; } while (ch.items[k] && ch.items[k].t !== "i");
-    if (!ch.items[k]) return; goItem(k, false); sfx(); fullImg.src = ch.items[k].src;
+    if (!ch.items[k]) return;
+    fk = k; fullImg.src = ch.items[k].src;                       // picture first, so it always changes
+    try { goItem(k, false); } catch (_) {}
+    sfx();
   }
   fx.addEventListener("click", closeFull); fp.addEventListener("click", () => fullStep(-1)); fn.addEventListener("click", () => fullStep(1));
   full.addEventListener("click", e => { if (e.target === full) closeFull(); });
+  /* wheel / trackpad: change the picture; the page behind never moves */
+  full.addEventListener("wheel", e => {
+    e.preventDefault(); e.stopPropagation();
+    const now = performance.now(); let d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY; if (e.deltaMode === 1) d *= 32;
+    if (now - wl > 180) wa = 0; wl = now; if (Math.abs(d) < 4) return;
+    wa += d; if (Math.abs(wa) >= 40 && now - wn > 450) { const dir = wa > 0 ? 1 : -1; wn = now; wa = 0; fullStep(dir); }
+  }, { passive: false });
+  full.addEventListener("touchmove", e => e.preventDefault(), { passive: false });
+  addEventListener("scroll", () => { if (full.classList.contains("on") && Math.abs(scrollY - lockY) > 2) scrollTo({ top: lockY, behavior: "instant" }); }, { passive: true });
 
   /* ---------- keep going when the old script discovers more photos (images/pm9.jpg ...) ---------- */
   if (window.MutationObserver) {
