@@ -1,0 +1,12 @@
+STUDIO LIGHTING update for Journey mode
+
+COPY (replace the old ones):
+  journey.js, journey.min.js, journey.css, journey.min.css   -> site root
+  studio/*.webp   (15 new mood images)                      -> studio/   (keep your existing day + depth files)
+  studio/audio/   (rain-storm-loop.mp3 + thunder-0..13.mp3) -> studio/audio/   (new folder)
+
+ONE EDIT in index.html (cache-bust, so browsers load the new files):
+  journey.min.css?v=j3  ->  journey.min.css?v=j5
+  journey.min.js?v=j4   ->  journey.min.js?v=j5
+
+Note: journey.min.js / journey.min.css are the normal (not minified) files under the min names, because the index.html already points to them.
