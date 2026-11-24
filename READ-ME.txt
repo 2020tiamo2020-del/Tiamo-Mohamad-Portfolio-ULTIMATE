@@ -1,0 +1,2 @@
+v6: replace these 4 files in the site root (images and audio from the previous package stay as they are).
+index.html: change ?v=j5 to ?v=j6 on journey.min.css and journey.min.js.

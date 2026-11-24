@@ -65,6 +65,7 @@
   /* flight order: [section, room, focus x, focus y, zoom] */
   const FL = [["home", 0, .5, .36, 1.2], ["creation", 0, .52, .5, 1.45], ["services", 1, .5, .58, 1.15], ["work", 1, .5, .46, 1.4], ["about", 2, .42, .52, 1.15], ["findme", 2, .72, .42, 1.5], ["cinema", 3, .58, .46, 1.25], ["beforeafter", 3, .42, .7, 1.5], ["process", 4, .45, .6, 1.15], ["brief", 4, .36, .55, 1.6], ["contact", 4, .5, .76, 1.75]];
   const FID = FL.map(f => f[0]);
+  const SEC_ICO = { home: '<path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/>', about: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/>', services: '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2M3 13h18"/>', work: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>', cinema: '<rect x="3" y="6" width="18" height="14" rx="2"/><path d="M3 10h18M7 6L5 3M12 6l-2-3M17 6l-2-3"/>', creation: '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/>', beforeafter: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16M7 10l-2 2 2 2M17 10l2 2-2 2"/>', process: '<circle cx="5" cy="18" r="2"/><circle cx="12" cy="7" r="2"/><circle cx="19" cy="15" r="2"/><path d="M6.4 16.4l4.3-7.3M13.7 8.3l4.2 5.2"/>', findme: '<path d="M12 21s7-6.2 7-11a7 7 0 10-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/>', brief: '<path d="M7 3h8l4 4v14H7zM15 3v4h4M10 12h6M10 16h6"/>', contact: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>' };
   const AN = [
     [[.5, .26], [.2, .33], [.82, .3], [.52, .62], [.18, .84], [.55, .88], [.85, .84], [.5, .46]],
     [[.5, .43], [.34, .45], [.66, .45], [.19, .66], [.82, .66], [.5, .72], [.27, .2], [.72, .2], [.06, .42], [.95, .4], [.24, .5]],
@@ -73,7 +74,8 @@
     [[.2, .52], [.36, .56], [.76, .42], [.45, .74], [.76, .74], [.2, .76], [.62, .4], [.1, .35]]];
   const AI = { home: [3, 0], creation: [1, 2, 3, 7], services: [3, 4, 5, 6, 7, 10], work: [1, 0, 2, 10, 3, 4], about: [0, 1, 4], findme: [1, 2, 5, 7, 8], cinema: [0], beforeafter: [3, 6], process: [0, 1, 2, 3, 4, 5], brief: [0, 1, 3, 5, 6, 7], contact: [3] };
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-  const S = i => ({ room: FL[i][1], fx: FL[i][2], fy: FL[i][3], Z: FL[i][4] });
+  let LT = false;   /* lighting mode: everything but the room and the lighting panel is hidden */
+  const S = i => LT ? { room: FL[i][1], fx: .5, fy: .5, Z: 1 } : ({ room: FL[i][1], fx: FL[i][2], fy: FL[i][3], Z: FL[i][4] });
 
   /* ---------- DOM ---------- */
   let jw, $, live = false, lastFocus = null, y0 = 0, inerted = [], cards = {}, ST = {}, cur = "home", idx = 0, W = 1, H2 = 1;
@@ -85,11 +87,14 @@
       '<div id="jwM" class="jw-m"></div><div class="jw-t" id="jwT"></div>' +
       '<header class="jw-nav"><div class="jw-in" id="jwIn"></div><div class="jw-pan" id="jwPan"><div class="jw-pin" id="jwPin"></div></div></header>' +
       '<button class="jw-x" id="jwX" type="button"><svg viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19"/></svg></button><div class="jw-dots" id="jwD"></div><div class="jw-hint" id="jwH"></div><div class="jw-win" id="jwW"></div>' +
-      '<div class="jw-fx" id="jwFx" role="group">' + MOODS.map(k => '<button class="jw-mood" type="button" data-fx="' + k + '" aria-pressed="false"><svg viewBox="0 0 24 24">' + FXI[k] + "</svg><span></span></button>").join("") + '<i class="jw-fxs"></i><button class="jw-mood jw-snd" id="jwSnd" type="button" aria-pressed="false"><svg class="off" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4zM17 9l4 6M21 9l-4 6"/></svg><svg class="on" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4zM16.5 8.5a5 5 0 010 7M19 6a8.5 8.5 0 010 12"/></svg></button></div>';
+      '<button class="jw-ltb" id="jwLt" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 00-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0012 3z"/></svg><span id="jwLtT"></span></button>' +
+      '<div class="jw-lp" id="jwLp" role="group"><div class="jw-lph"><h3 id="jwLpT"></h3><button class="jw-lps" id="jwSnd" type="button" aria-pressed="false"><svg class="off" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4zM17 9l4 6M21 9l-4 6"/></svg><svg class="on" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4zM16.5 8.5a5 5 0 010 7M19 6a8.5 8.5 0 010 12"/></svg></button></div><div class="jw-cards">' + MOODS.map(k => '<button class="jw-card" type="button" data-fx="' + k + '" aria-pressed="false"><svg viewBox="0 0 24 24">' + FXI[k] + "</svg><span><b></b><small></small></span></button>").join("") + '</div><label class="jw-br"><span id="jwBrL"></span><input type="range" id="jwBr" min="70" max="130" value="100"></label></div>';
     D.body.appendChild(jw); $ = id => D.getElementById(id);
     cv = $("jwgl"); ln = $("jwln"); lg = ln.getContext("2d");
     jw.addEventListener("click", onClick);
-    jw.addEventListener("click", e => { const b = e.target.closest("[data-fx]"); if (b) setMood(b.dataset.fx); else if (e.target.closest("#jwSnd")) soundOn(!sOn); });
+    jw.addEventListener("click", e => { const b = e.target.closest("[data-fx]"); if (b) { setMood(b.dataset.fx); if (want === "rain" && LT && !sOn) soundOn(true); } else if (e.target.closest("#jwSnd")) soundOn(!sOn); else if (e.target.closest("#jwLt")) toggleLT(!LT); });
+    $("jwBr").addEventListener("input", e => { bright = e.target.value / 100; });
+    jw.addEventListener("pointermove", e => { const el = e.target.closest && e.target.closest(".jw-lp,.jw-card,.jw-ltb"); if (el) { const r = el.getBoundingClientRect(); el.style.setProperty("--mx", e.clientX - r.left + "px"); el.style.setProperty("--my", e.clientY - r.top + "px"); } });
     jw.addEventListener("wheel", e => { e.stopPropagation(); if (jw.classList.contains("win") || tr) return; wacc += e.deltaY; clearTimeout(wt); wt = setTimeout(() => wacc = 0, 220); if (Math.abs(wacc) > 50) { step(wacc > 0 ? 1 : -1); wacc = 0; } }, { passive: true });
     let tx = 0, ty = 0;
     jw.addEventListener("touchstart", e => { tx = e.touches[0].clientX; ty = e.touches[0].clientY; }, { passive: true });
@@ -102,7 +107,7 @@
     ORDER.forEach(id => { const d = info(id); ST[id] = { d }; cards[id] = d.c; });
     $("jwIn").innerHTML = '<button class="jw-it jw-cur" type="button" data-jmore="1"><span id="jwCur"></span> ▾</button>' + MAIN.map(id => '<button class="jw-it" type="button" data-jgo="' + id + '">' + esc(lab(id)) + "</button>").join("") + '<button class="jw-it" type="button" data-jmore="1" id="jwMore">' + l.more + " ▾</button>";
     $("jwPin").innerHTML = FID.map((id, i) => '<button class="jw-it' + (MAIN.includes(id) ? " m-only" : "") + '" type="button" data-jgo="' + id + '">' + esc(lab(id)) + "<small>" + two(i + 1) + "</small></button>").join("");
-    $("jwD").innerHTML = FID.map(id => '<button class="jw-dot" type="button" data-jgo="' + id + '" aria-label="' + esc(lab(id)) + '"></button>').join("");
+    $("jwD").innerHTML = FID.map(id => '<button class="jw-dot" type="button" data-jgo="' + id + '" aria-label="' + esc(lab(id)) + '"><svg viewBox="0 0 24 24" aria-hidden="true">' + (SEC_ICO[id] || SEC_ICO.home) + "</svg><span>" + esc(lab(id)) + "</span></button>").join("");
     $("jwH").textContent = l.hint; $("jwX").setAttribute("aria-label", l.exit); fxLabels();
   }
   function mark() {
@@ -145,7 +150,7 @@
       return gl.getProgramParameter(p, gl.LINK_STATUS) ? p : null;
     };
     pf = prog(VS, FSF, "p"); if (!pf) { gl = null; return false; }
-    pp = prog(VS, FXF, "p"); if (pp) [ "uS", "uD", "uB", "uRes", "uSun", "uSunC", "uTime", "uRain", "uSunS", "uFlash", "uBolt" ].forEach(n => lp_[n] = gl.getUniformLocation(pp, n));
+    pp = prog(VS, FXF, "p"); if (pp) [ "uS", "uD", "uB", "uRes", "uSun", "uSunC", "uTime", "uRain", "uSunS", "uFlash", "uBolt", "uExp" ].forEach(n => lp_[n] = gl.getUniformLocation(pp, n));
     ["im", "C", "F", "Z", "A"].forEach(n => lf[n] = gl.getUniformLocation(pf, n));
     meshOK = gl.getParameter(gl.MAX_VERTEX_TEXTURE_IMAGE_UNITS) > 0; pm = meshOK ? prog(VSM, FSM, "a") : null; meshOK = !!pm;
     qbuf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, qbuf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
@@ -229,9 +234,9 @@
   /* sun and moon position inside each photo (pixels of the 1672 x 941 image) */
   const SPOS = { desk: { s: [1195, 325], m: [1355, 128] }, windows: { s: [390, 438], m: [365, 128] }, screen: { s: [25, 440], m: [75, 205] }, floor: { s: [690, 285], m: [355, 110] }, ceiling: { s: [903, 912], m: [228, 666] } };
   const SND_EV = [19.5, 34.2, 80.4, 87.9, 96.8, 122.1, 140.45, 161.9, 173.4, 190.35];   /* seconds of the thunder cracks inside rain-storm-loop.mp3 */
-  const FXL = { en: { t: "Studio lighting", day: "Day", sunset: "Sunset", rain: "Rain", night: "Night", snd: "Storm sound" }, ar: { t: "إضاءة الاستوديو", day: "نهار", sunset: "غروب", rain: "مطر", night: "ليل", snd: "صوت العاصفة" } };
+  const FXL = { en: { t: "Studio lighting", day: "Day", dayS: "Clear sky", sunset: "Sunset", sunsetS: "Low amber light", rain: "Rain", rainS: "Storm on glass", night: "Night", nightS: "Moon over the city", br: "Brightness", snd: "Storm sound" }, ar: { t: "إضاءة الاستوديو", day: "نهار", dayS: "سماء صافية", sunset: "غروب", sunsetS: "ضوء كهرماني هادئ", rain: "مطر", rainS: "عاصفة على الزجاج", night: "ليل", nightS: "قمر فوق المدينة", br: "السطوع", snd: "صوت العاصفة" } };
   const FXI = { day: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>', sunset: '<path d="M7 17a5 5 0 0110 0M12 6v3M4.5 10.5l1.8 1.8M19.5 10.5l-1.8 1.8M2 17h20M6 21h12"/>', rain: '<path d="M7 15a4.5 4.5 0 01-.5-9 6 6 0 0111.4 1.5A3.8 3.8 0 0117 15zM8 18l-1 3M12 18l-1 3M16 18l-1 3"/>', night: '<path d="M20 14.5A8.5 8.5 0 119.5 4a7 7 0 0010.5 10.5z"/>' };
-  const FXF = `precision highp float;varying vec2 s;uniform sampler2D uS,uD,uB;uniform vec2 uRes,uSun;uniform vec3 uSunC;uniform float uTime,uRain,uSunS,uFlash,uBolt;
+  const FXF = `precision highp float;varying vec2 s;uniform sampler2D uS,uD,uB;uniform vec2 uRes,uSun;uniform vec3 uSunC;uniform float uTime,uRain,uSunS,uFlash,uBolt,uExp;
 vec3 h31(vec2 p){vec3 q=fract(vec3(p.xyx)*vec3(.1031,.103,.0973));q+=dot(q,q.yxz+33.33);return fract((q.xxy+q.yzz)*q.zyx);}
 vec4 SC(vec2 u){return texture2D(uS,vec2(u.x,1.-u.y));}
 float DP(vec2 u){return texture2D(uD,vec2(u.x,1.-u.y)).r;}
@@ -257,7 +262,7 @@ void main(){float ra=uRes.x/uRes.y;vec2 u=s,ua=vec2(u.x*ra,u.y);
  col+=spec*vec3(.9,.95,1.)*.8;col*=1.-rim*.3;
  col+=vec3(.8,.88,1.)*texture2D(uB,p).r*uBolt*far*1.7;
  col=col*(1.+uFlash*(.14+.8*far))+vec3(.03,.035,.06)*uFlash*(1.-far)+vec3(.14,.17,.32)*uFlash*far;
- gl_FragColor=vec4(col,1.);}`;
+ gl_FragColor=vec4(col*uExp,1.);}`;
   let pp, lp_ = {}, fS, fD, fW = 0, fH = 0, bTex, bCv, bX, bPend = false, bBuf = null;
   let mood = "day", want = "day", MF = { from: "day", to: "day", t: 1 }, Fx = { rain: 0, sun: 0, col: [1, 1, 1], pos: [.5, .5] }, fxT = 0;
   let AC, comp, bedG, bedSrc, bedBuf, bedStart = 0, thBufs = [], sLoad = null, sOn = false, lastClip = -1, lastPos = -1, nextBolt = 1e12, pulses = [];
@@ -270,8 +275,8 @@ void main(){float ra=uRes.x/uRes.y;vec2 u=s,ua=vec2(u.x*ra,u.y);
   }
   function setMood(k) { want = k; fxUI(); loadMood(FL[idx][1], k); }
   const fxL = () => FXL[H.lang === "ar" ? "ar" : "en"];
-  function fxUI() { if (!jw) return; jw.querySelectorAll("[data-fx]").forEach(b => b.setAttribute("aria-pressed", b.dataset.fx === want)); const sb = $("jwSnd"); if (sb) sb.setAttribute("aria-pressed", sOn); }
-  function fxLabels() { const l = fxL(), p = $("jwFx"); if (!p) return; p.setAttribute("aria-label", l.t); p.querySelectorAll("[data-fx]").forEach(b => { b.querySelector("span").textContent = l[b.dataset.fx]; }); $("jwSnd").setAttribute("aria-label", l.snd); fxUI(); }
+  function fxUI() { if (!jw) return; jw.querySelectorAll("[data-fx]").forEach(b => b.setAttribute("aria-pressed", b.dataset.fx === want)); const sb = $("jwSnd"); if (sb) sb.setAttribute("aria-pressed", sOn); const lb = $("jwLt"); if (lb) lb.setAttribute("aria-pressed", LT); }
+  function fxLabels() { const l = fxL(); if (!$("jwLp")) return; $("jwLtT").textContent = l.t; $("jwLpT").textContent = l.t; $("jwBrL").textContent = l.br; $("jwSnd").setAttribute("aria-label", l.snd); jw.querySelectorAll("[data-fx]").forEach(b => { b.querySelector("b").textContent = l[b.dataset.fx]; b.querySelector("small").textContent = l[b.dataset.fx + "S"]; }); fxUI(); }
   function mkFBO(w, h) {
     const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
     [[gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE], [gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR]].forEach(([k, v]) => gl.texParameteri(gl.TEXTURE_2D, k, v));
@@ -341,6 +346,14 @@ void main(){float ra=uRes.x/uRes.y;vec2 u=s,ua=vec2(u.x*ra,u.y);
     if (RM || mood !== "rain" || now < nextBolt) return;
     if (bedG && sOn) { if (nearEvent(bedPos())) { nextBolt = now + 2500; return; } fire(true); nextBolt = now + 9000 + Math.random() * 8000; } else { fire(false); nextBolt = now + 4000 + Math.random() * 7000; }
   }
+  let bright = 1;
+  function toggleLT(on) {
+    if (!jw || on === LT) return; const from = vis || S(idx);
+    LT = on; jw.classList.toggle("jw-lt", on); pan(false); $("jwM").classList.remove("show");
+    tr = { from: { room: from.room, Z: from.Z, fx: from.fx, fy: from.fy }, t0: performance.now(), dur: RM ? 1 : 1100 };
+    if (on) soundOn(true); else { soundOn(false); bright = 1; $("jwBr").value = 100; }
+    fxUI();
+  }
   function fxOpen() { if (sOn && AC) { AC.resume(); audioMood(); } }
   function fxClose() { if (AC && AC.state === "running") { if (bedG) bedG.gain.setTargetAtTime(0, AC.currentTime, .1); setTimeout(() => { if (!live && AC) AC.suspend(); }, 400); } }
   /* one step of the effect state per frame; returns whether the post pass runs */
@@ -359,13 +372,13 @@ void main(){float ra=uRes.x/uRes.y;vec2 u=s,ua=vec2(u.x*ra,u.y);
     gl.useProgram(pp); gl.bindBuffer(gl.ARRAY_BUFFER, qbuf); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
     gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, fS.t); gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, fD.t); gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, bTex || fD.t);
     gl.uniform1i(lp_.uS, 0); gl.uniform1i(lp_.uD, 1); gl.uniform1i(lp_.uB, 2); gl.uniform2f(lp_.uRes, cv.width, cv.height); gl.uniform2f(lp_.uSun, Fx.pos[0], Fx.pos[1]); gl.uniform3f(lp_.uSunC, Fx.col[0], Fx.col[1], Fx.col[2]);
-    gl.uniform1f(lp_.uTime, t * .001 * (RM ? .25 : 1)); gl.uniform1f(lp_.uRain, Fx.rain); gl.uniform1f(lp_.uSunS, Fx.sun); gl.uniform1f(lp_.uFlash, fl); gl.uniform1f(lp_.uBolt, bTex ? Math.min(1, fl * 1.2) : 0);
+    gl.uniform1f(lp_.uTime, t * .001 * (RM ? .25 : 1)); gl.uniform1f(lp_.uRain, Fx.rain); gl.uniform1f(lp_.uSunS, Fx.sun); gl.uniform1f(lp_.uFlash, fl); gl.uniform1f(lp_.uBolt, bTex ? Math.min(1, fl * 1.2) : 0); gl.uniform1f(lp_.uExp, bright);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }
 
   /* ---------- camera ---------- */
   function fly(i) {
-    i = clamp(i, 0, FL.length - 1); if (i === idx && !tr) return;
+    if (LT) return; i = clamp(i, 0, FL.length - 1); if (i === idx && !tr) return;
     const from = vis || S(idx); idx = i; cur = FL[i][0]; loadRoom(FL[i][1]);
     tr = { from: { room: from.room, Z: from.Z, fx: from.fx, fy: from.fy }, t0: performance.now(), dur: RM ? 1 : from.room === FL[i][1] ? 1300 : 1900 };
     $("jwM").classList.remove("show"); const T = $("jwT"); T.classList.add("off"); clearTimeout(ht); ht = setTimeout(() => { setHead(); T.classList.remove("off"); }, RM ? 0 : 420);
@@ -479,7 +492,7 @@ void main(){float ra=uRes.x/uRes.y;vec2 u=s,ua=vec2(u.x*ra,u.y);
     live = true; jw.classList.add("on"); cancelAnimationFrame(raf); raf = requestAnimationFrame(frame); $("jwX").focus({ preventScroll: true });
   }
   function exit(target) {
-    if (!live) return; live = false; fxClose(); stopAt = performance.now() + 1000; jw.classList.remove("on", "win"); H.classList.remove("jw-lock"); inertAll(false);
+    if (!live) return; if (LT) toggleLT(false); live = false; fxClose(); stopAt = performance.now() + 1000; jw.classList.remove("on", "win"); H.classList.remove("jw-lock"); inertAll(false);
     window.__lenis && __lenis.start && __lenis.start();
     const a = target && D.querySelector('#nav a[href="#' + target + '"]');
     if (a) a.click(); else { const back = () => { if (window.__lenis && __lenis.scrollTo) __lenis.scrollTo(y0, { immediate: true, force: true }); else scrollTo({ top: y0, left: 0, behavior: "instant" }); }; back(); requestAnimationFrame(back); }   /* closing returns you to exactly where you were */
@@ -488,7 +501,7 @@ void main(){float ra=uRes.x/uRes.y;vec2 u=s,ua=vec2(u.x*ra,u.y);
   btn.addEventListener("click", open);
   D.addEventListener("keydown", e => {
     if (!live) return;
-    if (e.key === "Escape") { e.preventDefault(); jw.classList.contains("win") ? closeWin() : $("jwPan").classList.contains("is-open") ? pan(false) : exit(); return; }
+    if (e.key === "Escape") { e.preventDefault(); if (LT) { toggleLT(false); return; } jw.classList.contains("win") ? closeWin() : $("jwPan").classList.contains("is-open") ? pan(false) : exit(); return; }
     if (jw.classList.contains("win")) return;
     const rtl = H.dir === "rtl", k = e.key;
     if (k === "ArrowDown" || k === "PageDown" || k === (rtl ? "ArrowLeft" : "ArrowRight")) { e.preventDefault(); step(1); }
