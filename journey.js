@@ -88,12 +88,12 @@
       '<header class="jw-nav"><div class="jw-in" id="jwIn"></div><div class="jw-pan" id="jwPan"><div class="jw-pin" id="jwPin"></div></div></header>' +
       '<button class="jw-x" id="jwX" type="button"><svg viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19"/></svg></button><div class="jw-dots" id="jwD"></div><div class="jw-hint" id="jwH"></div><div class="jw-win" id="jwW"></div>' +
       '<div class="jw-rd" id="jwRd" role="group">' + ROOMS.map((_, i) => '<button class="jw-rdd" type="button" data-rd="' + i + '"></button>').join("") + '</div>' +
-      '<button class="jw-ltb" id="jwLt" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 00-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0012 3z"/></svg><span id="jwLtT"></span></button>' +
-      '<div class="jw-lp" id="jwLp" role="group"><div class="jw-lph"><h3 id="jwLpT"></h3><button class="jw-lps" id="jwSnd" type="button" aria-pressed="false"><svg class="off" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4zM17 9l4 6M21 9l-4 6"/></svg><svg class="on" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4zM16.5 8.5a5 5 0 010 7M19 6a8.5 8.5 0 010 12"/></svg></button></div><div class="jw-cards">' + MOODS.map(k => '<button class="jw-card" type="button" data-fx="' + k + '" aria-pressed="false"><svg viewBox="0 0 24 24">' + FXI[k] + "</svg><span><b></b><small></small></span></button>").join("") + '</div><label class="jw-br"><span id="jwBrL"></span><input type="range" id="jwBr" min="70" max="130" value="100"></label></div>';
+      '<div class="jw-tl"><button class="jw-ltb" id="jwLt" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 00-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0012 3z"/></svg><span id="jwLtT"></span></button><button class="jw-sb" id="jwSnd" type="button" aria-pressed="false"><svg class="off" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4zM17 9l4 6M21 9l-4 6"/></svg><svg class="on" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4zM16.5 8.5a5 5 0 010 7M19 6a8.5 8.5 0 010 12"/></svg></button></div>' +
+      '<div class="jw-lp" id="jwLp" role="group"><div class="jw-lph"><h3 id="jwLpT"></h3></div><div class="jw-cards">' + MOODS.map(k => '<button class="jw-card" type="button" data-fx="' + k + '" aria-pressed="false"><svg viewBox="0 0 24 24">' + FXI[k] + "</svg><span><b></b><small></small></span></button>").join("") + '</div><label class="jw-br"><span id="jwBrL"></span><input type="range" id="jwBr" min="70" max="130" value="100"></label></div>';
     D.body.appendChild(jw); $ = id => D.getElementById(id);
     cv = $("jwgl"); ln = $("jwln"); lg = ln.getContext("2d");
     jw.addEventListener("click", onClick);
-    jw.addEventListener("click", e => { const b = e.target.closest("[data-fx]"); if (b) { setMood(b.dataset.fx); if (want === "rain" && LT && !sOn) soundOn(true); } else if (e.target.closest("#jwSnd")) soundOn(!sOn); else if (e.target.closest("#jwLt")) toggleLT(!LT); else if (e.target.closest("[data-rd]")) ltGo(+e.target.closest("[data-rd]").dataset.rd); });
+    jw.addEventListener("click", e => { const b = e.target.closest("[data-fx]"); if (b) { setMood(b.dataset.fx); if (want === "rain" && LT && !sOn && !sMuted) soundOn(true); } else if (e.target.closest("#jwSnd")) { soundOn(!sOn); sMuted = !sOn; } else if (e.target.closest("#jwLt")) toggleLT(!LT); else if (e.target.closest("[data-rd]")) ltGo(+e.target.closest("[data-rd]").dataset.rd); });
     $("jwBr").addEventListener("input", e => { bright = e.target.value / 100; });
     jw.addEventListener("pointermove", e => { const el = e.target.closest && e.target.closest(".jw-lp,.jw-card,.jw-ltb"); if (el) { const r = el.getBoundingClientRect(); el.style.setProperty("--mx", e.clientX - r.left + "px"); el.style.setProperty("--my", e.clientY - r.top + "px"); } });
     jw.addEventListener("wheel", e => { e.stopPropagation(); if (jw.classList.contains("win") || tr) return; wacc += e.deltaY; clearTimeout(wt); wt = setTimeout(() => wacc = 0, 220); if (Math.abs(wacc) > 50) { step(wacc > 0 ? 1 : -1); wacc = 0; } }, { passive: true });
@@ -241,32 +241,40 @@
 vec3 h31(vec2 p){vec3 q=fract(vec3(p.xyx)*vec3(.1031,.103,.0973));q+=dot(q,q.yxz+33.33);return fract((q.xxy+q.yzz)*q.zyx);}
 vec4 SC(vec2 u){return texture2D(uS,vec2(u.x,1.-u.y));}
 float DP(vec2 u){return texture2D(uD,vec2(u.x,1.-u.y)).r;}
-vec4 dropL(vec2 u,float sc,float spd,float seed){vec2 g=u*sc,id=floor(g),f=fract(g);vec3 h=h31(id+seed);
- float life=fract(uTime*spd*(.4+h.z*.8)+h.x*13.);float slip=smoothstep(.62,1.,life);vec2 c=vec2(.22+.56*h.y,.25+.5*slip*slip);
- float vis=smoothstep(0.,.12,life)*(1.-smoothstep(.93,1.,life))*step(.3,h.x);float r=.075+.07*h.z;vec2 q=f-c;q.y*=.8;float d=length(q);
- float m=smoothstep(r,r*.6,d)*vis;vec2 n=q/r;
- float tr=smoothstep(.016,0.,abs(f.x-c.x))*step(f.y,c.y)*step(.25,f.y)*smoothstep(.62,.7,life)*vis*.5;
- float rim=smoothstep(r*.55,r,d)*(1.-smoothstep(r,r*1.15,d))*vis;
- return vec4(-n*m*r/sc,smoothstep(.55,.95,dot(n,vec2(-.55,-.83)))*m,rim+tr);}
-vec4 micro(vec2 u,float sc){vec2 g=u*sc,id=floor(g),f=fract(g);vec3 h=h31(id+11.);float life=sin(uTime*.12+h.x*6.28)*.5+.5;vec2 c=.25+.5*h.yz;float r=.07+.07*h.x;vec2 q=f-c;float d=length(q);
- float m=smoothstep(r,r*.6,d)*step(.62,h.x*.5+h.y*.5+.15)*life;vec2 n=q/r;
- return vec4(-n*m*r/sc,smoothstep(.55,.95,dot(n,vec2(-.55,-.83)))*m,smoothstep(r*.55,r,d)*(1.-smoothstep(r,r*1.15,d))*life*.6);}
+/* a water drop is a tiny lens: the picture inside it is flipped and magnified, with a sharp highlight, a bright caustic on the low edge and a dark rim */
+vec4 lens(vec2 n,float m,float r,float sc){float nl=length(n);vec2 off=-n*m*r/sc*(.9+.9*nl*nl);
+ vec3 N=normalize(vec3(n*.9,sqrt(max(0.,1.-min(nl*nl,1.)))+.15));vec3 H=normalize(normalize(vec3(-.45,-.6,.65))+vec3(0.,0.,1.));
+ float spec=pow(max(dot(N,H),0.),38.)*m;float caust=smoothstep(.45,.95,nl)*max(0.,dot(normalize(n+vec2(1e-4)),vec2(.45,.9)))*m;
+ return vec4(off,spec+caust*.5,smoothstep(.7,1.,nl)*m);}
+/* a drop that creeps down the glass, stops, slides on, and leaves a thin wet line (clear of mist) behind it */
+vec4 slide(vec2 u,float sc,float spd,float seed,out float clr){vec2 g=u*vec2(sc,sc*.5),id=floor(g),f=fract(g);vec3 h=h31(id+seed),h2=h31(id*1.7+seed+9.);vec2 c=vec2(f.x,f.y*2.);
+ float ph=fract(uTime*spd*(.5+h.y)+h.z*7.);float yy=.28+1.5*ph-.05*sin(ph*34.+h.x*6.);float x0=.22+.56*h.x+.03*sin(yy*7.+h.y*6.);
+ float r=.075+.06*h2.x;vec2 q=vec2(c.x-x0,(c.y-yy)*.82);float vis=smoothstep(0.,.08,ph)*(1.-smoothstep(.9,1.,ph))*step(.28,h2.y);
+ float m=smoothstep(r,r*.82,length(q))*vis;float above=yy-c.y,tl=clamp(above/(yy-.28+.001),0.,1.),tw=r*(.34+.18*(1.-tl)),wob=.015*sin(c.y*17.+h.x*12.);
+ float tr=smoothstep(tw,tw*.35,abs(c.x-x0-wob))*step(0.,above)*step(.28,c.y)*(1.-tl*.85)*vis*smoothstep(0.,.1,ph);
+ vec4 L=lens(q/r,m,r,sc);L.xy+=vec2((c.x-x0-wob)/tw,0.)*tr*tw/sc*.5;clr=max(m,tr*.9);return L;}
+/* drops that stick and just sit there, slowly breathing */
+vec4 stuck(vec2 u,float sc,float seed,out float clr){vec2 g=u*sc,id=floor(g),f=fract(g);vec3 h=h31(id+seed);float life=.55+.45*sin(uTime*.1+h.x*6.28);
+ vec2 c=.2+.6*h.yz;float r=.06+.12*h.x*h.x;float on=step(.62,fract(h.x*7.13+h.y*3.7));float m=smoothstep(r,r*.8,length(f-c))*on*life;clr=m;return lens((f-c)/r,m,r,sc);}
 vec3 rays(vec2 c,vec2 sp){vec2 dir=sp-c;float ang=atan(dir.y,dir.x);vec3 acc=vec3(0.);
  for(int i=0;i<24;i++){float t=float(i)/24.;vec2 q=c+dir*t*.92;float on=step(0.,q.x)*step(q.x,1.)*step(0.,q.y)*step(q.y,1.);q=clamp(q,.002,.998);vec3 sc=SC(q).rgb;float l=dot(sc,vec3(.3,.59,.11));float far=smoothstep(.35,.65,DP(q));acc+=smoothstep(.5,.9,l)*far*(1.-t)*sc*on;}
  return acc/24.*(.7+.3*sin(ang*26.+uTime*.2)*sin(ang*11.-uTime*.13));}
 float dust(vec2 u){vec2 g=u*vec2(15.,9.)+vec2(uTime*.012,uTime*.02);vec2 id=floor(g),f=fract(g);vec3 h=h31(id+4.);vec2 c=.2+.6*h.xy+.08*sin(uTime*.5+h.xy*6.28);return smoothstep(.07,0.,length(f-c))*step(.6,h.z)*(.5+.5*sin(uTime*1.3+h.x*20.));}
-void main(){float ra=uRes.x/uRes.y;vec2 u=s,ua=vec2(u.x*ra,u.y);
- vec4 a=dropL(ua,4.5,.07,1.),b=dropL(ua,8.,.1,7.),c=dropL(ua,14.,.14,3.),d=micro(ua,38.);
- vec2 off=(a.xy+b.xy+c.xy+d.xy)*uRain;off.x/=ra;float spec=(a.z+b.z+c.z+d.z)*uRain,rim=(a.w+b.w+c.w+d.w)*uRain;
- vec2 p=u+off;vec3 col=SC(p).rgb;float far=smoothstep(.35,.65,DP(p));
+void main(){float ra=uRes.x/uRes.y;vec2 u=s,ua=vec2(u.x*ra,u.y);float c0,c1,c2,c3,c4,c5;
+ vec4 w=slide(ua,3.2,.045,1.,c0)+slide(ua,5.5,.06,7.,c1)+slide(ua,9.,.08,3.,c2)+slide(ua,14.,.14,5.,c3)+stuck(ua,20.,11.,c4)+stuck(ua,42.,5.,c5);
+ vec2 off=w.xy*uRain;off.x/=ra;float spec=w.z*uRain,rim=w.w*uRain,clr=clamp(c0+c1+c2+c3+c4+c5,0.,1.);
+ vec2 p=u+off;vec3 col=SC(p).rgb;
+ if(uRain>.01){vec2 e1=vec2(6.)/uRes;vec3 bl=col+SC(p+e1*vec2(1.,0.)).rgb+SC(p+e1*vec2(.5,.87)).rgb+SC(p+e1*vec2(-.5,.87)).rgb+SC(p+e1*vec2(-1.,0.)).rgb+SC(p+e1*vec2(-.5,-.87)).rgb+SC(p+e1*vec2(.5,-.87)).rgb;bl/=7.;
+  float fog=uRain*.65*(1.-clr);col=mix(col,bl,fog);col=mix(col,vec3(dot(col,vec3(.3,.59,.11)))*vec3(.92,.97,1.06),fog*.18);}
+ float far=smoothstep(.35,.65,DP(p));
  if(uSunS>.01){vec3 r=rays(p,uSun)*uSunC*uSunS*1.5;float fall=smoothstep(1.4,0.,length(u-uSun));col+=r*(.55+fall)+dust(ua)*uSunS*fall*uSunC*.7;}
- col+=spec*vec3(.9,.95,1.)*.8;col*=1.-rim*.3;
+ col+=spec*vec3(.95,.97,1.)*1.1;col*=1.-rim*.4;
  col+=vec3(.8,.88,1.)*texture2D(uB,p).r*uBolt*far*1.7;
- col=col*(1.+uFlash*.9*far)+vec3(.14,.17,.32)*uFlash*far;
+ col=col*(1.+uFlash*(.2+.8*far))+vec3(.04,.05,.09)*uFlash*(1.-far)+vec3(.14,.17,.32)*uFlash*far;
  gl_FragColor=vec4(col*uExp,1.);}`;
   let pp, lp_ = {}, fS, fD, fW = 0, fH = 0, bTex, bCv, bX, bPend = false, bBuf = null;
   let mood = "day", want = "day", MF = { from: "day", to: "day", t: 1 }, Fx = { rain: 0, sun: 0, col: [1, 1, 1], pos: [.5, .5] }, fxT = 0;
-  let AC, comp, bedG, bedSrc, bedBuf, bedStart = 0, thBufs = [], sLoad = null, sOn = false, lastClip = -1, lastPos = -1, nextBolt = 1e12, pulses = [];
+  let AC, comp, bedG, bedSrc, bedBuf, bedStart = 0, thBufs = [], sLoad = null, sOn = false, lastClip = -1, lastPos = -1, sMuted = false, nextBolt = 1e12, pulses = [];
   const rdy = r => { const m = room[r]; if (!m || !m.ready) return false; const ok = k => k === "day" || !gl || !!(m.tm && m.tm[k]); return ok(MF.to) && (MF.t >= 1 || ok(MF.from)); };
   const moodTex = (r, k) => { const m = room[r]; return !m ? null : k === "day" ? m.ti : (m.tm && m.tm[k]) || null; };
   function loadMood(r, k) {
@@ -276,7 +284,7 @@ void main(){float ra=uRes.x/uRes.y;vec2 u=s,ua=vec2(u.x*ra,u.y);
   }
   function setMood(k) { want = k; fxUI(); loadMood(FL[idx][1], k); }
   const fxL = () => FXL[H.lang === "ar" ? "ar" : "en"];
-  function fxUI() { if (!jw) return; jw.querySelectorAll("[data-fx]").forEach(b => b.setAttribute("aria-pressed", b.dataset.fx === want)); const sb = $("jwSnd"); if (sb) sb.setAttribute("aria-pressed", sOn); const lb = $("jwLt"); if (lb) lb.setAttribute("aria-pressed", LT); }
+  function fxUI() { if (!jw) return; jw.querySelectorAll("[data-fx]").forEach(b => b.setAttribute("aria-pressed", b.dataset.fx === want)); const sb = $("jwSnd"); if (sb) sb.setAttribute("aria-pressed", sOn); const lb = $("jwLt"); if (lb) lb.setAttribute("aria-pressed", LT); jw.classList.toggle("jw-rainy", want === "rain"); }
   function fxLabels() { const l = fxL(); if (!$("jwLp")) return; $("jwLtT").textContent = l.t; $("jwLpT").textContent = l.t; $("jwBrL").textContent = l.br; $("jwSnd").setAttribute("aria-label", l.snd); jw.querySelectorAll("[data-rd]").forEach(b => b.setAttribute("aria-label", l.rooms[+b.dataset.rd])); rdUI(); jw.querySelectorAll("[data-fx]").forEach(b => { b.querySelector("b").textContent = l[b.dataset.fx]; b.querySelector("small").textContent = l[b.dataset.fx + "S"]; }); fxUI(); }
   function mkFBO(w, h) {
     const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
@@ -362,7 +370,7 @@ void main(){float ra=uRes.x/uRes.y;vec2 u=s,ua=vec2(u.x*ra,u.y);
     LT = on; if (on) { LR = 0; loadRoom(0); } jw.classList.toggle("jw-lt", on); pan(false); $("jwM").classList.remove("show");
     tr = { from: { room: from.room, Z: from.Z, fx: from.fx, fy: from.fy }, t0: performance.now(), dur: RM ? 1 : (from.room === S(idx).room ? 1100 : 1900) };
     rdUI();
-    if (on) soundOn(true); else { soundOn(false); bright = 1; $("jwBr").value = 100; }
+    if (on) { if (!sMuted) soundOn(true); } else { bright = 1; $("jwBr").value = 100; }
     fxUI();
   }
   function fxOpen() { if (sOn && AC) { AC.resume(); audioMood(); } }
@@ -430,9 +438,27 @@ void main(){float ra=uRes.x/uRes.y;vec2 u=s,ua=vec2(u.x*ra,u.y);
     raf = requestAnimationFrame(frame);
   }
   /* hologram layer: a ring on the focus point, spokes to every hotspot, and a flowing path through them */
+  /* every marker (dot + label) is kept fully on screen, off the side rail, and clear of the title card and the top buttons */
+  function markerGeom() {
+    const rtl = H.dir === "rtl", obs = [];
+    ["jwT", "jwLt", "jwSnd"].forEach(id => { const e = $(id); if (!e || !e.offsetWidth || e.classList.contains("off") || (id === "jwSnd" && !jw.classList.contains("jw-rainy"))) return; const b = e.getBoundingClientRect(); obs.push([b.left - 12, b.top - 12, b.right + 12, b.bottom + 12]); });
+    return { rtl, s0: rtl ? -1 : 1, R: 25, lo: 16 + (rtl ? 86 : 0), hi: W - 16 - (rtl ? 0 : 86), t: 72, b: 46, obs };
+  }
+  function fitMarker(m, p, g) {
+    if (m.lw == null) { const sp = m.el.querySelector("span"); m.lw = sp && sp.offsetWidth ? sp.offsetWidth : 0; }
+    const R = g.R, ext = m.lw ? 21 + m.lw : R, ex = s => s > 0 ? [-R, ext] : [-ext, R], cx = (x, e) => Math.max(g.lo - e[0], Math.min(g.hi - e[1], x)), cy = y => Math.max(g.t + R, Math.min(H2 - g.b - R, y));
+    const cost = s => Math.abs(cx(p[0], ex(s)) - p[0]) + (s === (m.side || g.s0) ? 0 : 14), s = cost(g.s0) <= cost(-g.s0) ? g.s0 : -g.s0, e = ex(s); m.side = s;
+    let x = cx(p[0], e), y = cy(p[1]); const hit = (a, b, o) => a + e[1] > o[0] && a + e[0] < o[2] && b + R > o[1] && b - R < o[3];
+    if (g.obs.some(o => hit(x, y, o))) {
+      let best = null;
+      g.obs.forEach(o => [[x, o[1] - R], [x, o[3] + R], [o[0] - e[1], y], [o[2] - e[0], y]].forEach(c => { const a = cx(c[0], e), b = cy(c[1]); if (g.obs.some(q => hit(a, b, q))) return; const dd = Math.hypot(a - x, b - y); if (!best || dd < best[2]) best = [a, b, dd]; }));
+      if (best) { x = best[0]; y = best[1]; }
+    }
+    p[0] = x; p[1] = y; return s !== g.s0;
+  }
   function drawLines(t, st) {
     lg.clearRect(0, 0, W, H2); if (tr || !MK.length) return;
-    const F = scr(st, st.fx, st.fy), P = MK.map(m => { const p = scr(st, m.u, m.v); m.x = p[0]; m.y = p[1]; m.el.style.transform = "translate(" + p[0].toFixed(1) + "px," + p[1].toFixed(1) + "px) translate(-50%,-50%)"; m.el.classList.toggle("fl", H.dir === "rtl" ? p[0] < 230 : p[0] > W - 230); return p; });
+    const G = markerGeom(), F = scr(st, st.fx, st.fy), P = MK.map(m => { const p = scr(st, m.u, m.v), fl = fitMarker(m, p, G); m.x = p[0]; m.y = p[1]; m.el.style.transform = "translate(" + p[0].toFixed(1) + "px," + p[1].toFixed(1) + "px) translate(-50%,-50%)"; m.el.classList.toggle("fl", fl); return p; });
     /* holographic overlay: every stroke is an ink underlay (contrast on the light studio) + coloured neon body + white-hot core */
     const CY = "#18e4ff", VI = "#8b5cff", WH = "#ffffff", INK = "rgba(26,12,120,.38)", k = ln.width / W;
     const neon = (draw, w, col, glow, dash, off) => {
@@ -486,7 +512,7 @@ void main(){float ra=uRes.x/uRes.y;vec2 u=s,ua=vec2(u.x*ra,u.y);
   function startId() { const a = D.querySelector("#nav a.is-active"), id = a ? a.getAttribute("href").slice(1) : "home"; return FID.includes(id) ? id : "home"; }
   const inertAll = v => { if (v) [...D.body.children].forEach(e => { if (e !== jw && !e.inert) { e.inert = true; inerted.push(e); } }); else { inerted.forEach(e => e.inert = false); inerted = []; } };
   function size() {
-    const d = Math.min(devicePixelRatio || 1, 1.5), d2 = Math.min(devicePixelRatio || 1, 2); W = innerWidth; H2 = innerHeight;
+    const d = Math.min(devicePixelRatio || 1, 1.5), d2 = Math.min(devicePixelRatio || 1, 2); W = innerWidth; H2 = innerHeight; MK.forEach(m => { m.lw = null; });
     cv.width = Math.round(W * d); cv.height = Math.round(H2 * d); ln.width = Math.round(W * d2); ln.height = Math.round(H2 * d2); lg.setTransform(d2, 0, 0, d2, 0, 0);
     if (fbc) { fbc.width = cv.width; fbc.height = cv.height; }
   }

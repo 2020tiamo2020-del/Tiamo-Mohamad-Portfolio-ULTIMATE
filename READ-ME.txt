@@ -1,4 +1,2 @@
-v7 - copy into the site (keep everything from the earlier packages):
-  journey.js, journey.min.js, journey.css, journey.min.css  -> site root (replace)
-  studio/*-sky.webp (5 small window masks, ~20 KB total)    -> studio/
-index.html: change ?v=j5 / ?v=j6 to ?v=j7 on journey.min.css and journey.min.js
+v8 - replace these 4 files in the site root (all images, masks and audio from the earlier packages stay).
+index.html: change ?v=j7 (or older) to ?v=j8 on journey.min.css and journey.min.js
