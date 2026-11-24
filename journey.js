@@ -1,4 +1,4 @@
-/* JOURNEY MODE v4: THE STUDIO + STUDIO LIGHTING (day / sunset / rain / night, rain drops, sun rays, lightning, storm sound). A glossy purple-white studio in five rooms (ceiling, desk, windows, wall screen, floor).
+/* JOURNEY MODE v7: THE STUDIO + STUDIO LIGHTING (day / sunset / rain / night, rain drops, sun rays, lightning, storm sound). A glossy purple-white studio in five rooms (ceiling, desk, windows, wall screen, floor).
    Each room is a photo + a depth map drawn with WebGL, so the camera can move and zoom through it with real parallax.
    Your 11 sections live inside the rooms as hotspots; the hologram lines, nav, cards and project window sit on top. */
 (() => {
@@ -74,8 +74,8 @@
     [[.2, .52], [.36, .56], [.76, .42], [.45, .74], [.76, .74], [.2, .76], [.62, .4], [.1, .35]]];
   const AI = { home: [3, 0], creation: [1, 2, 3, 7], services: [3, 4, 5, 6, 7, 10], work: [1, 0, 2, 10, 3, 4], about: [0, 1, 4], findme: [1, 2, 5, 7, 8], cinema: [0], beforeafter: [3, 6], process: [0, 1, 2, 3, 4, 5], brief: [0, 1, 3, 5, 6, 7], contact: [3] };
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-  let LT = false;   /* lighting mode: everything but the room and the lighting panel is hidden */
-  const S = i => LT ? { room: FL[i][1], fx: .5, fy: .5, Z: 1 } : ({ room: FL[i][1], fx: FL[i][2], fy: FL[i][3], Z: FL[i][4] });
+  let LT = false, LR = 0;   /* lighting mode: everything but the room and the lighting panel is hidden */
+  const S = i => LT ? { room: LR, fx: .5, fy: .5, Z: 1 } : ({ room: FL[i][1], fx: FL[i][2], fy: FL[i][3], Z: FL[i][4] });
 
   /* ---------- DOM ---------- */
   let jw, $, live = false, lastFocus = null, y0 = 0, inerted = [], cards = {}, ST = {}, cur = "home", idx = 0, W = 1, H2 = 1;
@@ -87,12 +87,13 @@
       '<div id="jwM" class="jw-m"></div><div class="jw-t" id="jwT"></div>' +
       '<header class="jw-nav"><div class="jw-in" id="jwIn"></div><div class="jw-pan" id="jwPan"><div class="jw-pin" id="jwPin"></div></div></header>' +
       '<button class="jw-x" id="jwX" type="button"><svg viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19"/></svg></button><div class="jw-dots" id="jwD"></div><div class="jw-hint" id="jwH"></div><div class="jw-win" id="jwW"></div>' +
+      '<div class="jw-rd" id="jwRd" role="group">' + ROOMS.map((_, i) => '<button class="jw-rdd" type="button" data-rd="' + i + '"></button>').join("") + '</div>' +
       '<button class="jw-ltb" id="jwLt" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 00-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0012 3z"/></svg><span id="jwLtT"></span></button>' +
       '<div class="jw-lp" id="jwLp" role="group"><div class="jw-lph"><h3 id="jwLpT"></h3><button class="jw-lps" id="jwSnd" type="button" aria-pressed="false"><svg class="off" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4zM17 9l4 6M21 9l-4 6"/></svg><svg class="on" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4zM16.5 8.5a5 5 0 010 7M19 6a8.5 8.5 0 010 12"/></svg></button></div><div class="jw-cards">' + MOODS.map(k => '<button class="jw-card" type="button" data-fx="' + k + '" aria-pressed="false"><svg viewBox="0 0 24 24">' + FXI[k] + "</svg><span><b></b><small></small></span></button>").join("") + '</div><label class="jw-br"><span id="jwBrL"></span><input type="range" id="jwBr" min="70" max="130" value="100"></label></div>';
     D.body.appendChild(jw); $ = id => D.getElementById(id);
     cv = $("jwgl"); ln = $("jwln"); lg = ln.getContext("2d");
     jw.addEventListener("click", onClick);
-    jw.addEventListener("click", e => { const b = e.target.closest("[data-fx]"); if (b) { setMood(b.dataset.fx); if (want === "rain" && LT && !sOn) soundOn(true); } else if (e.target.closest("#jwSnd")) soundOn(!sOn); else if (e.target.closest("#jwLt")) toggleLT(!LT); });
+    jw.addEventListener("click", e => { const b = e.target.closest("[data-fx]"); if (b) { setMood(b.dataset.fx); if (want === "rain" && LT && !sOn) soundOn(true); } else if (e.target.closest("#jwSnd")) soundOn(!sOn); else if (e.target.closest("#jwLt")) toggleLT(!LT); else if (e.target.closest("[data-rd]")) ltGo(+e.target.closest("[data-rd]").dataset.rd); });
     $("jwBr").addEventListener("input", e => { bright = e.target.value / 100; });
     jw.addEventListener("pointermove", e => { const el = e.target.closest && e.target.closest(".jw-lp,.jw-card,.jw-ltb"); if (el) { const r = el.getBoundingClientRect(); el.style.setProperty("--mx", e.clientX - r.left + "px"); el.style.setProperty("--my", e.clientY - r.top + "px"); } });
     jw.addEventListener("wheel", e => { e.stopPropagation(); if (jw.classList.contains("win") || tr) return; wacc += e.deltaY; clearTimeout(wt); wt = setTimeout(() => wacc = 0, 220); if (Math.abs(wacc) > 50) { step(wacc > 0 ? 1 : -1); wacc = 0; } }, { passive: true });
@@ -189,7 +190,7 @@
   function bindLoss(c) {
     c.addEventListener("webglcontextlost", e => { e.preventDefault(); glLost = true; });
     c.addEventListener("webglcontextrestored", () => {
-      try { if (initGL()) { fS = fD = null; bTex = null; room.forEach(m => { if (m && m.ready && m.ai) { m.ti = mkTex(m.ai); m.td = mkTex(m.bi); } if (m && m.mi) { m.tm = {}; for (const k in m.mi) m.tm[k] = mkTex(m.mi[k]); } }); } } catch (e) { /* keeps the loading state */ }
+      try { if (initGL()) { fS = fD = null; bTex = null; room.forEach(m => { if (m && m.ready && m.ai) { m.ti = mkTex(m.ai); m.td = mkTex(m.bi); } if (m && m.mi) { m.tm = {}; for (const k in m.mi) m.tm[k] = mkTex(m.mi[k]); } if (m && m.si) m.tsky = mkTex(m.si); }); } } catch (e) { /* keeps the loading state */ }
       glLost = false;
     });
   }
@@ -234,7 +235,7 @@
   /* sun and moon position inside each photo (pixels of the 1672 x 941 image) */
   const SPOS = { desk: { s: [1195, 325], m: [1355, 128] }, windows: { s: [390, 438], m: [365, 128] }, screen: { s: [25, 440], m: [75, 205] }, floor: { s: [690, 285], m: [355, 110] }, ceiling: { s: [903, 912], m: [228, 666] } };
   const SND_EV = [19.5, 34.2, 80.4, 87.9, 96.8, 122.1, 140.45, 161.9, 173.4, 190.35];   /* seconds of the thunder cracks inside rain-storm-loop.mp3 */
-  const FXL = { en: { t: "Studio lighting", day: "Day", dayS: "Clear sky", sunset: "Sunset", sunsetS: "Low amber light", rain: "Rain", rainS: "Storm on glass", night: "Night", nightS: "Moon over the city", br: "Brightness", snd: "Storm sound" }, ar: { t: "إضاءة الاستوديو", day: "نهار", dayS: "سماء صافية", sunset: "غروب", sunsetS: "ضوء كهرماني هادئ", rain: "مطر", rainS: "عاصفة على الزجاج", night: "ليل", nightS: "قمر فوق المدينة", br: "السطوع", snd: "صوت العاصفة" } };
+  const FXL = { en: { t: "Studio lighting", day: "Day", dayS: "Clear sky", sunset: "Sunset", sunsetS: "Low amber light", rain: "Rain", rainS: "Storm on glass", night: "Night", nightS: "Moon over the city", br: "Brightness", snd: "Storm sound", rooms: ["Ceiling", "Desk", "Windows", "Screen", "Floor"] }, ar: { t: "إضاءة الاستوديو", day: "نهار", dayS: "سماء صافية", sunset: "غروب", sunsetS: "ضوء كهرماني هادئ", rain: "مطر", rainS: "عاصفة على الزجاج", night: "ليل", nightS: "قمر فوق المدينة", br: "السطوع", snd: "صوت العاصفة", rooms: ["السقف", "المكتب", "الشبابيك", "الشاشة", "الأرضية"] } };
   const FXI = { day: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>', sunset: '<path d="M7 17a5 5 0 0110 0M12 6v3M4.5 10.5l1.8 1.8M19.5 10.5l-1.8 1.8M2 17h20M6 21h12"/>', rain: '<path d="M7 15a4.5 4.5 0 01-.5-9 6 6 0 0111.4 1.5A3.8 3.8 0 0117 15zM8 18l-1 3M12 18l-1 3M16 18l-1 3"/>', night: '<path d="M20 14.5A8.5 8.5 0 119.5 4a7 7 0 0010.5 10.5z"/>' };
   const FXF = `precision highp float;varying vec2 s;uniform sampler2D uS,uD,uB;uniform vec2 uRes,uSun;uniform vec3 uSunC;uniform float uTime,uRain,uSunS,uFlash,uBolt,uExp;
 vec3 h31(vec2 p){vec3 q=fract(vec3(p.xyx)*vec3(.1031,.103,.0973));q+=dot(q,q.yxz+33.33);return fract((q.xxy+q.yzz)*q.zyx);}
@@ -251,17 +252,17 @@ vec4 micro(vec2 u,float sc){vec2 g=u*sc,id=floor(g),f=fract(g);vec3 h=h31(id+11.
  float m=smoothstep(r,r*.6,d)*step(.62,h.x*.5+h.y*.5+.15)*life;vec2 n=q/r;
  return vec4(-n*m*r/sc,smoothstep(.55,.95,dot(n,vec2(-.55,-.83)))*m,smoothstep(r*.55,r,d)*(1.-smoothstep(r,r*1.15,d))*life*.6);}
 vec3 rays(vec2 c,vec2 sp){vec2 dir=sp-c;float ang=atan(dir.y,dir.x);vec3 acc=vec3(0.);
- for(int i=0;i<24;i++){float t=float(i)/24.;vec2 q=c+dir*t*.92;float on=step(0.,q.x)*step(q.x,1.)*step(0.,q.y)*step(q.y,1.);q=clamp(q,.002,.998);vec3 sc=SC(q).rgb;float l=dot(sc,vec3(.3,.59,.11));float far=1.-smoothstep(.3,.46,DP(q));acc+=smoothstep(.5,.9,l)*far*(1.-t)*sc*on;}
+ for(int i=0;i<24;i++){float t=float(i)/24.;vec2 q=c+dir*t*.92;float on=step(0.,q.x)*step(q.x,1.)*step(0.,q.y)*step(q.y,1.);q=clamp(q,.002,.998);vec3 sc=SC(q).rgb;float l=dot(sc,vec3(.3,.59,.11));float far=smoothstep(.35,.65,DP(q));acc+=smoothstep(.5,.9,l)*far*(1.-t)*sc*on;}
  return acc/24.*(.7+.3*sin(ang*26.+uTime*.2)*sin(ang*11.-uTime*.13));}
 float dust(vec2 u){vec2 g=u*vec2(15.,9.)+vec2(uTime*.012,uTime*.02);vec2 id=floor(g),f=fract(g);vec3 h=h31(id+4.);vec2 c=.2+.6*h.xy+.08*sin(uTime*.5+h.xy*6.28);return smoothstep(.07,0.,length(f-c))*step(.6,h.z)*(.5+.5*sin(uTime*1.3+h.x*20.));}
 void main(){float ra=uRes.x/uRes.y;vec2 u=s,ua=vec2(u.x*ra,u.y);
  vec4 a=dropL(ua,4.5,.07,1.),b=dropL(ua,8.,.1,7.),c=dropL(ua,14.,.14,3.),d=micro(ua,38.);
  vec2 off=(a.xy+b.xy+c.xy+d.xy)*uRain;off.x/=ra;float spec=(a.z+b.z+c.z+d.z)*uRain,rim=(a.w+b.w+c.w+d.w)*uRain;
- vec2 p=u+off;vec3 col=SC(p).rgb;float far=1.-smoothstep(.3,.46,DP(p));
+ vec2 p=u+off;vec3 col=SC(p).rgb;float far=smoothstep(.35,.65,DP(p));
  if(uSunS>.01){vec3 r=rays(p,uSun)*uSunC*uSunS*1.5;float fall=smoothstep(1.4,0.,length(u-uSun));col+=r*(.55+fall)+dust(ua)*uSunS*fall*uSunC*.7;}
  col+=spec*vec3(.9,.95,1.)*.8;col*=1.-rim*.3;
  col+=vec3(.8,.88,1.)*texture2D(uB,p).r*uBolt*far*1.7;
- col=col*(1.+uFlash*(.14+.8*far))+vec3(.03,.035,.06)*uFlash*(1.-far)+vec3(.14,.17,.32)*uFlash*far;
+ col=col*(1.+uFlash*.9*far)+vec3(.14,.17,.32)*uFlash*far;
  gl_FragColor=vec4(col*uExp,1.);}`;
   let pp, lp_ = {}, fS, fD, fW = 0, fH = 0, bTex, bCv, bX, bPend = false, bBuf = null;
   let mood = "day", want = "day", MF = { from: "day", to: "day", t: 1 }, Fx = { rain: 0, sun: 0, col: [1, 1, 1], pos: [.5, .5] }, fxT = 0;
@@ -276,7 +277,7 @@ void main(){float ra=uRes.x/uRes.y;vec2 u=s,ua=vec2(u.x*ra,u.y);
   function setMood(k) { want = k; fxUI(); loadMood(FL[idx][1], k); }
   const fxL = () => FXL[H.lang === "ar" ? "ar" : "en"];
   function fxUI() { if (!jw) return; jw.querySelectorAll("[data-fx]").forEach(b => b.setAttribute("aria-pressed", b.dataset.fx === want)); const sb = $("jwSnd"); if (sb) sb.setAttribute("aria-pressed", sOn); const lb = $("jwLt"); if (lb) lb.setAttribute("aria-pressed", LT); }
-  function fxLabels() { const l = fxL(); if (!$("jwLp")) return; $("jwLtT").textContent = l.t; $("jwLpT").textContent = l.t; $("jwBrL").textContent = l.br; $("jwSnd").setAttribute("aria-label", l.snd); jw.querySelectorAll("[data-fx]").forEach(b => { b.querySelector("b").textContent = l[b.dataset.fx]; b.querySelector("small").textContent = l[b.dataset.fx + "S"]; }); fxUI(); }
+  function fxLabels() { const l = fxL(); if (!$("jwLp")) return; $("jwLtT").textContent = l.t; $("jwLpT").textContent = l.t; $("jwBrL").textContent = l.br; $("jwSnd").setAttribute("aria-label", l.snd); jw.querySelectorAll("[data-rd]").forEach(b => b.setAttribute("aria-label", l.rooms[+b.dataset.rd])); rdUI(); jw.querySelectorAll("[data-fx]").forEach(b => { b.querySelector("b").textContent = l[b.dataset.fx]; b.querySelector("small").textContent = l[b.dataset.fx + "S"]; }); fxUI(); }
   function mkFBO(w, h) {
     const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
     [[gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE], [gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR]].forEach(([k, v]) => gl.texParameteri(gl.TEXTURE_2D, k, v));
@@ -302,7 +303,7 @@ void main(){float ra=uRes.x/uRes.y;vec2 u=s,ua=vec2(u.x*ra,u.y);
   /* lightning: found in the depth picture (window glass only), drawn in screen space, shown through the shader */
   function makeBolt() {
     bPend = false; const w = fW, h = fH; if (!bBuf) bBuf = new Uint8Array(w * h * 4); gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, bBuf);
-    const st = 12, far = (x, y) => x >= 0 && y >= 0 && x < w && y < h && bBuf[((h - 1 - y) * w + x) * 4] < 95, c = [];
+    const st = 12, far = (x, y) => x >= 0 && y >= 0 && x < w && y < h && bBuf[((h - 1 - y) * w + x) * 4] > 128, c = [];
     for (let y = st; y < h; y += st) for (let x = st; x < w; x += st) if (far(x, y)) c.push(x, y);
     if (c.length < 80) return;
     let x, y0, y1, hh = 0, tries = 0;
@@ -347,10 +348,20 @@ void main(){float ra=uRes.x/uRes.y;vec2 u=s,ua=vec2(u.x*ra,u.y);
     if (bedG && sOn) { if (nearEvent(bedPos())) { nextBolt = now + 2500; return; } fire(true); nextBolt = now + 9000 + Math.random() * 8000; } else { fire(false); nextBolt = now + 4000 + Math.random() * 7000; }
   }
   let bright = 1;
+  function rdUI() { if (jw) jw.querySelectorAll("[data-rd]").forEach(b => b.setAttribute("aria-current", +b.dataset.rd === LR)); }
+  function ltGo(r) {
+    if (!LT || tr || r === LR || r < 0 || r >= ROOMS.length) return; const from = vis || S(idx);
+    LR = r; loadRoom(r); tr = { from: { room: from.room, Z: from.Z, fx: from.fx, fy: from.fy }, t0: performance.now(), dur: RM ? 1 : 1900 }; rdUI();
+  }
+  function loadSky(r) {   /* window-glass mask: white = glass. lightning, flashes and light shafts only exist where this is white */
+    const m = room[r]; if (!m || !gl || m.sk) return; m.sk = 1; const im = new Image(); im.crossOrigin = "anonymous";
+    im.onload = () => { try { if (gl) { m.si = im; m.tsky = mkTex(im); } } catch (e) { m.sk = 0; } }; im.src = BASE + ROOMS[r] + "-sky.webp";
+  }
   function toggleLT(on) {
     if (!jw || on === LT) return; const from = vis || S(idx);
-    LT = on; jw.classList.toggle("jw-lt", on); pan(false); $("jwM").classList.remove("show");
-    tr = { from: { room: from.room, Z: from.Z, fx: from.fx, fy: from.fy }, t0: performance.now(), dur: RM ? 1 : 1100 };
+    LT = on; if (on) { LR = 0; loadRoom(0); } jw.classList.toggle("jw-lt", on); pan(false); $("jwM").classList.remove("show");
+    tr = { from: { room: from.room, Z: from.Z, fx: from.fx, fy: from.fy }, t0: performance.now(), dur: RM ? 1 : (from.room === S(idx).room ? 1100 : 1900) };
+    rdUI();
     if (on) soundOn(true); else { soundOn(false); bright = 1; $("jwBr").value = 100; }
     fxUI();
   }
@@ -359,6 +370,7 @@ void main(){float ra=uRes.x/uRes.y;vec2 u=s,ua=vec2(u.x*ra,u.y);
   /* one step of the effect state per frame; returns whether the post pass runs */
   function fxStep(t, tg) {
     const dt = Math.min(.05, Math.max(0, (t - fxT) / 1e3)); fxT = t; const k = 1 - Math.exp(-dt * 2.4), kp = 1 - Math.exp(-dt * 6);
+    loadSky(tg.room); if (LT) [LR - 1, LR + 1].forEach(r => { if (room[r] && room[r].ready) { loadMood(r, MF.to); loadSky(r); } });
     if (rdy(tg.room)) { loadMood(tg.room, want); if (want !== MF.to && (want === "day" || moodTex(tg.room, want))) { MF = { from: MF.to, to: want, t: 0 }; mood = want; audioMood(); if (want === "rain") nextBolt = t + 2500; } }
     else loadMood(tg.room, MF.to);
     if (MF.t < 1) MF.t = Math.min(1, MF.t + dt / 1.3);
@@ -385,7 +397,7 @@ void main(){float ra=uRes.x/uRes.y;vec2 u=s,ua=vec2(u.x*ra,u.y);
     mark(); pan(false);
   }
   const goId = id => { const i = FID.indexOf(id); if (i >= 0) fly(i); };
-  const step = d => { if (!tr) fly(idx + d); };
+  const step = d => { if (LT) { if (!tr) ltGo(LR + d); return; } if (!tr) fly(idx + d); };
   const ease = k => k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
   function frame(t) {
     if (!live && t > stopAt) { raf = 0; return; }
@@ -409,7 +421,7 @@ void main(){float ra=uRes.x/uRes.y;vec2 u=s,ua=vec2(u.x*ra,u.y);
       ok = colorPasses(passes);
       if (post) {
         const needD = Fx.sun > .01 || fl > .004 || bPend;
-        if (needD) { gl.bindFramebuffer(gl.FRAMEBUFFER, fD.f); gl.clearColor(.5, .5, .5, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); passes.forEach(p => pass(p[0], p[1], p[2], p[3], p[4], room[p[0]].td)); if (bPend) makeBolt(); }
+        if (needD) { gl.bindFramebuffer(gl.FRAMEBUFFER, fD.f); gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); passes.forEach(p => { const sk = room[p[0]].tsky; if (sk) pass(p[0], p[1], p[2], p[3], p[4], sk); }); if (bPend) makeBolt(); }
         gl.bindFramebuffer(gl.FRAMEBUFFER, null); drawPost(t, fl, needD);
       }
     } else { if (fbg) { fbg.fillStyle = "#0a0714"; fbg.fillRect(0, 0, fbc.width, fbc.height); } passes.forEach(p => { if (pass(p[0], p[1], p[2], p[3], p[4])) ok = true; }); }
