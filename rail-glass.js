@@ -193,3 +193,35 @@ console.info("[rail-glass v8] loaded");
   document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", boot) : boot();
 })();
 
+
+/* LIQUID GLASS v9 — refraction for the side dock (Chromium: real bending of the page behind it; other browsers keep the clear-glass look) */
+(() => {
+  const ua = navigator.userAgent; if (!/Chrome\//.test(ua) || /Firefox\//.test(ua)) return;
+  let glass, svg, img, ro, tm = 0, last = "";
+  const NS = "http://www.w3.org/2000/svg";
+  function map(w, h, rad) {
+    const c = document.createElement("canvas"); c.width = w; c.height = h; const x = c.getContext("2d"), id = x.createImageData(w, h), d = id.data, hx = w / 2, hy = h / 2, B = Math.max(14, Math.min(w, h) * .36);
+    for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+      const px = i + .5 - hx, py = j + .5 - hy, qx = Math.abs(px) - (hx - rad), qy = Math.abs(py) - (hy - rad), ox = Math.max(qx, 0), oy = Math.max(qy, 0), len = Math.hypot(ox, oy);
+      const sd = len + Math.min(Math.max(qx, qy), 0) - rad, dep = -sd; let nx, ny;
+      if (len > 0) { nx = ox / len * Math.sign(px); ny = oy / len * Math.sign(py); } else if (qx > qy) { nx = Math.sign(px); ny = 0; } else { nx = 0; ny = Math.sign(py); }
+      const t = Math.max(0, Math.min(1, 1 - dep / B)), s = Math.pow(t, 2.2), k = (j * w + i) * 4;
+      d[k] = 128 - nx * s * 127; d[k + 1] = 128 - ny * s * 127; d[k + 2] = 128; d[k + 3] = 255;
+    }
+    x.putImageData(id, 0, 0); return c.toDataURL();
+  }
+  function update() {
+    if (!glass) return; const w = Math.round(glass.offsetWidth), h = Math.round(glass.offsetHeight); if (w < 8 || h < 8) return;
+    const key = w + "x" + h; if (key === last) return; last = key;
+    const rad = Math.min(28, w / 2, h / 2); img.setAttribute("width", w); img.setAttribute("height", h); img.setAttribute("href", map(w, h, rad)); img.setAttributeNS("http://www.w3.org/1999/xlink", "href", img.getAttribute("href"));
+  }
+  function init() {
+    glass = document.querySelector(".st-rail.rg .rg-glass"); if (!glass) return false;
+    svg = document.createElementNS(NS, "svg"); svg.setAttribute("width", "0"); svg.setAttribute("height", "0"); svg.setAttribute("aria-hidden", "true"); svg.style.cssText = "position:absolute;pointer-events:none";
+    svg.innerHTML = '<filter id="lgRefract" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feImage x="0" y="0" width="50" height="500" preserveAspectRatio="none" result="m"/><feDisplacementMap in="SourceGraphic" in2="m" scale="70" xChannelSelector="R" yChannelSelector="G"/></filter>';
+    document.body.appendChild(svg); img = svg.querySelector("feImage"); update();
+    ro = new ResizeObserver(() => { clearTimeout(tm); tm = setTimeout(update, 120); }); ro.observe(glass);
+    document.documentElement.classList.add("lg-refract"); return true;
+  }
+  let tries = 0; const iv = setInterval(() => { if (init() || ++tries > 40) clearInterval(iv); }, 250);
+})();

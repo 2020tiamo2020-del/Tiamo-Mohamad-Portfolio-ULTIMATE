@@ -61,12 +61,13 @@
   const closeWin = () => { jw.classList.remove("win"); mark(); };
 
   /* ---------- the studio: rooms, camera stops, hotspot anchors ---------- */
-  const ROOMS = ["ceiling", "desk", "windows", "screen", "floor"], IA = 1672 / 941, F0 = .5;
+  const ROOMS = ["intro", "ceiling", "desk", "windows", "screen", "floor"], IA = 1672 / 941, F0 = .5;
   /* flight order: [section, room, focus x, focus y, zoom] */
-  const FL = [["home", 0, .5, .36, 1.2], ["creation", 0, .52, .5, 1.45], ["services", 1, .5, .58, 1.15], ["work", 1, .5, .46, 1.4], ["about", 2, .42, .52, 1.15], ["findme", 2, .72, .42, 1.5], ["cinema", 3, .58, .46, 1.25], ["beforeafter", 3, .42, .7, 1.5], ["process", 4, .45, .6, 1.15], ["brief", 4, .36, .55, 1.6], ["contact", 4, .5, .76, 1.75]];
+  const FL = [["home", 0, .5, .5, 1.04], ["creation", 1, .52, .5, 1.45], ["services", 2, .5, .58, 1.15], ["work", 2, .5, .46, 1.4], ["about", 3, .42, .52, 1.15], ["findme", 3, .72, .42, 1.5], ["cinema", 4, .58, .46, 1.25], ["beforeafter", 4, .42, .7, 1.5], ["process", 5, .45, .6, 1.15], ["brief", 5, .36, .55, 1.6], ["contact", 5, .5, .76, 1.75]];
   const FID = FL.map(f => f[0]);
   const SEC_ICO = { home: '<path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/>', about: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/>', services: '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2M3 13h18"/>', work: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>', cinema: '<rect x="3" y="6" width="18" height="14" rx="2"/><path d="M3 10h18M7 6L5 3M12 6l-2-3M17 6l-2-3"/>', creation: '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/>', beforeafter: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16M7 10l-2 2 2 2M17 10l2 2-2 2"/>', process: '<circle cx="5" cy="18" r="2"/><circle cx="12" cy="7" r="2"/><circle cx="19" cy="15" r="2"/><path d="M6.4 16.4l4.3-7.3M13.7 8.3l4.2 5.2"/>', findme: '<path d="M12 21s7-6.2 7-11a7 7 0 10-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/>', brief: '<path d="M7 3h8l4 4v14H7zM15 3v4h4M10 12h6M10 16h6"/>', contact: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>' };
   const AN = [
+    [[.34, .66], [.2, .56], [.34, .34], [.78, .4]],
     [[.5, .26], [.2, .33], [.82, .3], [.52, .62], [.18, .84], [.55, .88], [.85, .84], [.5, .46]],
     [[.5, .43], [.34, .45], [.66, .45], [.19, .66], [.82, .66], [.5, .72], [.27, .2], [.72, .2], [.06, .42], [.95, .4], [.24, .5]],
     [[.27, .32], [.6, .38], [.88, .5], [.22, .66], [.42, .64], [.8, .72], [.05, .4], [.95, .55], [.68, .22]],
@@ -151,7 +152,7 @@
       return gl.getProgramParameter(p, gl.LINK_STATUS) ? p : null;
     };
     pf = prog(VS, FSF, "p"); if (!pf) { gl = null; return false; }
-    pp = prog(VS, FXF, "p"); if (pp) [ "uS", "uD", "uB", "uRes", "uSun", "uSunC", "uTime", "uRain", "uSunS", "uFlash", "uBolt", "uExp" ].forEach(n => lp_[n] = gl.getUniformLocation(pp, n));
+    pp = prog(VS, FXF, "p"); if (pp) [ "uS", "uD", "uB", "uRes", "uSun", "uSunC", "uTime", "uRain", "uSunS", "uFlash", "uBolt", "uExp", "uR", "uDr", "uDa", "uAt", "uRT" ].forEach(n => lp_[n] = gl.getUniformLocation(pp, n));
     ["im", "C", "F", "Z", "A"].forEach(n => lf[n] = gl.getUniformLocation(pf, n));
     meshOK = gl.getParameter(gl.MAX_VERTEX_TEXTURE_IMAGE_UNITS) > 0; pm = meshOK ? prog(VSM, FSM, "a") : null; meshOK = !!pm;
     qbuf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, qbuf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
@@ -190,7 +191,7 @@
   function bindLoss(c) {
     c.addEventListener("webglcontextlost", e => { e.preventDefault(); glLost = true; });
     c.addEventListener("webglcontextrestored", () => {
-      try { if (initGL()) { fS = fD = null; bTex = null; room.forEach(m => { if (m && m.ready && m.ai) { m.ti = mkTex(m.ai); m.td = mkTex(m.bi); } if (m && m.mi) { m.tm = {}; for (const k in m.mi) m.tm[k] = mkTex(m.mi[k]); } if (m && m.si) m.tsky = mkTex(m.si); }); } } catch (e) { /* keeps the loading state */ }
+      try { if (initGL()) { fS = fD = null; bTex = null; dTex = null; dLoad = false; room.forEach(m => { if (m && m.ready && m.ai) { m.ti = mkTex(m.ai); m.td = mkTex(m.bi); } if (m && m.mi) { m.tm = {}; for (const k in m.mi) m.tm[k] = mkTex(m.mi[k]); } if (m && m.si) m.tsky = mkTex(m.si); }); } } catch (e) { /* keeps the loading state */ }
       glLost = false;
     });
   }
@@ -233,11 +234,11 @@
   const MOODS = ["day", "sunset", "rain", "night"];
   const FXP = { day: { rain: 0, sun: .4, col: [1, .94, .78], p: "s" }, sunset: { rain: 0, sun: 1, col: [1, .62, .3], p: "s" }, rain: { rain: 1, sun: 0, col: [.7, .8, 1], p: "s" }, night: { rain: 0, sun: .45, col: [.62, .74, 1], p: "m" } };
   /* sun and moon position inside each photo (pixels of the 1672 x 941 image) */
-  const SPOS = { desk: { s: [1195, 325], m: [1355, 128] }, windows: { s: [390, 438], m: [365, 128] }, screen: { s: [25, 440], m: [75, 205] }, floor: { s: [690, 285], m: [355, 110] }, ceiling: { s: [903, 912], m: [228, 666] } };
+  const SPOS = { intro: { s: [224, 420], m: [315, 255] }, desk: { s: [1195, 325], m: [1355, 128] }, windows: { s: [390, 438], m: [365, 128] }, screen: { s: [25, 440], m: [75, 205] }, floor: { s: [690, 285], m: [355, 110] }, ceiling: { s: [903, 912], m: [228, 666] } };
   const SND_EV = [19.5, 34.2, 80.4, 87.9, 96.8, 122.1, 140.45, 161.9, 173.4, 190.35];   /* seconds of the thunder cracks inside rain-storm-loop.mp3 */
-  const FXL = { en: { t: "Studio lighting", day: "Day", dayS: "Clear sky", sunset: "Sunset", sunsetS: "Low amber light", rain: "Rain", rainS: "Storm on glass", night: "Night", nightS: "Moon over the city", br: "Brightness", snd: "Storm sound", rooms: ["Ceiling", "Desk", "Windows", "Screen", "Floor"] }, ar: { t: "إضاءة الاستوديو", day: "نهار", dayS: "سماء صافية", sunset: "غروب", sunsetS: "ضوء كهرماني هادئ", rain: "مطر", rainS: "عاصفة على الزجاج", night: "ليل", nightS: "قمر فوق المدينة", br: "السطوع", snd: "صوت العاصفة", rooms: ["السقف", "المكتب", "الشبابيك", "الشاشة", "الأرضية"] } };
+  const FXL = { en: { t: "Studio lighting", day: "Day", dayS: "Clear sky", sunset: "Sunset", sunsetS: "Low amber light", rain: "Rain", rainS: "Storm on glass", night: "Night", nightS: "Moon over the city", br: "Brightness", snd: "Storm sound", rooms: ["Studio", "Ceiling", "Desk", "Windows", "Screen", "Floor"] }, ar: { t: "إضاءة الاستوديو", day: "نهار", dayS: "سماء صافية", sunset: "غروب", sunsetS: "ضوء كهرماني هادئ", rain: "مطر", rainS: "عاصفة على الزجاج", night: "ليل", nightS: "قمر فوق المدينة", br: "السطوع", snd: "صوت العاصفة", rooms: ["الاستوديو", "السقف", "المكتب", "الشبابيك", "الشاشة", "الأرضية"] } };
   const FXI = { day: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>', sunset: '<path d="M7 17a5 5 0 0110 0M12 6v3M4.5 10.5l1.8 1.8M19.5 10.5l-1.8 1.8M2 17h20M6 21h12"/>', rain: '<path d="M7 15a4.5 4.5 0 01-.5-9 6 6 0 0111.4 1.5A3.8 3.8 0 0117 15zM8 18l-1 3M12 18l-1 3M16 18l-1 3"/>', night: '<path d="M20 14.5A8.5 8.5 0 119.5 4a7 7 0 0010.5 10.5z"/>' };
-  const FXF = `precision highp float;varying vec2 s;uniform sampler2D uS,uD,uB;uniform vec2 uRes,uSun;uniform vec3 uSunC;uniform float uTime,uRain,uSunS,uFlash,uBolt,uExp;
+  const FXF = `precision highp float;varying vec2 s;uniform sampler2D uS,uD,uB,uR;uniform vec4 uDr[14],uDa[14];uniform vec2 uAt;uniform float uRT;uniform vec2 uRes,uSun;uniform vec3 uSunC;uniform float uTime,uRain,uSunS,uFlash,uBolt,uExp;
 vec3 h31(vec2 p){vec3 q=fract(vec3(p.xyx)*vec3(.1031,.103,.0973));q+=dot(q,q.yxz+33.33);return fract((q.xxy+q.yzz)*q.zyx);}
 vec4 SC(vec2 u){return texture2D(uS,vec2(u.x,1.-u.y));}
 float DP(vec2 u){return texture2D(uD,vec2(u.x,1.-u.y)).r;}
@@ -246,26 +247,24 @@ vec4 lens(vec2 n,float m,float r,float sc){float nl=length(n);vec2 off=-n*m*r/sc
  vec3 N=normalize(vec3(n*.9,sqrt(max(0.,1.-min(nl*nl,1.)))+.15));vec3 H=normalize(normalize(vec3(-.45,-.6,.65))+vec3(0.,0.,1.));
  float spec=pow(max(dot(N,H),0.),38.)*m;float caust=smoothstep(.45,.95,nl)*max(0.,dot(normalize(n+vec2(1e-4)),vec2(.45,.9)))*m;
  return vec4(off,spec+caust*.5,smoothstep(.7,1.,nl)*m);}
-/* a drop that creeps down the glass, stops, slides on, and leaves a thin wet line (clear of mist) behind it */
-vec4 slide(vec2 u,float sc,float spd,float seed,out float clr){vec2 g=u*vec2(sc,sc*.5),id=floor(g),f=fract(g);vec3 h=h31(id+seed),h2=h31(id*1.7+seed+9.);vec2 c=vec2(f.x,f.y*2.);
- float ph=fract(uTime*spd*(.5+h.y)+h.z*7.);float yy=.28+1.5*ph-.05*sin(ph*34.+h.x*6.);float x0=.22+.56*h.x+.03*sin(yy*7.+h.y*6.);
- float r=.075+.06*h2.x;vec2 q=vec2(c.x-x0,(c.y-yy)*.82);float vis=smoothstep(0.,.08,ph)*(1.-smoothstep(.9,1.,ph))*step(.28,h2.y);
- float m=smoothstep(r,r*.82,length(q))*vis;float above=yy-c.y,tl=clamp(above/(yy-.28+.001),0.,1.),tw=r*(.34+.18*(1.-tl)),wob=.015*sin(c.y*17.+h.x*12.);
- float tr=smoothstep(tw,tw*.35,abs(c.x-x0-wob))*step(0.,above)*step(.28,c.y)*(1.-tl*.85)*vis*smoothstep(0.,.1,ph);
- vec4 L=lens(q/r,m,r,sc);L.xy+=vec2((c.x-x0-wob)/tw,0.)*tr*tw/sc*.5;clr=max(m,tr*.9);return L;}
+/* real water streaks (shapes cut from a photo of drops): each is a sprite; its edges bend the picture behind it like a lens, its highlights catch the light */
+vec4 streaks(vec2 ua,float ra){vec2 off=vec2(0.);float spec=0.,rim=0.;
+ for(int i=0;i<14;i++){vec4 P=uDr[i];if(P.w<.01)continue;vec4 R=uDa[i];float asp=R.z*uAt.x/(R.w*uAt.y),hh=abs(P.z)*.5,hw=hh*asp;float fl=P.z<0.?-1.:1.;
+  vec2 d=ua-vec2(P.x*ra,P.y);vec2 l=vec2(d.x/hw*fl,d.y/hh);if(abs(l.x)>1.||abs(l.y)>1.)continue;
+  vec2 q=R.xy+(l*.5+.5)*R.zw,e=vec2(2.)/uAt;vec4 t=texture2D(uR,q);float ax=texture2D(uR,q+vec2(e.x,0.)).a-texture2D(uR,q-vec2(e.x,0.)).a,ay=texture2D(uR,q+vec2(0.,e.y)).a-texture2D(uR,q-vec2(0.,e.y)).a;
+  float lum=dot(t.rgb,vec3(.3,.59,.11));off+=-vec2(ax*fl,ay)*abs(P.z)*.1*P.w;spec+=smoothstep(.74,.98,lum)*t.a*1.5*P.w;rim+=(t.a*.2+(abs(ax)+abs(ay))*.6)*P.w;}
+ return vec4(off.x*ra,off.y,spec,rim);}
 /* drops that stick and just sit there, slowly breathing */
 vec4 stuck(vec2 u,float sc,float seed,out float clr){vec2 g=u*sc,id=floor(g),f=fract(g);vec3 h=h31(id+seed);float life=.55+.45*sin(uTime*.1+h.x*6.28);
- vec2 c=.2+.6*h.yz;float r=.06+.12*h.x*h.x;float on=step(.62,fract(h.x*7.13+h.y*3.7));float m=smoothstep(r,r*.8,length(f-c))*on*life;clr=m;return lens((f-c)/r,m,r,sc);}
+ vec2 c=.2+.6*h.yz;float r=.06+.12*h.x*h.x;float on=step(.62,fract(h.x*7.13+h.y*3.7))*smoothstep(0.,5.,uRT-h.y*26.);float m=smoothstep(r,r*.8,length(f-c))*on*life;clr=m;return lens((f-c)/r,m,r,sc);}
 vec3 rays(vec2 c,vec2 sp){vec2 dir=sp-c;float ang=atan(dir.y,dir.x);vec3 acc=vec3(0.);
  for(int i=0;i<24;i++){float t=float(i)/24.;vec2 q=c+dir*t*.92;float on=step(0.,q.x)*step(q.x,1.)*step(0.,q.y)*step(q.y,1.);q=clamp(q,.002,.998);vec3 sc=SC(q).rgb;float l=dot(sc,vec3(.3,.59,.11));float far=smoothstep(.35,.65,DP(q));acc+=smoothstep(.5,.9,l)*far*(1.-t)*sc*on;}
  return acc/24.*(.7+.3*sin(ang*26.+uTime*.2)*sin(ang*11.-uTime*.13));}
 float dust(vec2 u){vec2 g=u*vec2(15.,9.)+vec2(uTime*.012,uTime*.02);vec2 id=floor(g),f=fract(g);vec3 h=h31(id+4.);vec2 c=.2+.6*h.xy+.08*sin(uTime*.5+h.xy*6.28);return smoothstep(.07,0.,length(f-c))*step(.6,h.z)*(.5+.5*sin(uTime*1.3+h.x*20.));}
-void main(){float ra=uRes.x/uRes.y;vec2 u=s,ua=vec2(u.x*ra,u.y);float c0,c1,c2,c3,c4,c5;
- vec4 w=slide(ua,3.2,.045,1.,c0)+slide(ua,5.5,.06,7.,c1)+slide(ua,9.,.08,3.,c2)+slide(ua,14.,.14,5.,c3)+stuck(ua,20.,11.,c4)+stuck(ua,42.,5.,c5);
- vec2 off=w.xy*uRain;off.x/=ra;float spec=w.z*uRain,rim=w.w*uRain,clr=clamp(c0+c1+c2+c3+c4+c5,0.,1.);
+void main(){float ra=uRes.x/uRes.y;vec2 u=s,ua=vec2(u.x*ra,u.y);float c4,c5;
+ vec4 w=streaks(ua,ra)+stuck(ua,20.,11.,c4)+stuck(ua,42.,5.,c5);
+ vec2 off=w.xy*uRain;off.x/=ra;float spec=w.z*uRain,rim=w.w*uRain;
  vec2 p=u+off;vec3 col=SC(p).rgb;
- if(uRain>.01){vec2 e1=vec2(6.)/uRes;vec3 bl=col+SC(p+e1*vec2(1.,0.)).rgb+SC(p+e1*vec2(.5,.87)).rgb+SC(p+e1*vec2(-.5,.87)).rgb+SC(p+e1*vec2(-1.,0.)).rgb+SC(p+e1*vec2(-.5,-.87)).rgb+SC(p+e1*vec2(.5,-.87)).rgb;bl/=7.;
-  float fog=uRain*.65*(1.-clr);col=mix(col,bl,fog);col=mix(col,vec3(dot(col,vec3(.3,.59,.11)))*vec3(.92,.97,1.06),fog*.18);}
  float far=smoothstep(.35,.65,DP(p));
  if(uSunS>.01){vec3 r=rays(p,uSun)*uSunC*uSunS*1.5;float fall=smoothstep(1.4,0.,length(u-uSun));col+=r*(.55+fall)+dust(ua)*uSunS*fall*uSunC*.7;}
  col+=spec*vec3(.95,.97,1.)*1.1;col*=1.-rim*.4;
@@ -355,6 +354,19 @@ void main(){float ra=uRes.x/uRes.y;vec2 u=s,ua=vec2(u.x*ra,u.y);float c0,c1,c2,c
     if (RM || mood !== "rain" || now < nextBolt) return;
     if (bedG && sOn) { if (nearEvent(bedPos())) { nextBolt = now + 2500; return; } fire(true); nextBolt = now + 9000 + Math.random() * 8000; } else { fire(false); nextBolt = now + 4000 + Math.random() * 7000; }
   }
+  /* water streaks: sprites from a real photo of drops; they appear one by one (never all at once), creep down the glass, then dry */
+  const NDR = 14; let dTex = null, dLoad = false, dAt = [1791, 640], dRects = [[0, 0, .12898, 1], [.13233, 0, .19207, 1], [.32775, 0, .09324, 1], [.42434, 0, .18258, 1], [.61027, 0, .16527, 1], [.77889, 0, .21776, 1]], dst = [], rainT = 0, dP = new Float32Array(NDR * 4), dA = new Float32Array(NDR * 4);
+  function loadDrops() { if (dTex || dLoad || !gl) return; dLoad = true; const im = new Image(); im.crossOrigin = "anonymous"; im.onload = () => { try { if (gl) dTex = mkTex(im); } catch (e) { dLoad = false; } }; im.onerror = () => { dLoad = false; }; im.src = BASE + "rain-drops.webp"; }
+  function dropSeed(d, born) { const big = Math.random() < .8; d.r = big ? Math.random() * 5 | 0 : 5; d.sz = big ? .17 + Math.random() * .2 : .22 + Math.random() * .12; d.x = .05 + Math.random() * .9; d.y = -.02 + Math.random() * .5; d.f = Math.random() < .5 ? -1 : 1; d.sp = .004 + Math.random() * .009; d.life = 26 + Math.random() * 22; d.born = born; }
+  function dropsStep(dt, raining) {
+    if (raining) rainT += dt; else if (Fx.rain < .02 && rainT > 0) { rainT = 0; dst = []; }
+    if (!dst.length) for (let i = 0; i < NDR; i++) { const d = {}; dropSeed(d, i * 1.5 + Math.random() * 2); dst.push(d); }
+    dst.forEach((d, i) => {
+      let a = rainT - d.born; if (a > d.life) { dropSeed(d, rainT + Math.random() * 3); a = rainT - d.born; }
+      const al = a < 0 ? 0 : Math.min(1, a / 4) * Math.min(1, (d.life - a) / 4) * Fx.rain, r = dRects[d.r], y = d.y + d.sp * (a + .6 * Math.sin(a * .9 + d.x * 9));
+      dP[i * 4] = d.x; dP[i * 4 + 1] = y; dP[i * 4 + 2] = d.sz * d.f; dP[i * 4 + 3] = al; dA[i * 4] = r[0]; dA[i * 4 + 1] = r[1]; dA[i * 4 + 2] = r[2]; dA[i * 4 + 3] = r[3];
+    });
+  }
   let bright = 1;
   function rdUI() { if (jw) jw.querySelectorAll("[data-rd]").forEach(b => b.setAttribute("aria-current", +b.dataset.rd === LR)); }
   function ltGo(r) {
@@ -385,14 +397,14 @@ void main(){float ra=uRes.x/uRes.y;vec2 u=s,ua=vec2(u.x*ra,u.y);float c0,c1,c2,c
     const f = FXP[MF.to], q = SPOS[ROOMS[tg.room]][f.p], sp = scr(vis || tg, q[0] / 1672, q[1] / 941);
     Fx.rain += (f.rain - Fx.rain) * k; Fx.sun += (f.sun - Fx.sun) * k; for (let i = 0; i < 3; i++) Fx.col[i] += (f.col[i] - Fx.col[i]) * k;
     Fx.pos[0] += (sp[0] / W - Fx.pos[0]) * kp; Fx.pos[1] += (sp[1] / H2 - Fx.pos[1]) * kp;
-    bedTick(); randBolt(t);
+    if (want === "rain") loadDrops(); dropsStep(dt, MF.to === "rain"); bedTick(); randBolt(t);
     let fl = 0; pulses = pulses.filter(p => t - p[0] < 900); pulses.forEach(p => { if (t >= p[0]) fl += p[1] * Math.exp(-(t - p[0]) / 85); }); return RM ? 0 : fl;
   }
   function drawPost(t, fl, needD) {
     gl.useProgram(pp); gl.bindBuffer(gl.ARRAY_BUFFER, qbuf); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
     gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, fS.t); gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, fD.t); gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, bTex || fD.t);
     gl.uniform1i(lp_.uS, 0); gl.uniform1i(lp_.uD, 1); gl.uniform1i(lp_.uB, 2); gl.uniform2f(lp_.uRes, cv.width, cv.height); gl.uniform2f(lp_.uSun, Fx.pos[0], Fx.pos[1]); gl.uniform3f(lp_.uSunC, Fx.col[0], Fx.col[1], Fx.col[2]);
-    gl.uniform1f(lp_.uTime, t * .001 * (RM ? .25 : 1)); gl.uniform1f(lp_.uRain, Fx.rain); gl.uniform1f(lp_.uSunS, Fx.sun); gl.uniform1f(lp_.uFlash, fl); gl.uniform1f(lp_.uBolt, bTex ? Math.min(1, fl * 1.2) : 0); gl.uniform1f(lp_.uExp, bright);
+    gl.uniform1f(lp_.uTime, t * .001 * (RM ? .25 : 1)); gl.uniform1f(lp_.uRain, Fx.rain); gl.uniform1f(lp_.uSunS, Fx.sun); gl.uniform1f(lp_.uFlash, fl); gl.uniform1f(lp_.uBolt, bTex ? Math.min(1, fl * 1.2) : 0); gl.uniform1f(lp_.uExp, bright); gl.activeTexture(gl.TEXTURE3); gl.bindTexture(gl.TEXTURE_2D, dTex || fD.t); gl.uniform1i(lp_.uR, 3); gl.uniform4fv(lp_.uDr, dP); gl.uniform4fv(lp_.uDa, dA); gl.uniform2f(lp_.uAt, dAt[0], dAt[1]); gl.uniform1f(lp_.uRT, rainT);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }
 

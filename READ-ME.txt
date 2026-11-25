@@ -1,2 +1,8 @@
-v8 - replace these 4 files in the site root (all images, masks and audio from the earlier packages stay).
-index.html: change ?v=j7 (or older) to ?v=j8 on journey.min.css and journey.min.js
+v9 - copy into the site (everything from the earlier packages stays):
+  journey.js, journey.min.js, journey.css, journey.min.css, rail-glass.css, rail-glass.js   -> site root (replace)
+  studio/ (8 new files: intro*.webp, intro-depth.webp, intro-sky.webp, rain-drops.webp)    -> studio/
+index.html - change the version numbers:
+  rail-glass.css?v=8  ->  rail-glass.css?v=9
+  rail-glass.js?v=8   ->  rail-glass.js?v=9
+  journey.min.css?v=j8 (or older) -> journey.min.css?v=j9
+  journey.min.js?v=j8  (or older) -> journey.min.js?v=j9
