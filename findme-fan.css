@@ -1,4 +1,4 @@
-/* Find Me — 5-card fan. The section keeps its original box: the old content stays as an invisible spacer. */
+/* Find Me — 7-card fan (6 side cards + centre). The section keeps its original box: the old content stays as an invisible spacer. */
 @property --fnx{syntax:"<length>";inherits:false;initial-value:0px}
 @property --flift{syntax:"<length>";inherits:false;initial-value:0px}
 @property --fk{syntax:"<number>";inherits:false;initial-value:1}
@@ -89,3 +89,39 @@ section.social-strip.fm>.fm-fan{position:absolute;inset:0;z-index:2;container-ty
 .fm-bg .w1{left:0;transform:translateX(calc((var(--fmp) - .5)*3vw))}
 .fm-bg .w2{left:0;transform:translateX(calc((var(--fmp) - .5)*-3vw))}
 .fm-l1 img,.fm-fb img{object-fit:cover;object-position:center;filter:brightness(.9) saturate(1.05)}
+
+/* ===== v9: 6 side cards, nothing overlaps =====
+   Left:  Google Reviews (fm-l3) · Instagram (fm-l2) · Photoshop Mode (fm-l1)   |  centre card  |
+   Right: Facebook (fm-r1) · TikTok (fm-r2) · YouTube (fm-r3)
+   DOM order must stay left to right (the hover push uses it). */
+.fm-r3 .fm-lab{flex-direction:row-reverse;text-align:right}
+.fm-gc img{filter:brightness(.95) saturate(1.15)}
+.fm-yt img{filter:brightness(.9) saturate(1.08)}
+.fm-d{margin:0;font:500 clamp(10.5px,1.05cqw,12.5px)/1.5 Inter,Cairo,system-ui,sans-serif;color:#c9c3da;text-wrap:pretty}
+.fm-n{font:600 11px/1 Inter,system-ui,sans-serif;letter-spacing:.06em;color:#a7a1b7;text-align:left}
+[dir=rtl] .fm-n{text-align:right}[dir=rtl] .fm-d{line-height:1.7}
+.fm-c .fm-gr{font-size:clamp(9.5px,.98cqw,11.5px);padding:.6em .8em;white-space:nowrap}
+@media(min-width:901px){
+  .fm-side{width:11.2cqw}
+  .fm-c{width:19cqw;padding:clamp(12px,6cqh,18px) clamp(12px,1.4cqw,18px)}
+  .fm-t{font-size:clamp(15px,min(12.2cqh,2.1cqw),30px)}
+  .fm-l3{--fx:-41cqw;--fy:12cqh;--fr:-8deg;z-index:2}
+  .fm-l2{--fx:-28.8cqw;--fy:8cqh;--fr:-6deg;z-index:3}
+  .fm-l1{--fx:-16.6cqw;--fy:4cqh;--fr:-4deg;z-index:4}
+  .fm-r1{--fx:16.6cqw;--fy:4cqh;--fr:4deg;z-index:4}
+  .fm-r2{--fx:28.8cqw;--fy:8cqh;--fr:6deg;z-index:3}
+  .fm-r3{--fx:41cqw;--fy:12cqh;--fr:8deg;z-index:2}
+  .fm-lab{left:8px;right:8px;gap:5px;font-size:10px}
+  .fm-lab svg,.fm-lab b{width:16px;height:16px}
+  .fm-lab small{font-size:9px}
+}
+@container (max-width:1000px){.fm-lab small{display:none}}
+@media(max-width:900px){
+  .fm-side{width:13cqw;height:44cqh}
+  .fm-c{width:37cqw;height:84cqh;padding:clamp(10px,4cqh,16px) clamp(10px,3cqw,14px);gap:6px}
+  .fm-t{font-size:clamp(12px,4.1cqw,20px)}
+  .fm-d{font-size:10.5px}
+  .fm-c .fm-gr{font-size:10px;padding:.55em .5em;margin-top:.3rem;white-space:normal;text-align:center;line-height:1.2}
+  .fm-l3{--fx:-39.6cqw;--fy:9cqh;--fr:-8deg}.fm-l2{--fx:-31.8cqw;--fy:6cqh;--fr:-6deg}.fm-l1{--fx:-23.5cqw;--fy:3cqh;--fr:-4deg}
+  .fm-r1{--fx:23.5cqw;--fy:3cqh;--fr:4deg}.fm-r2{--fx:31.8cqw;--fy:6cqh;--fr:6deg}.fm-r3{--fx:39.6cqw;--fy:9cqh;--fr:8deg}
+}
