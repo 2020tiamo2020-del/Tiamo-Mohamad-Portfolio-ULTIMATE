@@ -1,8 +1,10 @@
-v9 - copy into the site (everything from the earlier packages stays):
-  journey.js, journey.min.js, journey.css, journey.min.css, rail-glass.css, rail-glass.js   -> site root (replace)
-  studio/ (8 new files: intro*.webp, intro-depth.webp, intro-sky.webp, rain-drops.webp)    -> studio/
-index.html - change the version numbers:
-  rail-glass.css?v=8  ->  rail-glass.css?v=9
-  rail-glass.js?v=8   ->  rail-glass.js?v=9
-  journey.min.css?v=j8 (or older) -> journey.min.css?v=j9
-  journey.min.js?v=j8  (or older) -> journey.min.js?v=j9
+v10 - copy everything into the site (replace existing files, same folder structure).
+
+ROOT:   index.html, ar.html            (only the ?v= numbers changed, so browsers load the new files)
+        nav-dock.min.js/.css  (+ nav-dock.js/.css)      top bar: fits the free space, language button next to the logo, liquid-glass ball
+        journey.min.js/.css   (+ journey.js/.css)       Studio: sliding glass pad on the lighting cards, intro room, new rain ...
+        rail-glass.css, rail-glass.js                    side dock: liquid glass + the fixed active-row pill
+STUDIO: studio/  (all room images, moods, window masks, audio, intro room, rain-drops.webp)
+
+Note: the *.min.* files are the normal (not minified) code under the min names, because the pages load those names.
+If you regenerate ar.html with build_ar.py from index.html, the new ?v= numbers carry over automatically.

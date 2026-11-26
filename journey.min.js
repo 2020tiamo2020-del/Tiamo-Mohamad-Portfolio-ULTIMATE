@@ -90,7 +90,7 @@
       '<button class="jw-x" id="jwX" type="button"><svg viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19"/></svg></button><div class="jw-dots" id="jwD"></div><div class="jw-hint" id="jwH"></div><div class="jw-win" id="jwW"></div>' +
       '<div class="jw-rd" id="jwRd" role="group">' + ROOMS.map((_, i) => '<button class="jw-rdd" type="button" data-rd="' + i + '"></button>').join("") + '</div>' +
       '<div class="jw-tl"><button class="jw-ltb" id="jwLt" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 00-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0012 3z"/></svg><span id="jwLtT"></span></button><button class="jw-sb" id="jwSnd" type="button" aria-pressed="false"><svg class="off" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4zM17 9l4 6M21 9l-4 6"/></svg><svg class="on" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4zM16.5 8.5a5 5 0 010 7M19 6a8.5 8.5 0 010 12"/></svg></button></div>' +
-      '<div class="jw-lp" id="jwLp" role="group"><div class="jw-lph"><h3 id="jwLpT"></h3></div><div class="jw-cards">' + MOODS.map(k => '<button class="jw-card" type="button" data-fx="' + k + '" aria-pressed="false"><svg viewBox="0 0 24 24">' + FXI[k] + "</svg><span><b></b><small></small></span></button>").join("") + '</div><label class="jw-br"><span id="jwBrL"></span><input type="range" id="jwBr" min="70" max="130" value="100"></label></div>';
+      '<div class="jw-lp" id="jwLp" role="group"><div class="jw-lph"><h3 id="jwLpT"></h3></div><div class="jw-cards"><i class="jw-blob"></i>' + MOODS.map(k => '<button class="jw-card" type="button" data-fx="' + k + '" aria-pressed="false"><svg viewBox="0 0 24 24">' + FXI[k] + "</svg><span><b></b><small></small></span></button>").join("") + '</div><label class="jw-br"><span id="jwBrL"></span><input type="range" id="jwBr" min="70" max="130" value="100"></label></div>';
     D.body.appendChild(jw); $ = id => D.getElementById(id);
     cv = $("jwgl"); ln = $("jwln"); lg = ln.getContext("2d");
     jw.addEventListener("click", onClick);
@@ -283,7 +283,15 @@ void main(){float ra=uRes.x/uRes.y;vec2 u=s,ua=vec2(u.x*ra,u.y);float c4,c5;
   }
   function setMood(k) { want = k; fxUI(); loadMood(FL[idx][1], k); }
   const fxL = () => FXL[H.lang === "ar" ? "ar" : "en"];
-  function fxUI() { if (!jw) return; jw.querySelectorAll("[data-fx]").forEach(b => b.setAttribute("aria-pressed", b.dataset.fx === want)); const sb = $("jwSnd"); if (sb) sb.setAttribute("aria-pressed", sOn); const lb = $("jwLt"); if (lb) lb.setAttribute("aria-pressed", LT); jw.classList.toggle("jw-rainy", want === "rain"); }
+  /* the liquid-glass pad that slides to the lighting card you pick */
+  function cardBlob(instant) {
+    const bl = jw && jw.querySelector(".jw-blob"), c = jw && jw.querySelector('.jw-card[aria-pressed="true"]'); if (!bl || !c || !c.offsetWidth) return;
+    const first = !bl.dataset.on; bl.style.transition = instant || first ? "none" : "";
+    bl.style.width = c.offsetWidth + "px"; bl.style.height = c.offsetHeight + "px"; bl.style.transform = "translate(" + c.offsetLeft + "px," + c.offsetTop + "px)"; bl.dataset.on = 1;
+    if (instant || first) { void bl.offsetWidth; bl.style.transition = ""; } else if (bl.animate && !RM) bl.animate([{ scale: "1 1" }, { scale: "1.1 .9", offset: .4 }, { scale: "1 1" }], { duration: 620, easing: "ease-out" });
+  }
+  addEventListener("resize", () => cardBlob(true));
+  function fxUI() { if (!jw) return; jw.querySelectorAll("[data-fx]").forEach(b => b.setAttribute("aria-pressed", b.dataset.fx === want)); const sb = $("jwSnd"); if (sb) sb.setAttribute("aria-pressed", sOn); const lb = $("jwLt"); if (lb) lb.setAttribute("aria-pressed", LT); jw.classList.toggle("jw-rainy", want === "rain"); cardBlob(); }
   function fxLabels() { const l = fxL(); if (!$("jwLp")) return; $("jwLtT").textContent = l.t; $("jwLpT").textContent = l.t; $("jwBrL").textContent = l.br; $("jwSnd").setAttribute("aria-label", l.snd); jw.querySelectorAll("[data-rd]").forEach(b => b.setAttribute("aria-label", l.rooms[+b.dataset.rd])); rdUI(); jw.querySelectorAll("[data-fx]").forEach(b => { b.querySelector("b").textContent = l[b.dataset.fx]; b.querySelector("small").textContent = l[b.dataset.fx + "S"]; }); fxUI(); }
   function mkFBO(w, h) {
     const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
@@ -383,7 +391,7 @@ void main(){float ra=uRes.x/uRes.y;vec2 u=s,ua=vec2(u.x*ra,u.y);float c4,c5;
     tr = { from: { room: from.room, Z: from.Z, fx: from.fx, fy: from.fy }, t0: performance.now(), dur: RM ? 1 : (from.room === S(idx).room ? 1100 : 1900) };
     rdUI();
     if (on) { if (!sMuted) soundOn(true); } else { bright = 1; $("jwBr").value = 100; }
-    fxUI();
+    fxUI(); requestAnimationFrame(() => cardBlob(true));
   }
   function fxOpen() { if (sOn && AC) { AC.resume(); audioMood(); } }
   function fxClose() { if (AC && AC.state === "running") { if (bedG) bedG.gain.setTargetAtTime(0, AC.currentTime, .1); setTimeout(() => { if (!live && AC) AC.suspend(); }, 400); } }

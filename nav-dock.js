@@ -22,9 +22,9 @@
   dock.className = "tmd"; dock.id = "tmDock";
   dock.innerHTML = '<div class="tmd-pill"><button class="tmd-rest" type="button" aria-expanded="false" aria-controls="tmdItems"><i class="tmd-dot"></i><span class="tmd-name"></span>' +
     '<svg class="tmd-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>' +
-    '<div class="tmd-items" id="tmdItems" role="navigation" aria-label="Sections"></div><div class="tmd-prog"><i></i></div></div><div class="tmd-tip" aria-hidden="true"></div>';
+    '<div class="tmd-items" id="tmdItems" role="navigation" aria-label="Sections"><i class="tmd-blob"></i></div><div class="tmd-prog"><i></i></div></div><div class="tmd-tip" aria-hidden="true"></div>';
   document.body.appendChild(dock);
-  const rest = dock.querySelector(".tmd-rest"), nameEl = dock.querySelector(".tmd-name"), box = dock.querySelector(".tmd-items"), tip = dock.querySelector(".tmd-tip"), prog = dock.querySelector(".tmd-prog i");
+  const blob = dock.querySelector(".tmd-blob"), rest = dock.querySelector(".tmd-rest"), nameEl = dock.querySelector(".tmd-name"), box = dock.querySelector(".tmd-items"), tip = dock.querySelector(".tmd-tip"), prog = dock.querySelector(".tmd-prog i");
   const items = links.map((a, i) => {
     const href = a.getAttribute("href");
     const b = document.createElement("a");
@@ -35,26 +35,45 @@
     box.appendChild(b);
     return { a, b, s: 1, t: 1, x: 0, tx: 0, c: 0 };
   });
+  let ready = false, cur = items[0];
   const sync = () => {
-    let cur = items.find(o => o.a.classList.contains("is-active")) || items[0];
+    cur = items.find(o => o.a.classList.contains("is-active")) || items[0];
     items.forEach(o => { const on = o === cur; o.b.classList.toggle("is-active", on); if (on) o.b.setAttribute("aria-current", "page"); else o.b.removeAttribute("aria-current"); o.b.setAttribute("aria-label", label(o.a)); });
-    nameEl.textContent = label(cur.a);
+    nameEl.textContent = label(cur.a); items.forEach(o => { o.b.title = label(o.a); });
+    if (ready) { kick(); layout(); }
   };
   new MutationObserver(sync).observe(nav, { attributes: true, attributeFilter: ["class"], subtree: true, characterData: true, childList: true });
   new MutationObserver(sync).observe(document.documentElement, { attributes: true, attributeFilter: ["lang", "dir"] });
   sync();
 
+  /* ---- fit to the free space between the logo side and the buttons side (works in English and Arabic, any window width) ---- */
+  let IT = 40, GP = 8, MW = 620, compact = false;
+  const SIZES = [[40, 8], [38, 7], [36, 6], [34, 5], [32, 4], [30, 4], [28, 3], [26, 3], [24, 2], [22, 2]], N = items.length;
+  const natural = (it, gp) => 2 + 28 + N * (it + gp) + 1 + 1.6 * it;      /* border + padding + icons + gaps + room for the magnify swell */
+  function layout() {
+    const vw = document.documentElement.clientWidth, mid = vw / 2; let L = 0, R = vw;
+    document.querySelectorAll(".site-header .logo,.site-header .lang,.site-header .journey-btn,.site-header .mini-wa").forEach(e => {
+      if (!e.offsetWidth) return; const r = e.getBoundingClientRect(), c = (r.left + r.right) / 2; if (c < mid) L = Math.max(L, r.right); else R = Math.min(R, r.left);
+    });
+    const gap = R - L - 24; let pick = null; for (const s of SIZES) { if (natural(s[0], s[1]) <= gap) { pick = s; break; } }
+    compact = !pick; if (!pick) pick = [30, 4]; IT = pick[0]; GP = pick[1]; MW = Math.ceil(natural(IT, GP));
+    const restW = (rest.scrollWidth || 200) + 2, half = (open && !compact ? MW : restW) / 2;
+    let cx = Math.max(L + 12 + half, Math.min(R - 12 - half, mid)); if (cx < L + 12 + half || cx > R - 12 - half) cx = (L + R) / 2;
+    dock.style.setProperty("--it", IT + "px"); dock.style.setProperty("--gp", GP + "px"); dock.style.setProperty("--mw", MW + "px"); dock.style.setProperty("--cx", cx.toFixed(1) + "px");
+    dock.classList.toggle("is-compact", compact);
+  }
+
   /* open / close */
   let open = false, closeT = 0, px = null, raf = 0;
   const setOpen = v => {
-    if (open === v) return; open = v; dock.classList.toggle("is-open", v); rest.setAttribute("aria-expanded", v);
-    if (v) measure(); else { px = null; hideTip(); }
+    if (open === v) return; open = v; layout(); dock.classList.toggle("is-open", v); rest.setAttribute("aria-expanded", v);
+    if (v) { measure(); bx = null; } else { px = null; hideTip(); }
     kick();
   };
   const arm = () => { clearTimeout(closeT); setOpen(true); };
   const disarm = () => { clearTimeout(closeT); closeT = setTimeout(() => { if (!dock.matches(":focus-within") || !dock.matches(":hover")) setOpen(false); }, 260); };
-  let lockUntil = 0; const hz = document.querySelector(".header-actions");
-  if (hz) { hz.addEventListener("pointerenter", () => { lockUntil = performance.now() + 600; clearTimeout(closeT); setOpen(false); }); hz.addEventListener("click", () => { lockUntil = performance.now() + 1400; clearTimeout(closeT); setOpen(false); }); }
+  let lockUntil = 0;
+  document.querySelectorAll(".site-header .lang,.site-header .journey-btn,.site-header .mini-wa").forEach(hz => { hz.addEventListener("pointerenter", () => { lockUntil = performance.now() + 600; clearTimeout(closeT); setOpen(false); }); hz.addEventListener("click", () => { lockUntil = performance.now() + 1400; clearTimeout(closeT); setOpen(false); }); });
   dock.addEventListener("pointerenter", e => { if (e.pointerType === "touch" || performance.now() < lockUntil) return; const r = dock.getBoundingClientRect(); if (e.clientX >= r.left - 6 && e.clientX <= r.right + 6 && e.clientY >= r.top - 6 && e.clientY <= r.bottom + 6) arm(); });
   dock.addEventListener("pointerleave", e => { if (e.pointerType !== "touch") { px = null; disarm(); } });
   dock.addEventListener("focusin", () => { if (performance.now() >= lockUntil) arm(); });
@@ -64,7 +83,7 @@
   document.addEventListener("pointerdown", e => { if (open && !dock.contains(e.target)) setOpen(false); }, { passive: true });
 
   /* magnify: scale each icon by distance to the pointer, push neighbours apart so the pill never jitters */
-  const W = 40, MAXS = 0.62, SIG = 46;
+  const MAXS = 0.62; let bx = null, bv = 0; const REDUCE = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const measure = () => { items.forEach(o => { o.c = o.b.offsetLeft + o.b.offsetWidth / 2; }); };
   box.addEventListener("pointermove", e => { const r = box.getBoundingClientRect(); px = e.clientX - r.left; kick(); });
   box.addEventListener("pointerleave", () => { px = null; hideTip(); kick(); });
@@ -79,17 +98,30 @@
     raf = 0; let moving = false;
     measure();                                                           // positions are read fresh each frame (the pill is still opening when the first frame runs)
     const order = items.slice().sort((a, b) => a.c - b.c);
-    order.forEach(o => { o.t = px == null ? 1 : 1 + MAXS * Math.exp(-((px - o.c) ** 2) / (2 * SIG * SIG)); o.s += (o.t - o.s) * 0.28; if (Math.abs(o.t - o.s) > 0.002) moving = true; else o.s = o.t; });
-    const E = order.reduce((n, o) => n + (o.s - 1) * W, 0); let acc = 0;
-    order.forEach(o => { const ex = (o.s - 1) * W; const tx = -E / 2 + acc + ex / 2; o.tx += (tx - o.tx) * 0.5; acc += ex; o.b.style.setProperty("--s", o.s.toFixed(3)); o.b.style.setProperty("--tx", o.tx.toFixed(2) + "px"); });
-    if (open && px != null) { let best = null, bd = 1e9; order.forEach(o => { const d = Math.abs(px - o.c); if (d < bd) { bd = d; best = o; } }); if (best && bd < 34 && best !== tipFor) { tipFor = best; showTip(best); } else if (bd >= 34 && tipFor) { tipFor = null; hideTip(); } }
+    order.forEach(o => { o.t = (px == null || compact) ? 1 : 1 + MAXS * Math.exp(-((px - o.c) ** 2) / (2 * (IT * 1.15) * (IT * 1.15))); o.s += (o.t - o.s) * 0.28; if (Math.abs(o.t - o.s) > 0.002) moving = true; else o.s = o.t; });
+    const E = order.reduce((n, o) => n + (o.s - 1) * IT, 0); let acc = 0;
+    order.forEach(o => { const ex = (o.s - 1) * IT; const tx = -E / 2 + acc + ex / 2; o.tx += (tx - o.tx) * 0.5; acc += ex; o.b.style.setProperty("--s", o.s.toFixed(3)); o.b.style.setProperty("--tx", o.tx.toFixed(2) + "px"); });
+    /* the liquid ball: springs to the icon under the pointer (else to the current section), stretching while it travels */
+    if (open && !compact) {
+      let tg = cur; if (px != null) { let bd = 1e9; order.forEach(o => { const d = Math.abs(px - o.c); if (d < bd) { bd = d; tg = o; } }); }
+      const cxx = tg.c + tg.tx; if (bx == null || REDUCE) { bx = cxx; bv = 0; }
+      bv += (cxx - bx) * 0.2; bv *= 0.68; bx += bv; if (Math.abs(cxx - bx) > 0.3 || Math.abs(bv) > 0.1) moving = true; else { bx = cxx; bv = 0; }
+      const st = Math.min(0.85, Math.abs(bv) / (IT * 0.45)), sc = tg.s;
+      blob.style.setProperty("--bx", (bx - IT / 2).toFixed(2) + "px"); blob.style.setProperty("--bsx", (sc * (1 + st)).toFixed(3)); blob.style.setProperty("--bsy", (sc * (1 - st * 0.22)).toFixed(3));
+      blob.classList.toggle("is-green", tg.b.classList.contains("is-beyond"));
+    }
+    if (open && px != null && !compact) { let best = null, bd = 1e9; order.forEach(o => { const d = Math.abs(px - o.c); if (d < bd) { bd = d; best = o; } }); if (best && bd < 34 && best !== tipFor) { tipFor = best; showTip(best); } else if (bd >= 34 && tipFor) { tipFor = null; hideTip(); } }
     else tipFor = null;
     dock.style.setProperty("--ep", (E / 2).toFixed(1) + "px");   /* the pill grows by exactly what the magnified icons need, so none ever pokes out of it */
     if (tipFor) showTip(tipFor);
     if (moving || (open && px != null)) raf = requestAnimationFrame(frame);
   };
   const kick = () => { if (!raf) raf = requestAnimationFrame(frame); };
-  addEventListener("resize", () => { measure(); });
+  addEventListener("resize", () => { layout(); measure(); });
+  new MutationObserver(() => layout()).observe(document.documentElement, { attributes: true, attributeFilter: ["lang", "dir"] });
+  if (window.ResizeObserver) { const ro = new ResizeObserver(() => layout()); document.querySelectorAll(".site-header .logo,.site-header .lang,.site-header .journey-btn,.site-header .mini-wa").forEach(e => ro.observe(e)); }
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(layout);
+  layout(); ready = true; setTimeout(layout, 400); setTimeout(layout, 1500);
 
   /* thin page-progress line under the pill */
   let pt = 0;
