@@ -22,7 +22,7 @@
 .music-mini.tmt-paused{box-shadow:0 10px 24px rgba(0,0,0,.4),0 0 14px rgba(139,53,255,.28),inset 0 1px 2px rgba(255,255,255,.3),inset 0 -8px 14px rgba(0,0,0,.4)}
 .tmt-badge.is-paused{font-size:0}
 .tmt-badge.is-paused::before{content:"";position:absolute;left:50%;top:50%;width:11px;height:11px;transform:translate(-50%,-50%);background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='5.5' y='4' width='4.6' height='16' rx='1.8' fill='white'/%3E%3Crect x='13.9' y='4' width='4.6' height='16' rx='1.8' fill='white'/%3E%3C/svg%3E") center/contain no-repeat}
-.tmt-badge{position:absolute;left:-9px;right:auto;top:-9px;min-width:21px;height:21px;padding:0 5px;box-sizing:border-box;border-radius:11px;display:grid;place-items:center;font:700 10px/1 Inter,Cairo,sans-serif;color:#fff;background:linear-gradient(145deg,rgba(255,255,255,.28),rgba(255,255,255,.06)),rgba(40,20,90,.78);border:1px solid rgba(255,255,255,.4);box-shadow:0 4px 10px rgba(0,0,0,.4);pointer-events:none;z-index:2}
+.tmt-badge{position:absolute;left:50%;right:auto;top:auto;bottom:-14px;transform:translateX(-50%);min-width:21px;height:21px;padding:0 5px;box-sizing:border-box;border-radius:11px;display:grid;place-items:center;font:700 10px/1 Inter,Cairo,sans-serif;color:#fff;background:linear-gradient(145deg,rgba(255,255,255,.28),rgba(255,255,255,.06)),rgba(40,20,90,.78);border:1px solid rgba(255,255,255,.4);box-shadow:0 4px 10px rgba(0,0,0,.4);pointer-events:none;z-index:2}
 @media (min-width:1280px){
 html[dir=rtl] .scroll-orbit{right:6px;left:auto}
 html:not([dir=rtl]) .scroll-orbit{right:auto;left:6px}
