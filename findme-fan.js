@@ -35,7 +35,7 @@ addEventListener("scroll",aim,{passive:true});layout();paint();
 const gr=s.querySelector(".fm-gr");
 wrap.addEventListener("pointermove",e=>{if(!pin)return;wrap.style.setProperty("--mx",(e.clientX/innerWidth-.5).toFixed(3));wrap.style.setProperty("--my",(e.clientY/innerHeight-.5).toFixed(3));if(gr){const b=gr.getBoundingClientRect(),dx=e.clientX-(b.left+b.width/2),dy=e.clientY-(b.top+b.height/2);gr.style.translate=Math.hypot(dx,dy)<120?(dx*.22).toFixed(1)+"px "+(dy*.28).toFixed(1)+"px":"0px 0px"}});
 cards.forEach((c,i)=>{
- c.addEventListener("pointerenter",()=>cards.forEach((o,j)=>{if(o!==c)o.style.setProperty("--fnx",(j<i?-1:1)*(Math.abs(j-i)>0?12:0)+"px")}));
+ c.addEventListener("pointerenter",()=>cards.forEach((o,j)=>{if(o!==c)o.style.setProperty("--fnx",(j<i?-1:1)*(Math.abs(j-i)>0?16:0)+"px")}));
  c.addEventListener("pointermove",e=>{const b=c.getBoundingClientRect(),x=(e.clientX-b.left)/b.width,y=(e.clientY-b.top)/b.height;
   c.style.setProperty("--fry",((x-.5)*12).toFixed(1)+"deg");c.style.setProperty("--frx",((.5-y)*10).toFixed(1)+"deg");c.style.setProperty("--fmx",x*100+"%");c.style.setProperty("--fmy",y*100+"%")});
  c.addEventListener("pointerleave",()=>{cards.forEach(o=>o.style.setProperty("--fnx","0px"));["--frx","--fry"].forEach(p=>c.style.setProperty(p,"0deg"))});
